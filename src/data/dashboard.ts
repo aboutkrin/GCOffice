@@ -33,17 +33,14 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     thisMonthConfirmed,
     recentDocuments,
   ] = await Promise.all([
-    // Total quotation count
     prisma.document.count({
       where: { type: DocumentType.QUOTATION },
     }),
 
-    // Total invoice count
     prisma.document.count({
       where: { type: DocumentType.INVOICE },
     }),
 
-    // Pending documents (DRAFT, QUOTED, or BILLED)
     prisma.document.count({
       where: {
         status: {
@@ -52,7 +49,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
     }),
 
-    // This month's confirmed/paid total
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
@@ -66,7 +62,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
     }),
 
-    // Recent 10 documents
     prisma.document.findMany({
       select: {
         id: true,

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
-import { DocumentTable } from "@/components/documents/document-table";
+import { DocumentPageTabs } from "@/components/documents/document-page-tabs";
 import { getDocuments } from "@/data/documents";
 import { Plus } from "lucide-react";
 
@@ -9,6 +9,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function InvoicesPage() {
   const documents = await getDocuments({ type: "INVOICE" });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const activeDocuments = documents.filter((doc: any) => doc.status !== "CANCELLED");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cancelledDocuments = documents.filter((doc: any) => doc.status === "CANCELLED");
 
   return (
     <div>
@@ -24,7 +28,12 @@ export default async function InvoicesPage() {
         </Link>
       </PageHeader>
 
-      <DocumentTable documents={documents} basePath="/invoices" documentType="INVOICE" />
+      <DocumentPageTabs
+        activeDocuments={activeDocuments}
+        cancelledDocuments={cancelledDocuments}
+        basePath="/invoices"
+        documentType="INVOICE"
+      />
     </div>
   );
 }
