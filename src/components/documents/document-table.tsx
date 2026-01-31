@@ -76,7 +76,7 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
       await deleteDocument(deleteId);
       setDeleteId(null);
     } catch (error) {
-      console.error("ลบเอกสารไม่สำเร็จ:", error);
+      console.error("ยกเลิกเอกสารไม่สำเร็จ:", error);
     } finally {
       setDeleting(false);
     }
@@ -298,26 +298,26 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
         ))}
       </div>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Cancel Confirmation Dialog */}
       <AlertDialog
         open={!!deleteId}
         onOpenChange={(open) => !open && setDeleteId(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>ยืนยันการลบเอกสาร</AlertDialogTitle>
+            <AlertDialogTitle>ยืนยันการยกเลิกเอกสาร</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณต้องการลบเอกสารนี้หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              คุณต้องการยกเลิกเอกสารนี้หรือไม่? เอกสารจะถูกย้ายไปยังแท็บ &quot;ยกเลิก&quot;
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>ยกเลิก</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>ปิด</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? "กำลังลบ..." : "ลบเอกสาร"}
+              {deleting ? "กำลังยกเลิก..." : "ยกเลิกเอกสาร"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

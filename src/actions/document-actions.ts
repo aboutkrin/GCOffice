@@ -212,7 +212,10 @@ export async function updateDocumentStatus(
 }
 
 export async function deleteDocument(id: string) {
-  await prisma.document.delete({ where: { id } });
+  await prisma.document.update({
+    where: { id },
+    data: { status: "CANCELLED" },
+  });
   revalidatePath("/quotations");
   revalidatePath("/invoices");
 }
