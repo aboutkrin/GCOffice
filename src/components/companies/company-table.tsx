@@ -79,6 +79,12 @@ export function CompanyTable({ companies }: CompanyTableProps) {
       header: "ชื่อบริษัท",
     },
     {
+      accessorKey: "taxId",
+      header: "เลขประจำตัวผู้เสียภาษี",
+      cell: ({ row }) => row.original.taxId ?? "-",
+      enableGlobalFilter: false,
+    },
+    {
       accessorKey: "phone",
       header: "เบอร์โทร",
       cell: ({ row }) => row.original.phone ?? "-",
@@ -192,7 +198,7 @@ export function CompanyTable({ companies }: CompanyTableProps) {
                   <TableHead
                     key={header.id}
                     className={
-                      ["logoUrl", "bankName", "vatEnabled", "status"].includes(header.id)
+                      ["logoUrl", "taxId", "bankName", "vatEnabled", "status"].includes(header.id)
                         ? "hidden md:table-cell"
                         : ""
                     }
@@ -213,7 +219,7 @@ export function CompanyTable({ companies }: CompanyTableProps) {
                     <TableCell
                       key={cell.id}
                       className={
-                        ["logoUrl", "bankName", "vatEnabled", "status"].includes(
+                        ["logoUrl", "taxId", "bankName", "vatEnabled", "status"].includes(
                           cell.column.id
                         )
                           ? "hidden md:table-cell"

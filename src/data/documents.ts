@@ -56,6 +56,7 @@ export async function getDocumentById(id: string) {
       paymentTerms: { orderBy: { sequence: "asc" } },
       company: true,
       customer: true,
+      createdBy: true,
     },
   });
   return serialize(data);

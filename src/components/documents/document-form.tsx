@@ -428,7 +428,14 @@ export function DocumentForm({
                   <FormItem>
                     <FormLabel>บริษัท</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
+                      onValueChange={(companyId) => {
+                        field.onChange(companyId);
+                        const selected = companies.find((c) => c.id === companyId);
+                        if (selected) {
+                          form.setValue("vatEnabled", selected.vatEnabled);
+                          form.setValue("vatRate", Number(selected.vatRate));
+                        }
+                      }}
                       value={field.value}
                     >
                       <FormControl>
@@ -564,7 +571,6 @@ export function DocumentForm({
           <CardContent className="pt-6">
             <PaymentTermsSection
               terms={terms}
-              addTerm={addTerm}
               removeTerm={removeTerm}
               updateTerm={handleUpdateTerm}
               totalAmount={paymentTotalAmount}

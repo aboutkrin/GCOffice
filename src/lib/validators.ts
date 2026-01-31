@@ -31,6 +31,7 @@ export const customerSchema = z.object({
   companyName: z.string().optional(),
   customerName: z.string().min(1, "กรุณาระบุชื่อลูกค้า"),
   contactPerson: z.string().optional(),
+  taxId: z.string().optional(),
   address: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง").optional().or(z.literal("")),
@@ -42,6 +43,7 @@ export const customerSchema = z.object({
 export const companySchema = z.object({
   name: z.string().min(1, "กรุณาระบุชื่อบริษัท"),
   address: z.string().min(1, "กรุณาระบุที่อยู่"),
+  taxId: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง").optional().or(z.literal("")),
   facebook: z.string().optional(),
@@ -51,6 +53,8 @@ export const companySchema = z.object({
   bankName: z.string().optional(),
   accountName: z.string().optional(),
   accountNumber: z.string().optional(),
+  bankLogoUrl: z.string().optional(),
+  promptpayQrUrl: z.string().optional(),
   vatEnabled: z.boolean().default(true),
   vatRate: z.coerce.number().default(7),
   footerNotes: z.string().optional(),
@@ -147,6 +151,13 @@ export const wooCommerceConfigSchema = z.object({
   autoSyncEnabled: z.boolean().default(false),
 });
 
+export const profileSchema = z.object({
+  firstName: z.string().min(1, "กรุณาระบุชื่อ"),
+  lastName: z.string().min(1, "กรุณาระบุนามสกุล"),
+  signatureUrl: z.string().optional(),
+});
+
 export type PaymentTermTemplateItemFormData = z.infer<typeof paymentTermTemplateItemSchema>;
 export type PaymentTermTemplateFormData = z.infer<typeof paymentTermTemplateSchema>;
 export type WooCommerceConfigFormData = z.infer<typeof wooCommerceConfigSchema>;
+export type ProfileFormData = z.infer<typeof profileSchema>;

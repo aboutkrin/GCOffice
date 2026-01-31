@@ -1,16 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   useReactTable,
   getCoreRowModel,
-  getFilteredRowModel,
   flexRender,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Trash2, Search } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { formatNumber } from "@/lib/thai-currency";
@@ -19,6 +27,13 @@ import { deleteProduct } from "@/actions/product-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -46,12 +61,62 @@ import {
 
 interface ProductTableProps {
   products: any[];
+  categories: any[];
+  total: number;
+  page: number;
+  totalPages: number;
+  filters: {
+    search: string;
+    status: string;
+    categoryId: string;
+  };
 }
 
-export function ProductTable({ products }: ProductTableProps) {
-  const [globalFilter, setGlobalFilter] = useState("");
+export function ProductTable({
+  products,
+  categories,
+  total,
+  page,
+  totalPages,
+  filters,
+}: ProductTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [searchValue, setSearchValue] = useState(filters.search);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const updateParams = useCallback(
+    (updates: Record<string, string>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value) {
+          params.set(key, value);
+        } else {
+          params.delete(key);
+        }
+      }
+      // Reset to page 1 when filters change (unless we're explicitly setting page)
+      if (!("page" in updates)) {
+        params.delete("page");
+      }
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [router, pathname, searchParams],
+  );
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateParams({ search: searchValue });
+  };
+
+  const clearFilters = () => {
+    setSearchValue("");
+    router.push(pathname);
+  };
+
+  const hasActiveFilters = filters.search || filters.status || filters.categoryId;
 
   const columns: ColumnDef<any>[] = [
     {
@@ -73,7 +138,6 @@ export function ProductTable({ products }: ProductTableProps) {
           </div>
         );
       },
-      enableGlobalFilter: false,
     },
     {
       accessorKey: "sku",
@@ -102,7 +166,6 @@ export function ProductTable({ products }: ProductTableProps) {
       accessorKey: "basePrice",
       header: "ราคา",
       cell: ({ row }) => formatNumber(row.original.basePrice),
-      enableGlobalFilter: false,
     },
     {
       accessorKey: "status",
@@ -112,7 +175,6 @@ export function ProductTable({ products }: ProductTableProps) {
           {row.original.status === "ACTIVE" ? "ใช้งาน" : "ไม่ใช้งาน"}
         </Badge>
       ),
-      enableGlobalFilter: false,
     },
     {
       id: "actions",
@@ -141,24 +203,13 @@ export function ProductTable({ products }: ProductTableProps) {
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-      enableGlobalFilter: false,
     },
   ];
 
   const table = useReactTable({
     data: products,
     columns,
-    state: { globalFilter },
-    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    globalFilterFn: (row, columnId, filterValue) => {
-      const search = filterValue.toLowerCase();
-      const name = String(row.original.name ?? "").toLowerCase();
-      const sku = String(row.original.sku ?? "").toLowerCase();
-      const category = String(row.original.category?.name ?? "").toLowerCase();
-      return name.includes(search) || sku.includes(search) || category.includes(search);
-    },
   });
 
   function handleDelete() {
@@ -175,18 +226,64 @@ export function ProductTable({ products }: ProductTableProps) {
     });
   }
 
+  const startItem = (page - 1) * 10 + 1;
+  const endItem = Math.min(page * 10, total);
+
   return (
     <div className="space-y-4">
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-        <Input
-          placeholder="ค้นหาสินค้า..."
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          className="pl-9"
-        />
+      {/* Filters */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            className="pl-9"
+          />
+        </form>
+        <Select
+          value={filters.status || "all"}
+          onValueChange={(value) =>
+            updateParams({ status: value === "all" ? "" : value })
+          }
+        >
+          <SelectTrigger className="w-full sm:w-[160px]">
+            <SelectValue placeholder="สถานะ" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">สถานะทั้งหมด</SelectItem>
+            <SelectItem value="ACTIVE">ใช้งาน</SelectItem>
+            <SelectItem value="INACTIVE">ไม่ใช้งาน</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={filters.categoryId || "all"}
+          onValueChange={(value) =>
+            updateParams({ categoryId: value === "all" ? "" : value })
+          }
+        >
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="หมวดหมู่" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">หมวดหมู่ทั้งหมด</SelectItem>
+            {categories.map((cat: any) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X className="size-4" />
+            ล้างตัวกรอง
+          </Button>
+        )}
       </div>
 
+      {/* Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -196,7 +293,7 @@ export function ProductTable({ products }: ProductTableProps) {
                   <TableHead
                     key={header.id}
                     className={
-                      ["imageUrl", "size", "basePrice", "status"].includes(header.id)
+                      ["imageUrl", "basePrice", "status"].includes(header.id)
                         ? "hidden md:table-cell"
                         : ""
                     }
@@ -217,9 +314,7 @@ export function ProductTable({ products }: ProductTableProps) {
                     <TableCell
                       key={cell.id}
                       className={
-                        ["imageUrl", "size", "basePrice", "status"].includes(
-                          cell.column.id
-                        )
+                        ["imageUrl", "basePrice", "status"].includes(cell.column.id)
                           ? "hidden md:table-cell"
                           : ""
                       }
@@ -240,6 +335,39 @@ export function ProductTable({ products }: ProductTableProps) {
         </Table>
       </div>
 
+      {/* Pagination */}
+      {total > 0 && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            แสดง {startItem}-{endItem} จาก {total} รายการ
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => updateParams({ page: String(page - 1) })}
+            >
+              <ChevronLeft className="size-4" />
+              ก่อนหน้า
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              หน้า {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => updateParams({ page: String(page + 1) })}
+            >
+              ถัดไป
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

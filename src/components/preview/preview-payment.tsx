@@ -18,6 +18,8 @@ interface PreviewPaymentProps {
     bankName?: string;
     accountName?: string;
     accountNumber?: string;
+    bankLogoUrl?: string;
+    promptpayQrUrl?: string;
   };
 }
 
@@ -91,29 +93,50 @@ export function PreviewPayment({
               ข้อมูลบัญชีสำหรับโอนเงิน
             </h4>
           </div>
-          <div className="grid grid-cols-1 gap-1 text-sm">
-            {company.bankName && (
-              <div className="flex gap-2">
-                <span className="text-gray-500 w-20 shrink-0">ธนาคาร:</span>
-                <span className="font-medium text-gray-800">
-                  {company.bankName}
-                </span>
-              </div>
-            )}
-            {company.accountName && (
-              <div className="flex gap-2">
-                <span className="text-gray-500 w-20 shrink-0">ชื่อบัญชี:</span>
-                <span className="font-medium text-gray-800">
-                  {company.accountName}
-                </span>
-              </div>
-            )}
-            {company.accountNumber && (
-              <div className="flex gap-2">
-                <span className="text-gray-500 w-20 shrink-0">เลขที่บัญชี:</span>
-                <span className="font-medium text-gray-800 tracking-wide">
-                  {company.accountNumber}
-                </span>
+          <div className="flex items-start justify-between gap-4">
+            <div className="grid grid-cols-1 gap-1 text-sm">
+              {company.bankName && (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 w-20 shrink-0">ธนาคาร:</span>
+                  <div className="flex items-center gap-1.5">
+                    {company.bankLogoUrl && (
+                      <img
+                        src={company.bankLogoUrl}
+                        alt={company.bankName}
+                        className="h-5 w-5 object-contain shrink-0"
+                      />
+                    )}
+                    <span className="font-medium text-gray-800">
+                      {company.bankName}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {company.accountName && (
+                <div className="flex gap-2">
+                  <span className="text-gray-500 w-20 shrink-0">ชื่อบัญชี:</span>
+                  <span className="font-medium text-gray-800">
+                    {company.accountName}
+                  </span>
+                </div>
+              )}
+              {company.accountNumber && (
+                <div className="flex gap-2">
+                  <span className="text-gray-500 w-20 shrink-0">เลขที่บัญชี:</span>
+                  <span className="font-medium text-gray-800 tracking-wide">
+                    {company.accountNumber}
+                  </span>
+                </div>
+              )}
+            </div>
+            {company.promptpayQrUrl && (
+              <div className="flex flex-col items-center shrink-0">
+                <img
+                  src={company.promptpayQrUrl}
+                  alt="PromptPay QR Code"
+                  className="h-24 w-24 sm:h-28 sm:w-28 object-contain"
+                />
+                <span className="text-xs text-gray-500 mt-1">พร้อมเพย์</span>
               </div>
             )}
           </div>

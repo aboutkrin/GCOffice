@@ -7,6 +7,11 @@ interface PreviewFooterProps {
   productionDays?: string;
   deliveryDateStart?: Date;
   deliveryDateEnd?: Date;
+  createdBy?: {
+    firstName?: string | null;
+    lastName?: string | null;
+    signatureUrl?: string | null;
+  };
 }
 
 export function PreviewFooter({
@@ -14,6 +19,7 @@ export function PreviewFooter({
   productionDays,
   deliveryDateStart,
   deliveryDateEnd,
+  createdBy,
 }: PreviewFooterProps) {
   const hasNotes = footerNotes || productionDays || deliveryDateStart;
 
@@ -59,9 +65,25 @@ export function PreviewFooter({
       <div className="mt-6 sm:mt-10 grid grid-cols-2 gap-4 sm:gap-8 pt-4">
         {/* Left: Issuer */}
         <div className="text-center">
-          <div className="mb-10 sm:mb-16" />
+          <div className="flex items-end justify-center h-16 sm:h-20">
+            {createdBy?.signatureUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={createdBy.signatureUrl}
+                alt="ลายเซ็น"
+                className="max-h-16 sm:max-h-20 w-auto object-contain"
+              />
+            )}
+          </div>
           <div className="mx-auto w-28 sm:w-48 border-b border-gray-400" />
-          <p className="mt-2 text-xs sm:text-sm text-gray-700">
+          {createdBy?.firstName || createdBy?.lastName ? (
+            <p className="mt-2 text-xs sm:text-sm text-gray-700">
+              {[createdBy.firstName, createdBy.lastName]
+                .filter(Boolean)
+                .join(" ")}
+            </p>
+          ) : null}
+          <p className="mt-1 text-xs sm:text-sm text-gray-700">
             ผู้เสนอราคา / ผู้ออกเอกสาร
           </p>
           <p className="mt-1 text-xs text-gray-500">

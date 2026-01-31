@@ -99,6 +99,12 @@ export function CustomerTable({ customers }: CustomerTableProps) {
       cell: ({ row }) => row.original.companyName ?? "-",
     },
     {
+      accessorKey: "taxId",
+      header: "เลขประจำตัวผู้เสียภาษี",
+      cell: ({ row }) => row.original.taxId ?? "-",
+      enableGlobalFilter: false,
+    },
+    {
       accessorKey: "phone",
       header: "เบอร์โทร",
       cell: ({ row }) => row.original.phone ?? "-",
@@ -207,7 +213,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                   <TableHead
                     key={header.id}
                     className={
-                      ["companyName", "leadType", "status"].includes(header.id)
+                      ["companyName", "taxId", "leadType", "status"].includes(header.id)
                         ? "hidden md:table-cell"
                         : ""
                     }
@@ -228,7 +234,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
                     <TableCell
                       key={cell.id}
                       className={
-                        ["companyName", "leadType", "status"].includes(cell.column.id)
+                        ["companyName", "taxId", "leadType", "status"].includes(cell.column.id)
                           ? "hidden md:table-cell"
                           : ""
                       }

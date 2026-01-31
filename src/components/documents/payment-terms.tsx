@@ -11,13 +11,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatNumber } from "@/lib/thai-currency";
-import { Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Trash2, AlertTriangle } from "lucide-react";
 import type { PaymentTerm } from "@/hooks/use-payment-terms";
 import { PaymentTermTemplateSelect } from "./payment-term-template-select";
 
 interface PaymentTermsProps {
   terms: PaymentTerm[];
-  addTerm: () => void;
   removeTerm: (id: string) => void;
   updateTerm: (id: string, updates: Partial<PaymentTerm>) => void;
   totalAmount: number;
@@ -28,7 +27,6 @@ interface PaymentTermsProps {
 
 export function PaymentTermsSection({
   terms,
-  addTerm,
   removeTerm,
   updateTerm,
   totalAmount,
@@ -51,10 +49,6 @@ export function PaymentTermsSection({
               onApply={onApplyTemplate}
             />
           )}
-          <Button type="button" variant="outline" size="sm" onClick={addTerm}>
-            <Plus className="h-4 w-4 mr-1" />
-            เพิ่มงวดชำระ
-          </Button>
         </div>
       </div>
 

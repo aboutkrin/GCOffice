@@ -6,6 +6,8 @@ export async function getProducts(params?: {
   search?: string;
   status?: Status;
   categoryId?: string;
+  page?: number;
+  perPage?: number;
 }) {
   const where: any = {};
   if (params?.status) where.status = params.status;
@@ -17,12 +19,21 @@ export async function getProducts(params?: {
     ];
   }
 
-  const data = await prisma.product.findMany({
-    where,
-    include: { category: true },
-    orderBy: { createdAt: "desc" },
-  });
-  return serialize(data);
+  const page = params?.page ?? 1;
+  const perPage = params?.perPage ?? 10;
+
+  const [data, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      include: { category: true },
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * perPage,
+      take: perPage,
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return { products: serialize(data), total };
 }
 
 export async function getProductById(id: string) {

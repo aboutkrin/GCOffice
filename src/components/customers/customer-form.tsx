@@ -55,6 +55,7 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
       type: initialData?.type ?? "INDIVIDUAL",
       companyName: initialData?.companyName ?? "",
       customerName: initialData?.customerName ?? "",
+      taxId: initialData?.taxId ?? "",
       address: initialData?.address ?? "",
       phone: initialData?.phone ?? "",
       email: initialData?.email ?? "",
@@ -148,6 +149,24 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                   <FormLabel>ชื่อลูกค้า</FormLabel>
                   <FormControl>
                     <Input placeholder="ชื่อ-นามสกุล" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="taxId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>เลขประจำตัวผู้เสียภาษี</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="เลขประจำตัวผู้เสียภาษี"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -14,6 +14,7 @@ import {
 interface CompanySnapshot {
   name: string;
   address: string;
+  taxId?: string;
   phone?: string;
   email?: string;
   facebook?: string;
@@ -23,6 +24,8 @@ interface CompanySnapshot {
   bankName?: string;
   accountName?: string;
   accountNumber?: string;
+  bankLogoUrl?: string;
+  promptpayQrUrl?: string;
 }
 
 interface PreviewHeaderProps {
@@ -62,6 +65,11 @@ export function PreviewHeader({
             <h1 className="text-base sm:text-xl font-bold text-gray-900 break-words">
               {company.name}
             </h1>
+            {company.taxId && (
+              <p className="text-xs text-gray-500">
+                เลขประจำตัวผู้เสียภาษี: {company.taxId}
+              </p>
+            )}
           </div>
         </div>
 

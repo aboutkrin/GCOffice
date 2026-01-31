@@ -34,6 +34,7 @@ export default async function InvoicePreviewPage({
           accountNumber: document.company.accountNumber,
         }
       : document.companySnapshot,
+    createdBy: document.createdBy,
   };
 
   return <DocumentPreviewPage document={documentWithLiveCompany as any} />;

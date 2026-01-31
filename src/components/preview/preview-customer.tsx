@@ -8,6 +8,7 @@ interface CustomerSnapshot {
   companyName?: string;
   customerName: string;
   contactPerson?: string;
+  taxId?: string;
   address?: string;
   phone?: string;
   email?: string;
@@ -48,6 +49,13 @@ export function PreviewCustomer({ customer }: PreviewCustomerProps) {
             )}
           </div>
         </div>
+
+        {/* Tax ID */}
+        {customer.taxId && (
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700">
+            <span>เลขประจำตัวผู้เสียภาษี: {customer.taxId}</span>
+          </div>
+        )}
 
         {/* Contact Person (for company type) */}
         {isCompany && customer.contactPerson && (

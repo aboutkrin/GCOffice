@@ -14,6 +14,7 @@ import {
   ClipboardList,
   Tags,
   CalendarOff,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/actions/auth-actions";
@@ -157,6 +158,12 @@ export function AppHeader({ user }: AppHeaderProps) {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem asChild className="cursor-pointer">
+            <Link href="/profile">
+              <User className="size-4" />
+              ตั้งค่าโปรไฟล์
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => signOut()}
             className="cursor-pointer"

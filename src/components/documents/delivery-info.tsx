@@ -82,9 +82,9 @@ export function DeliveryInfo({
       <div className="space-y-3">
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div className="space-y-0.5">
-            <Label className="text-sm font-medium">ข้ามวันเสาร์-อาทิตย์</Label>
+            <Label className="text-sm font-medium">ข้ามวันอาทิตย์</Label>
             <p className="text-xs text-muted-foreground">
-              นับเฉพาะวันจันทร์-ศุกร์
+              นับเฉพาะวันจันทร์-เสาร์
             </p>
           </div>
           <Switch

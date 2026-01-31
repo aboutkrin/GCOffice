@@ -1,14 +1,42 @@
 import Link from "next/link";
 import { Plus, Tags } from "lucide-react";
 
-import { getProducts } from "@/data/products";
+import { Status } from "@/generated/prisma/client";
+import { getProducts, getProductCategories } from "@/data/products";
 import { Button } from "@/components/ui/button";
 import { ProductTable } from "@/components/products/product-table";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-export default async function ProductsPage() {
-  const products = await getProducts();
+interface ProductsPageProps {
+  searchParams: Promise<{
+    search?: string;
+    status?: string;
+    categoryId?: string;
+    page?: string;
+  }>;
+}
+
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
+  const params = await searchParams;
+
+  const page = Math.max(1, Number(params.page) || 1);
+  const status = params.status === "ACTIVE" || params.status === "INACTIVE"
+    ? (params.status as Status)
+    : undefined;
+
+  const [{ products, total }, categories] = await Promise.all([
+    getProducts({
+      search: params.search,
+      status,
+      categoryId: params.categoryId,
+      page,
+      perPage: 10,
+    }),
+    getProductCategories(),
+  ]);
+
+  const totalPages = Math.ceil(total / 10);
 
   return (
     <div className="space-y-6">
@@ -35,7 +63,18 @@ export default async function ProductsPage() {
         </div>
       </div>
 
-      <ProductTable products={products} />
+      <ProductTable
+        products={products}
+        categories={categories}
+        total={total}
+        page={page}
+        totalPages={totalPages}
+        filters={{
+          search: params.search ?? "",
+          status: params.status ?? "",
+          categoryId: params.categoryId ?? "",
+        }}
+      />
     </div>
   );
 }

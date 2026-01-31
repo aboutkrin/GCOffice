@@ -38,6 +38,7 @@ export function CompanyForm({ initialData }: CompanyFormProps) {
     defaultValues: {
       name: initialData?.name ?? "",
       address: initialData?.address ?? "",
+      taxId: initialData?.taxId ?? "",
       phone: initialData?.phone ?? "",
       email: initialData?.email ?? "",
       facebook: initialData?.facebook ?? "",
@@ -47,6 +48,8 @@ export function CompanyForm({ initialData }: CompanyFormProps) {
       bankName: initialData?.bankName ?? "",
       accountName: initialData?.accountName ?? "",
       accountNumber: initialData?.accountNumber ?? "",
+      bankLogoUrl: initialData?.bankLogoUrl ?? "",
+      promptpayQrUrl: initialData?.promptpayQrUrl ?? "",
       vatEnabled: initialData?.vatEnabled ?? true,
       vatRate: initialData?.vatRate ? Number(initialData.vatRate) : 7,
       footerNotes: initialData?.footerNotes ?? "",
@@ -105,6 +108,24 @@ export function CompanyForm({ initialData }: CompanyFormProps) {
                       placeholder="ที่อยู่บริษัท..."
                       rows={3}
                       {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="taxId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>เลขประจำตัวผู้เสียภาษี</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="เลขประจำตัวผู้เสียภาษี"
+                      {...field}
+                      value={field.value ?? ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -290,6 +311,46 @@ export function CompanyForm({ initialData }: CompanyFormProps) {
                         placeholder="xxx-x-xxxxx-x"
                         {...field}
                         value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="bankLogoUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>โลโก้ธนาคาร</FormLabel>
+                    <FormControl>
+                      <ImageUpload
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        bucket="company-logos"
+                        folder="bank-logos"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="promptpayQrUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>QR Code พร้อมเพย์</FormLabel>
+                    <FormControl>
+                      <ImageUpload
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        bucket="company-logos"
+                        folder="promptpay-qr"
                       />
                     </FormControl>
                     <FormMessage />

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 interface ImageUploadProps {
   value: string;
   onChange: (url: string) => void;
-  bucket: "product-images" | "company-logos";
+  bucket: "product-images" | "company-logos" | "signatures";
   folder?: string;
 }
 

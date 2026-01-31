@@ -1,7 +1,7 @@
 "use client";
 
 export async function uploadImage(
-  bucket: "product-images" | "company-logos",
+  bucket: "product-images" | "company-logos" | "signatures",
   file: File,
   folder: string
 ): Promise<string> {

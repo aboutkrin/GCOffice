@@ -11,6 +11,7 @@ import { PreviewFooter } from "./preview-footer";
 interface CompanySnapshot {
   name: string;
   address: string;
+  taxId?: string;
   phone?: string;
   email?: string;
   facebook?: string;
@@ -20,6 +21,8 @@ interface CompanySnapshot {
   bankName?: string;
   accountName?: string;
   accountNumber?: string;
+  bankLogoUrl?: string;
+  promptpayQrUrl?: string;
 }
 
 interface CustomerSnapshot {
@@ -28,6 +31,7 @@ interface CustomerSnapshot {
   companyName?: string;
   customerName: string;
   contactPerson?: string;
+  taxId?: string;
   address?: string;
   phone?: string;
   email?: string;
@@ -76,6 +80,11 @@ export interface DocumentData {
   deliveryDateEnd?: Date;
   lineItems: LineItem[];
   paymentTerms: PaymentTerm[];
+  createdBy?: {
+    firstName?: string | null;
+    lastName?: string | null;
+    signatureUrl?: string | null;
+  };
 }
 
 interface DocumentPreviewProps {
@@ -123,6 +132,8 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
             bankName: doc.companySnapshot.bankName,
             accountName: doc.companySnapshot.accountName,
             accountNumber: doc.companySnapshot.accountNumber,
+            bankLogoUrl: doc.companySnapshot.bankLogoUrl,
+            promptpayQrUrl: doc.companySnapshot.promptpayQrUrl,
           }}
         />
 
@@ -132,6 +143,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           productionDays={doc.productionDays}
           deliveryDateStart={doc.deliveryDateStart}
           deliveryDateEnd={doc.deliveryDateEnd}
+          createdBy={doc.createdBy}
         />
       </div>
     );

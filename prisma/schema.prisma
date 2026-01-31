@@ -12,12 +12,15 @@ datasource db {
 // ============================================================
 
 model Profile {
-  id        String   @id @db.Uuid
-  email     String   @unique
-  fullName  String?  @map("full_name")
-  avatarUrl String?  @map("avatar_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String   @id @db.Uuid
+  email        String   @unique
+  fullName     String?  @map("full_name")
+  avatarUrl    String?  @map("avatar_url")
+  firstName    String?  @map("first_name")
+  lastName     String?  @map("last_name")
+  signatureUrl String?  @map("signature_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   documents Document[]
 
@@ -32,6 +35,7 @@ model Company {
   id      String @id @default(cuid())
   name    String
   address String @db.Text
+  taxId   String? @map("tax_id")
   phone   String?
   email   String?
 
@@ -42,7 +46,9 @@ model Company {
 
   bankName      String? @map("bank_name")
   accountName   String? @map("account_name")
-  accountNumber String? @map("account_number")
+  accountNumber  String? @map("account_number")
+  bankLogoUrl    String? @map("bank_logo_url")
+  promptpayQrUrl String? @map("promptpay_qr_url")
 
   vatEnabled  Boolean @default(true) @map("vat_enabled")
   vatRate     Decimal @default(7) @map("vat_rate") @db.Decimal(5, 2)
@@ -112,6 +118,7 @@ model Customer {
   companyName   String?      @map("company_name")
   customerName  String       @map("customer_name")
   contactPerson String?      @map("contact_person")
+  taxId         String?      @map("tax_id")
   address       String?      @db.Text
   phone         String?
   email         String?
