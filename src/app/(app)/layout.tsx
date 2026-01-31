@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { NavigationProgress } from "@/components/layout/navigation-progress";
 
 export default async function AppLayout({
   children,
@@ -20,6 +22,9 @@ export default async function AppLayout({
 
   return (
     <div className="h-dvh flex overflow-hidden">
+      <Suspense>
+        <NavigationProgress />
+      </Suspense>
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <AppHeader user={user} />
