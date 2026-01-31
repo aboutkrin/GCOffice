@@ -5,6 +5,7 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppHeader } from "@/components/layout/app-header";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
+import { ScrollProvider } from "@/components/layout/scroll-provider";
 
 export default async function AppLayout({
   children,
@@ -26,11 +27,13 @@ export default async function AppLayout({
         <NavigationProgress />
       </Suspense>
       <AppSidebar />
-      <div className="flex-1 flex flex-col min-w-0">
-        <AppHeader user={user} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">{children}</main>
-      </div>
-      <MobileNav />
+      <ScrollProvider>
+        <div className="flex-1 flex flex-col min-w-0">
+          <AppHeader user={user} />
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">{children}</main>
+        </div>
+        <MobileNav />
+      </ScrollProvider>
     </div>
   );
 }

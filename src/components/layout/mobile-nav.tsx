@@ -10,6 +10,7 @@ import {
   FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useScrollHidden } from "@/components/layout/scroll-provider";
 
 const mobileNavItems = [
   {
@@ -42,9 +43,14 @@ const mobileNavItems = [
 
 export function MobileNav() {
   const pathname = usePathname();
+  const scrollHidden = useScrollHidden();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t shadow-lg">
+    <nav className={cn(
+      "fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t shadow-lg",
+      "transition-transform duration-300 ease-in-out",
+      scrollHidden && "translate-y-full"
+    )}>
       <div className="flex items-center justify-around h-16">
         {mobileNavItems.map((item) => {
           const isActive =

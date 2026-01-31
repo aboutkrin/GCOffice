@@ -15,9 +15,13 @@ import {
   ClipboardList,
   Tags,
   CalendarOff,
+  Settings,
+  ChevronDown,
+  ShoppingCart,
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useScrollHidden } from "@/components/layout/scroll-provider";
 import { signOut } from "@/actions/auth-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -43,7 +47,7 @@ interface AppHeaderProps {
   };
 }
 
-const navItems = [
+const mainNavItems = [
   {
     href: "/dashboard",
     label: "แดชบอร์ด",
@@ -65,14 +69,17 @@ const navItems = [
     icon: Package,
   },
   {
-    href: "/categories",
-    label: "หมวดหมู่สินค้า",
-    icon: Tags,
-  },
-  {
     href: "/customers",
     label: "ลูกค้า",
     icon: Users,
+  },
+];
+
+const settingsNavItems = [
+  {
+    href: "/categories",
+    label: "หมวดหมู่สินค้า",
+    icon: Tags,
   },
   {
     href: "/payment-terms",
@@ -89,16 +96,31 @@ const navItems = [
     label: "บริษัท",
     icon: Building2,
   },
+  {
+    href: "/woocommerce",
+    label: "WooCommerce",
+    icon: ShoppingCart,
+  },
 ];
 
 export function AppHeader({ user }: AppHeaderProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const scrollHidden = useScrollHidden();
+  const isSettingsActive = settingsNavItems.some(
+    (item) =>
+      pathname === item.href || pathname.startsWith(item.href + "/")
+  );
+  const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);
 
   const userInitial = user.email ? user.email.charAt(0).toUpperCase() : "U";
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-card px-4 md:px-6">
+    <header className={cn(
+      "sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-card px-4 md:px-6",
+      "transition-[transform,margin-bottom] duration-300 ease-in-out",
+      scrollHidden && "max-md:-translate-y-full max-md:-mb-14"
+    )}>
       {/* Mobile menu button */}
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetTrigger asChild>
@@ -111,8 +133,8 @@ export function AppHeader({ user }: AppHeaderProps) {
           <SheetHeader className="border-b px-6">
             <SheetTitle className="text-left">GCOffice</SheetTitle>
           </SheetHeader>
-          <nav className="flex-1 space-y-1 p-4">
-            {navItems.map((item) => {
+          <nav className="flex-1 overflow-y-auto space-y-1 p-4">
+            {mainNavItems.map((item) => {
               const isActive =
                 pathname === item.href ||
                 pathname.startsWith(item.href + "/");
@@ -135,6 +157,55 @@ export function AppHeader({ user }: AppHeaderProps) {
                 </Link>
               );
             })}
+
+            {/* การตั้งค่า submenu */}
+            <div>
+              <button
+                onClick={() => setSettingsOpen(!settingsOpen)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                  isSettingsActive
+                    ? "text-accent-foreground font-medium"
+                    : "text-muted-foreground hover:bg-accent/50"
+                )}
+              >
+                <Settings className="size-4" />
+                <span className="flex-1 text-left">การตั้งค่า</span>
+                <ChevronDown
+                  className={cn(
+                    "size-4 transition-transform",
+                    settingsOpen ? "rotate-0" : "-rotate-90"
+                  )}
+                />
+              </button>
+              {settingsOpen && (
+                <div className="ml-4 space-y-1 mt-1">
+                  {settingsNavItems.map((item) => {
+                    const isActive =
+                      pathname === item.href ||
+                      pathname.startsWith(item.href + "/");
+                    const Icon = item.icon;
+
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMenuOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                          isActive
+                            ? "bg-accent text-accent-foreground font-medium"
+                            : "text-muted-foreground hover:bg-accent/50"
+                        )}
+                      >
+                        <Icon className="size-4" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </nav>
         </SheetContent>
       </Sheet>
