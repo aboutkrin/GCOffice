@@ -140,5 +140,13 @@ export type DocumentFormData = z.infer<typeof documentSchema>;
 export type LineItemFormData = z.infer<typeof lineItemSchema>;
 export type PaymentTermFormData = z.infer<typeof paymentTermSchema>;
 export type HolidayFormData = z.infer<typeof holidaySchema>;
+export const wooCommerceConfigSchema = z.object({
+  storeUrl: z.string().url("กรุณาระบุ URL ที่ถูกต้อง").min(1, "กรุณาระบุ URL ร้านค้า"),
+  consumerKey: z.string().min(1, "กรุณาระบุ Consumer Key"),
+  consumerSecret: z.string().min(1, "กรุณาระบุ Consumer Secret"),
+  autoSyncEnabled: z.boolean().default(false),
+});
+
 export type PaymentTermTemplateItemFormData = z.infer<typeof paymentTermTemplateItemSchema>;
 export type PaymentTermTemplateFormData = z.infer<typeof paymentTermTemplateSchema>;
+export type WooCommerceConfigFormData = z.infer<typeof wooCommerceConfigSchema>;

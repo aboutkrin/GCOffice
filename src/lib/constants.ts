@@ -45,3 +45,25 @@ export const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "ใช้งาน",
   INACTIVE: "ไม่ใช้งาน",
 };
+
+export const PRODUCT_SOURCE_LABELS: Record<string, string> = {
+  MANUAL: "เพิ่มเอง",
+  WOOCOMMERCE: "WooCommerce",
+};
+
+export const SYNC_STATUS_LABELS: Record<string, string> = {
+  RUNNING: "กำลังซิงค์",
+  COMPLETED: "สำเร็จ",
+  FAILED: "ล้มเหลว",
+};
+
+export const SYNC_STATUS_COLORS: Record<string, string> = {
+  RUNNING: "bg-blue-100 text-blue-800",
+  COMPLETED: "bg-green-100 text-green-800",
+  FAILED: "bg-red-100 text-red-800",
+};
+
+export const SYNC_TRIGGER_LABELS: Record<string, string> = {
+  MANUAL: "ซิงค์เอง",
+  SCHEDULED: "อัตโนมัติ",
+};

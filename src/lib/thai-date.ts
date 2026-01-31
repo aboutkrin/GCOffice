@@ -24,6 +24,15 @@ export function formatThaiDateShort(date: Date): string {
   return `${day}/${month}/${year}`;
 }
 
+export function formatThaiDateTime(date: Date): string {
+  const day = date.getDate();
+  const monthIndex = date.getMonth();
+  const buddhistYear = date.getFullYear() + 543;
+  const hours = date.getHours().toString().padStart(2, "0");
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  return `${day} ${THAI_MONTHS_SHORT[monthIndex]} ${buddhistYear} ${hours}:${minutes}`;
+}
+
 export function toBuddhistYear(date: Date): number {
   return date.getFullYear() + 543;
 }

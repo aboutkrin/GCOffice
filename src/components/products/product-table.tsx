@@ -82,6 +82,16 @@ export function ProductTable({ products }: ProductTableProps) {
     {
       accessorKey: "name",
       header: "ชื่อสินค้า",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          {row.original.name}
+          {row.original.source === "WOOCOMMERCE" && (
+            <Badge className="bg-purple-100 text-purple-800 text-[10px] px-1.5 py-0">
+              WC
+            </Badge>
+          )}
+        </div>
+      ),
     },
     {
       accessorKey: "category.name",

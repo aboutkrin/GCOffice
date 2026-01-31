@@ -91,6 +91,9 @@ model Product {
   categoryId String?          @map("category_id")
   category   ProductCategory? @relation(fields: [categoryId], references: [id])
 
+  woocommerceId Int?          @unique @map("woocommerce_id")
+  source        ProductSource @default(MANUAL)
+
   status    Status   @default(ACTIVE)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -329,4 +332,62 @@ enum DiscountType {
 enum PaymentTermType {
   PERCENTAGE
   AMOUNT
+}
+
+enum ProductSource {
+  MANUAL
+  WOOCOMMERCE
+}
+
+enum SyncStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum SyncTrigger {
+  MANUAL
+  SCHEDULED
+}
+
+// ============================================================
+// WOOCOMMERCE INTEGRATION
+// ============================================================
+
+model WooCommerceConfig {
+  id              String   @id @default(cuid())
+  storeUrl        String   @map("store_url")
+  consumerKey     String   @map("consumer_key")
+  consumerSecret  String   @map("consumer_secret")
+  autoSyncEnabled Boolean  @default(false) @map("auto_sync_enabled")
+  lastSyncAt      DateTime? @map("last_sync_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  syncLogs WooCommerceSyncLog[]
+
+  @@map("woocommerce_configs")
+}
+
+model WooCommerceSyncLog {
+  id       String      @id @default(cuid())
+  configId String      @map("config_id")
+  config   WooCommerceConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+
+  status       SyncStatus
+  trigger      SyncTrigger
+  totalFetched Int        @default(0) @map("total_fetched")
+  created      Int        @default(0)
+  updated      Int        @default(0)
+  skipped      Int        @default(0)
+  failed       Int        @default(0)
+  errorMessage String?    @map("error_message") @db.Text
+
+  startedAt   DateTime  @default(now()) @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  @@index([configId])
+  @@index([startedAt])
+  @@map("woocommerce_sync_logs")
 }

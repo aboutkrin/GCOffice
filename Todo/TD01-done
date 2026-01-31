@@ -1,0 +1,18 @@
+1. Customer ID
+2. Product SKU
+--Product Category
+---Tiles Collection
+----TCL-00001
+3. Product -> ตารางเมตร / กล่อง
+4. Remove show photo button and make all default to yes
+5. เงื่อนไขชำระเงิน maintenance list 
+6. ระยะเวลาการผลิต / จัดส่ง (range) + lead time from document date excluding holiday and weekend (auto date range)
+Bug
+Quantity cannot delete "1"
+
+7. Reorder status 
+draft, confirm, shipped, done, ยกเลิก
+Quotation: ร่าง เสนอราคาแล้ว ยืนยันสั่งซื้อ ตัวอย่าง ยกเลิก 
+Invoice: ร่าง เรียกเก็บแล้ว ชำระแล้ว ยกเลิก
+8. Invoice ยืนยันแล้ว -> ชำระแล้ว
+9. Quotation -> ยืนยันสั่งซื้อ

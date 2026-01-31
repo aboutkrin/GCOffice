@@ -15,6 +15,7 @@ import {
   CalendarOff,
   Settings,
   ChevronDown,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +67,11 @@ const settingsNavItems = [
     href: "/companies",
     label: "บริษัท",
     icon: Building2,
+  },
+  {
+    href: "/woocommerce",
+    label: "WooCommerce",
+    icon: ShoppingCart,
   },
 ];
 
