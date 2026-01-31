@@ -111,7 +111,12 @@ export async function deleteProductCategory(id: string) {
   revalidatePath("/categories");
 }
 
-export async function searchProductsAction(query: string) {
+export async function searchProductsAction(query: string, categoryId?: string) {
   const { searchProducts } = await import("@/data/products");
-  return searchProducts(query);
+  return searchProducts(query, categoryId);
+}
+
+export async function getProductCategoriesAction() {
+  const { getProductCategories } = await import("@/data/products");
+  return getProductCategories();
 }

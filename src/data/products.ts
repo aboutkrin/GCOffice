@@ -58,15 +58,24 @@ export async function getProductCategoryById(id: string) {
   });
 }
 
-export async function searchProducts(query: string) {
+export async function searchProducts(query: string, categoryId?: string) {
+  const where: any = {
+    status: "ACTIVE",
+  };
+
+  if (categoryId) {
+    where.categoryId = categoryId;
+  }
+
+  if (query) {
+    where.OR = [
+      { name: { contains: query, mode: "insensitive" } },
+      { sku: { contains: query, mode: "insensitive" } },
+    ];
+  }
+
   const data = await prisma.product.findMany({
-    where: {
-      status: "ACTIVE",
-      OR: [
-        { name: { contains: query, mode: "insensitive" } },
-        { sku: { contains: query, mode: "insensitive" } },
-      ],
-    },
+    where,
     take: 20,
     orderBy: { name: "asc" },
   });

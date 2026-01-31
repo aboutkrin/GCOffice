@@ -19,7 +19,7 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="h-screen flex overflow-hidden">
+    <div className="h-dvh flex overflow-hidden">
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <AppHeader user={user} />

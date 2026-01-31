@@ -11,7 +11,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { searchProductsAction } from "@/actions/product-actions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  searchProductsAction,
+  getProductCategoriesAction,
+} from "@/actions/product-actions";
 import { Search, Package } from "lucide-react";
 import { formatNumber } from "@/lib/thai-currency";
 
@@ -21,6 +31,11 @@ interface Product {
   name: string;
   basePrice: number;
   imageUrl?: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
 }
 
 interface ProductPickerProps {
@@ -36,8 +51,17 @@ interface ProductPickerProps {
 export function ProductPicker({ onSelect, children }: ProductPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [categoryId, setCategoryId] = useState<string>("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    getProductCategoriesAction().then((data) =>
+      setCategories(data.map((c) => ({ id: c.id, name: c.name })))
+    );
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -45,7 +69,10 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
     const timeout = setTimeout(async () => {
       setLoading(true);
       try {
-        const result = await searchProductsAction(query);
+        const result = await searchProductsAction(
+          query,
+          categoryId || undefined
+        );
         setProducts(result as unknown as Product[]);
       } catch {
         setProducts([]);
@@ -55,7 +82,7 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [query, open]);
+  }, [query, categoryId, open]);
 
   const handleSelect = (product: Product) => {
     onSelect({
@@ -66,6 +93,7 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
     });
     setOpen(false);
     setQuery("");
+    setCategoryId("");
   };
 
   return (
@@ -82,14 +110,34 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
         <DialogHeader>
           <DialogTitle>เลือกสินค้า</DialogTitle>
         </DialogHeader>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="ค้นหาชื่อสินค้าหรือรหัส SKU..."
-            className="pl-9"
-          />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="ค้นหาชื่อสินค้าหรือรหัส SKU..."
+              className="pl-9"
+            />
+          </div>
+          <Select
+            value={categoryId}
+            onValueChange={(value) =>
+              setCategoryId(value === "all" ? "" : value)
+            }
+          >
+            <SelectTrigger className="w-[160px] shrink-0">
+              <SelectValue placeholder="ทุกหมวดหมู่" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกหมวดหมู่</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <ScrollArea className="h-[300px]">
           {loading && (

@@ -7,6 +7,7 @@ interface PreviewFooterProps {
   productionDays?: string;
   deliveryDateStart?: Date;
   deliveryDateEnd?: Date;
+  documentDate?: Date;
   createdBy?: {
     firstName?: string | null;
     lastName?: string | null;
@@ -19,6 +20,7 @@ export function PreviewFooter({
   productionDays,
   deliveryDateStart,
   deliveryDateEnd,
+  documentDate,
   createdBy,
 }: PreviewFooterProps) {
   const hasNotes = footerNotes || productionDays || deliveryDateStart;
@@ -87,7 +89,10 @@ export function PreviewFooter({
             ผู้เสนอราคา / ผู้ออกเอกสาร
           </p>
           <p className="mt-1 text-xs text-gray-500">
-            วันที่ ____/____/________
+            วันที่{" "}
+            {documentDate
+              ? formatThaiDate(new Date(documentDate))
+              : "____/____/________"}
           </p>
         </div>
 

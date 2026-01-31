@@ -143,6 +143,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           productionDays={doc.productionDays}
           deliveryDateStart={doc.deliveryDateStart}
           deliveryDateEnd={doc.deliveryDateEnd}
+          documentDate={doc.documentDate}
           createdBy={doc.createdBy}
         />
       </div>

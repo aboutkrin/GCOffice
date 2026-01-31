@@ -30,8 +30,11 @@ export default async function InvoicePreviewPage({
           tiktok: document.company.tiktok,
           logoUrl: document.company.logoUrl,
           bankName: document.company.bankName,
+          bankLogoUrl: document.company.bankLogoUrl,
           accountName: document.company.accountName,
           accountNumber: document.company.accountNumber,
+          promptpayQrUrl: document.company.promptpayQrUrl,
+          taxId: document.company.taxId,
         }
       : document.companySnapshot,
     createdBy: document.createdBy,

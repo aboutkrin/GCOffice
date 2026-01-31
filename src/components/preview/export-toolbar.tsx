@@ -176,7 +176,7 @@ export function ExportToolbar({
   const handleEdit = useCallback(() => {
     // Determine path based on current URL
     const path = window.location.pathname;
-    const editPath = path.replace("/preview", "/edit");
+    const editPath = path.replace("/preview", "");
     router.push(editPath);
   }, [router]);
 
