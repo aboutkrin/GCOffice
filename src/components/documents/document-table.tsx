@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import html2canvas from "html2canvas-pro";
 import {
   Table,
   TableBody,
@@ -31,7 +32,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DocumentStatusBadge } from "./document-status-badge";
-import { deleteDocument, updateDocumentStatus } from "@/actions/document-actions";
+import { DocumentPreview } from "@/components/preview/document-preview";
+import { deleteDocument, updateDocumentStatus, getDocumentForShare } from "@/actions/document-actions";
+import { shareFile } from "@/lib/share";
 import { formatThaiDate } from "@/lib/thai-date";
 import { formatBaht } from "@/lib/thai-currency";
 import {
@@ -40,7 +43,7 @@ import {
   QUOTATION_STATUS_OPTIONS,
   INVOICE_STATUS_OPTIONS,
 } from "@/lib/constants";
-import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal } from "lucide-react";
+import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal, Loader2 } from "lucide-react";
 
 interface DocumentTableProps {
   documents: any[];
@@ -54,6 +57,9 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareDocData, setShareDocData] = useState<any>(null);
+  const offscreenRef = useRef<HTMLDivElement>(null);
 
   const handleStatusChange = (docId: string, newStatus: string) => {
     startTransition(async () => {
@@ -68,6 +74,91 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
       }
     });
   };
+
+  const handleShare = useCallback(async (docId: string) => {
+    setIsSharing(true);
+    try {
+      const data = await getDocumentForShare(docId);
+      setShareDocData(data);
+    } catch {
+      toast.error("ไม่สามารถโหลดข้อมูลเอกสารได้");
+      setIsSharing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!shareDocData || !offscreenRef.current) return;
+
+    const el = offscreenRef.current;
+
+    // Wait for all images to load
+    const images = el.querySelectorAll("img");
+    const imagePromises = Array.from(images).map((img) => {
+      if (img.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      });
+    });
+
+    let cancelled = false;
+
+    Promise.all(imagePromises).then(async () => {
+      if (cancelled) return;
+      // Small delay for layout
+      await new Promise((r) => setTimeout(r, 300));
+      if (cancelled) return;
+
+      try {
+        // Force A4 width for capture
+        el.style.width = "210mm";
+        el.style.maxWidth = "none";
+        el.style.minHeight = "297mm";
+        el.style.padding = "2rem";
+        await new Promise((r) => setTimeout(r, 100));
+
+        const canvas = await html2canvas(el, {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
+
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92);
+        });
+
+        if (!blob) {
+          toast.error("ไม่สามารถสร้างไฟล์สำหรับแชร์ได้");
+          return;
+        }
+
+        const file = new File([blob], `${shareDocData.documentNumber}.jpg`, {
+          type: "image/jpeg",
+        });
+
+        const shared = await shareFile({
+          title: shareDocData.documentNumber,
+          text: `เอกสาร ${shareDocData.documentNumber}`,
+          files: [file],
+        });
+
+        if (!shared) {
+          toast.info("อุปกรณ์ไม่รองรับการแชร์ไฟล์");
+        }
+      } catch (error) {
+        console.error("Share failed:", error);
+        toast.error("ไม่สามารถแชร์ไฟล์ได้");
+      } finally {
+        setShareDocData(null);
+        setIsSharing(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shareDocData]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -187,7 +278,8 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
                       size="icon"
                       className="h-8 w-8"
                       title="แชร์"
-                      onClick={() => router.push(`${basePath}/${doc.id}/preview`)}
+                      disabled={isSharing}
+                      onClick={() => handleShare(doc.id)}
                     >
                       <Share2 className="h-4 w-4" />
                     </Button>
@@ -266,7 +358,8 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
                       ดู / แก้ไข
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      onClick={() => router.push(`${basePath}/${doc.id}/preview`)}
+                      disabled={isSharing}
+                      onClick={() => handleShare(doc.id)}
                     >
                       <Share2 className="h-4 w-4 mr-2" />
                       แชร์
@@ -297,6 +390,33 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
           </div>
         ))}
       </div>
+
+      {/* Off-screen preview for direct share */}
+      {shareDocData && (
+        <div
+          style={{
+            position: "fixed",
+            left: "-9999px",
+            top: 0,
+            width: "210mm",
+            zIndex: -1,
+          }}
+        >
+          <DocumentPreview ref={offscreenRef} document={shareDocData} />
+        </div>
+      )}
+
+      {/* Share loading overlay */}
+      {isSharing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="flex items-center gap-3 rounded-lg bg-white px-6 py-4 shadow-xl">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-sm font-medium text-gray-700">
+              กำลังสร้างไฟล์...
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog

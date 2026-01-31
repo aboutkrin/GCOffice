@@ -88,6 +88,16 @@ export const holidaySchema = z.object({
   isRecurring: z.boolean().default(false),
 });
 
+export const holidayRangeSchema = z.object({
+  name: z.string().min(1, "กรุณาระบุชื่อวันหยุด"),
+  startDate: z.coerce.date({ error: "กรุณาเลือกวันที่เริ่มต้น" }),
+  endDate: z.coerce.date({ error: "กรุณาเลือกวันที่สิ้นสุด" }),
+  isRecurring: z.boolean().default(false),
+}).refine(
+  (data) => data.endDate >= data.startDate,
+  { message: "วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น", path: ["endDate"] }
+);
+
 export const documentSchema = z.object({
   type: z.enum(["QUOTATION", "INVOICE"]),
   documentDate: z.coerce.date(),
@@ -144,6 +154,7 @@ export type DocumentFormData = z.infer<typeof documentSchema>;
 export type LineItemFormData = z.infer<typeof lineItemSchema>;
 export type PaymentTermFormData = z.infer<typeof paymentTermSchema>;
 export type HolidayFormData = z.infer<typeof holidaySchema>;
+export type HolidayRangeFormData = z.infer<typeof holidayRangeSchema>;
 export const wooCommerceConfigSchema = z.object({
   storeUrl: z.string().url("กรุณาระบุ URL ที่ถูกต้อง").min(1, "กรุณาระบุ URL ร้านค้า"),
   consumerKey: z.string().min(1, "กรุณาระบุ Consumer Key"),

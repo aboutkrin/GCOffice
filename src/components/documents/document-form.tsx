@@ -173,6 +173,17 @@ export function DocumentForm({
 
   const vatEnabled = form.watch("vatEnabled");
   const vatRate = form.watch("vatRate");
+  const selectedCompanyId = form.watch("companyId");
+
+  // Pre-fill footerNotes from company defaults when creating a new document
+  useEffect(() => {
+    if (!isEditing && selectedCompanyId) {
+      const selected = companies.find((c: any) => c.id === selectedCompanyId);
+      if (selected?.footerNotes) {
+        setFooterNotes(selected.footerNotes);
+      }
+    }
+  }, [selectedCompanyId, companies, isEditing]);
 
   const pricing = usePricing({
     subtotal,

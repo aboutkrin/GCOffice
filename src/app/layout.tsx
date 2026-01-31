@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Sarabun } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
@@ -10,9 +10,24 @@ const sarabun = Sarabun({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#1a1a1a",
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "GCOffice - ระบบใบเสนอราคา",
   description: "ระบบจัดทำใบเสนอราคาและใบแจ้งหนี้",
+  applicationName: "GCOffice",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "GCOffice",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export default function RootLayout({
