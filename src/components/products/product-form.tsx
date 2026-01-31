@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2, Plus } from "lucide-react";
 
-import { productSchema, type ProductFormData } from "@/lib/validators";
+import { productSchema, updateProductSchema, type ProductFormData, type UpdateProductFormData } from "@/lib/validators";
 import { createProduct, updateProduct, createProductCategory } from "@/actions/product-actions";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface ProductFormProps {
   initialData?: any;
@@ -49,25 +50,26 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
   const [isPending, startTransition] = useTransition();
   const [categoryList, setCategoryList] = useState(categories);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryPrefix, setNewCategoryPrefix] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const isEditing = !!initialData;
 
   const form = useForm<ProductFormData>({
-    resolver: zodResolver(productSchema) as any,
+    resolver: zodResolver(isEditing ? updateProductSchema : productSchema) as any,
     defaultValues: {
-      sku: initialData?.sku ?? "",
       name: initialData?.name ?? "",
       description: initialData?.description ?? "",
       categoryId: initialData?.categoryId ?? "",
-      width: initialData?.width ? Number(initialData.width) : undefined,
-      height: initialData?.height ? Number(initialData.height) : undefined,
-      sizeUnit: initialData?.sizeUnit ?? "cm",
       basePrice: initialData?.basePrice ? Number(initialData.basePrice) : 0,
       imageUrl: initialData?.imageUrl ?? "",
       status: initialData?.status ?? "ACTIVE",
     },
   });
 
-  function onSubmit(values: ProductFormData) {
+  const selectedCategoryId = form.watch("categoryId");
+  const selectedCategory = categoryList.find((c) => c.id === selectedCategoryId);
+
+  function onSubmit(values: ProductFormData | UpdateProductFormData) {
     startTransition(async () => {
       try {
         if (initialData) {
@@ -85,12 +87,16 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
   }
 
   async function handleAddCategory() {
-    if (!newCategoryName.trim()) return;
+    if (!newCategoryName.trim() || !newCategoryPrefix.trim()) return;
     try {
-      const category = await createProductCategory(newCategoryName.trim());
+      const category = await createProductCategory({
+        name: newCategoryName.trim(),
+        prefix: newCategoryPrefix.trim().toUpperCase(),
+      });
       setCategoryList((prev) => [...prev, category]);
       form.setValue("categoryId", category.id);
       setNewCategoryName("");
+      setNewCategoryPrefix("");
       setDialogOpen(false);
       toast.success("เพิ่มหมวดหมู่เรียบร้อยแล้ว");
     } catch (error: any) {
@@ -107,19 +113,18 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="sku"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>รหัสสินค้า (SKU)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="เช่น PRD-001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <div>
+                <Label className="mb-2 block">รหัสสินค้า (SKU)</Label>
+                {isEditing ? (
+                  <Input value={initialData.sku} disabled />
+                ) : (
+                  <div className="flex h-9 w-full items-center rounded-md border bg-muted px-3 text-sm text-muted-foreground">
+                    {selectedCategory?.prefix
+                      ? `${selectedCategory.prefix}-XXXX (สร้างอัตโนมัติ)`
+                      : "เลือกหมวดหมู่เพื่อสร้างรหัสอัตโนมัติ"}
+                  </div>
                 )}
-              />
+              </div>
 
               <FormField
                 control={form.control}
@@ -156,7 +161,7 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
                         <SelectContent>
                           {categoryList.map((cat) => (
                             <SelectItem key={cat.id} value={cat.id}>
-                              {cat.name}
+                              {cat.prefix ? `${cat.prefix} - ${cat.name}` : cat.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -172,21 +177,40 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
                             <DialogTitle>เพิ่มหมวดหมู่ใหม่</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-4">
-                            <Input
-                              placeholder="ชื่อหมวดหมู่"
-                              value={newCategoryName}
-                              onChange={(e) => setNewCategoryName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  handleAddCategory();
+                            <div>
+                              <Label className="mb-2 block">ชื่อหมวดหมู่</Label>
+                              <Input
+                                placeholder="เช่น ป้ายผ้า"
+                                value={newCategoryName}
+                                onChange={(e) => setNewCategoryName(e.target.value)}
+                              />
+                            </div>
+                            <div>
+                              <Label className="mb-2 block">รหัสนำหน้า (Prefix)</Label>
+                              <Input
+                                placeholder="เช่น TCL"
+                                value={newCategoryPrefix}
+                                onChange={(e) =>
+                                  setNewCategoryPrefix(
+                                    e.target.value.toUpperCase().replace(/[^A-Z]/g, "")
+                                  )
                                 }
-                              }}
-                            />
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleAddCategory();
+                                  }
+                                }}
+                              />
+                              <p className="text-sm text-muted-foreground mt-1">
+                                ใช้สำหรับสร้างรหัสสินค้าอัตโนมัติ เช่น TCL-0001
+                              </p>
+                            </div>
                             <Button
                               type="button"
                               onClick={handleAddCategory}
                               className="w-full"
+                              disabled={!newCategoryName.trim() || !newCategoryPrefix.trim()}
                             >
                               เพิ่มหมวดหมู่
                             </Button>
@@ -211,93 +235,14 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
                         step="0.01"
                         placeholder="0.00"
                         {...field}
-                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                        value={field.value || ""}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-
-            <div>
-              <FormLabel className="mb-2 block">ขนาด กว้าง x สูง</FormLabel>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <FormField
-                  control={form.control}
-                  name="width"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="กว้าง"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value ? e.target.valueAsNumber : undefined
-                            )
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="height"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="สูง"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={(e) =>
-                            field.onChange(
-                              e.target.value ? e.target.valueAsNumber : undefined
-                            )
-                          }
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="sizeUnit"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value ?? "cm"}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="หน่วย" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="mm">มม.</SelectItem>
-                          <SelectItem value="cm">ซม.</SelectItem>
-                          <SelectItem value="m">ม.</SelectItem>
-                          <SelectItem value="in">นิ้ว</SelectItem>
-                          <SelectItem value="ft">ฟุต</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
             </div>
 
             <FormField

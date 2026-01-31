@@ -63,6 +63,13 @@ export function CustomerTable({ customers }: CustomerTableProps) {
 
   const columns: ColumnDef<any>[] = [
     {
+      accessorKey: "code",
+      header: "รหัสลูกค้า",
+      cell: ({ row }) => (
+        <span className="font-mono text-xs">{row.original.code}</span>
+      ),
+    },
+    {
       accessorKey: "customerName",
       header: "ชื่อ",
       cell: ({ row }) => (
@@ -155,11 +162,12 @@ export function CustomerTable({ customers }: CustomerTableProps) {
     getFilteredRowModel: getFilteredRowModel(),
     globalFilterFn: (row, columnId, filterValue) => {
       const search = filterValue.toLowerCase();
+      const code = String(row.original.code ?? "").toLowerCase();
       const name = String(row.original.customerName ?? "").toLowerCase();
       const company = String(row.original.companyName ?? "").toLowerCase();
       const phone = String(row.original.phone ?? "").toLowerCase();
       return (
-        name.includes(search) || company.includes(search) || phone.includes(search)
+        code.includes(search) || name.includes(search) || company.includes(search) || phone.includes(search)
       );
     },
   });

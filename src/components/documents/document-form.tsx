@@ -52,6 +52,7 @@ import { PaymentTermsSection } from "./payment-terms";
 import { DeliveryInfo } from "./delivery-info";
 
 import { createDocument, updateDocument } from "@/actions/document-actions";
+import { calculateDeliveryDates, type Holiday } from "@/lib/delivery-date";
 
 // Form schema for top-level fields only (line items & payment terms handled by hooks)
 const formSchema = z.object({
@@ -70,6 +71,8 @@ interface DocumentFormProps {
   companies: any[];
   customers: any[];
   quotations?: any[];
+  paymentTermTemplates?: any[];
+  holidays?: Holiday[];
 }
 
 export function DocumentForm({
@@ -78,6 +81,8 @@ export function DocumentForm({
   companies,
   customers,
   quotations,
+  paymentTermTemplates,
+  holidays = [],
 }: DocumentFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
@@ -90,15 +95,21 @@ export function DocumentForm({
   const [footerNotes, setFooterNotes] = useState<string>(
     initialData?.footerNotes || ""
   );
-  const [productionDays, setProductionDays] = useState<string>(
-    initialData?.productionDays || ""
+  const [productionDaysMin, setProductionDaysMin] = useState<number | null>(
+    initialData?.productionDaysMin ?? null
   );
-  const [deliveryDateStart, setDeliveryDateStart] = useState<
-    Date | undefined
-  >(initialData?.deliveryDateStart ? new Date(initialData.deliveryDateStart) : undefined);
-  const [deliveryDateEnd, setDeliveryDateEnd] = useState<Date | undefined>(
-    initialData?.deliveryDateEnd ? new Date(initialData.deliveryDateEnd) : undefined
+  const [productionDaysMax, setProductionDaysMax] = useState<number | null>(
+    initialData?.productionDaysMax ?? null
   );
+  const [skipWeekends, setSkipWeekends] = useState<boolean>(
+    initialData?.skipWeekends ?? false
+  );
+  const [skipHolidays, setSkipHolidays] = useState<boolean>(
+    initialData?.skipHolidays ?? false
+  );
+  const [productionDaysText, setProductionDaysText] = useState<string>("");
+  const [deliveryDateStart, setDeliveryDateStart] = useState<Date | null>(null);
+  const [deliveryDateEnd, setDeliveryDateEnd] = useState<Date | null>(null);
   const [sourceQuotationId, setSourceQuotationId] = useState<string | undefined>(
     initialData?.sourceQuotationId || undefined
   );
@@ -176,6 +187,24 @@ export function DocumentForm({
     recalculate(pricing.grandTotal);
   }, [pricing.grandTotal, recalculate]);
 
+  // Watch documentDate for delivery date calculation
+  const documentDate = form.watch("documentDate");
+
+  // Auto-calculate delivery dates
+  useEffect(() => {
+    const result = calculateDeliveryDates({
+      documentDate,
+      daysMin: productionDaysMin,
+      daysMax: productionDaysMax,
+      skipWeekends,
+      skipHolidays,
+      holidays,
+    });
+    setProductionDaysText(result.productionDaysText);
+    setDeliveryDateStart(result.deliveryDateStart);
+    setDeliveryDateEnd(result.deliveryDateEnd);
+  }, [documentDate, productionDaysMin, productionDaysMax, skipWeekends, skipHolidays, holidays]);
+
   // Wrap updateTerm to also recalculate after value/type changes
   const handleUpdateTerm = useCallback(
     (id: string, updates: Partial<PaymentTerm>) => {
@@ -183,6 +212,25 @@ export function DocumentForm({
       recalculate(pricing.grandTotal);
     },
     [updateTerm, recalculate, pricing.grandTotal]
+  );
+
+  const handleApplyTemplate = useCallback(
+    (templateItems: any[]) => {
+      const newTerms: PaymentTerm[] = templateItems.map((item: any, idx: number) => ({
+        id: Math.random().toString(36).substr(2, 9),
+        sequence: idx + 1,
+        name: item.name || "",
+        type: item.type || "PERCENTAGE",
+        value: Number(item.value) || 0,
+        calculatedAmount:
+          item.type === "PERCENTAGE"
+            ? pricing.grandTotal * (Number(item.value) / 100)
+            : Number(item.value),
+        note: item.note || undefined,
+      }));
+      setTerms(newTerms);
+    },
+    [setTerms, pricing.grandTotal]
   );
 
   const handleQuotationSelect = (quotationId: string) => {
@@ -230,15 +278,12 @@ export function DocumentForm({
     }));
     setTerms(newTerms);
 
-    // Pre-fill footer notes, production days, delivery dates
+    // Pre-fill footer notes and production day settings
     setFooterNotes(q.footerNotes || "");
-    setProductionDays(q.productionDays || "");
-    setDeliveryDateStart(
-      q.deliveryDateStart ? new Date(q.deliveryDateStart) : undefined
-    );
-    setDeliveryDateEnd(
-      q.deliveryDateEnd ? new Date(q.deliveryDateEnd) : undefined
-    );
+    setProductionDaysMin(q.productionDaysMin ?? null);
+    setProductionDaysMax(q.productionDaysMax ?? null);
+    setSkipWeekends(q.skipWeekends ?? false);
+    setSkipHolidays(q.skipHolidays ?? false);
   };
 
   const assembleData = (formData: FormData) => {
@@ -253,7 +298,11 @@ export function DocumentForm({
       vatEnabled: formData.vatEnabled,
       vatRate: formData.vatRate,
       footerNotes: footerNotes || undefined,
-      productionDays: productionDays || undefined,
+      productionDays: productionDaysText || undefined,
+      productionDaysMin: productionDaysMin ?? undefined,
+      productionDaysMax: productionDaysMax ?? undefined,
+      skipWeekends,
+      skipHolidays,
       deliveryDateStart: deliveryDateStart || null,
       deliveryDateEnd: deliveryDateEnd || null,
       lineItems: items.map((item) => ({
@@ -520,6 +569,8 @@ export function DocumentForm({
               updateTerm={handleUpdateTerm}
               totalAmount={paymentTotalAmount}
               grandTotal={pricing.grandTotal}
+              paymentTermTemplates={paymentTermTemplates}
+              onApplyTemplate={handleApplyTemplate}
             />
           </CardContent>
         </Card>
@@ -533,12 +584,17 @@ export function DocumentForm({
             <DeliveryInfo
               footerNotes={footerNotes}
               onFooterNotesChange={setFooterNotes}
-              productionDays={productionDays}
-              onProductionDaysChange={setProductionDays}
+              productionDaysMin={productionDaysMin}
+              onProductionDaysMinChange={setProductionDaysMin}
+              productionDaysMax={productionDaysMax}
+              onProductionDaysMaxChange={setProductionDaysMax}
+              skipWeekends={skipWeekends}
+              onSkipWeekendsChange={setSkipWeekends}
+              skipHolidays={skipHolidays}
+              onSkipHolidaysChange={setSkipHolidays}
+              productionDaysText={productionDaysText}
               deliveryDateStart={deliveryDateStart}
-              onDeliveryDateStartChange={(val) => setDeliveryDateStart(val)}
               deliveryDateEnd={deliveryDateEnd}
-              onDeliveryDateEndChange={(val) => setDeliveryDateEnd(val)}
             />
           </CardContent>
         </Card>

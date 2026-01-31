@@ -62,11 +62,13 @@ model Company {
 // ============================================================
 
 model ProductCategory {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(cuid())
+  name       String   @unique
+  prefix     String?  @unique
+  lastNumber Int      @default(0) @map("last_number")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   products Product[]
 
@@ -102,6 +104,7 @@ model Product {
 
 model Customer {
   id            String       @id @default(cuid())
+  code          String       @unique @map("customer_code")
   type          CustomerType
   companyName   String?      @map("company_name")
   customerName  String       @map("customer_name")
@@ -161,6 +164,10 @@ model Document {
 
   footerNotes       String?   @map("footer_notes") @db.Text
   productionDays    String?   @map("production_days")
+  productionDaysMin Int?      @map("production_days_min")
+  productionDaysMax Int?      @map("production_days_max")
+  skipWeekends      Boolean   @default(false) @map("skip_weekends")
+  skipHolidays      Boolean   @default(false) @map("skip_holidays")
   deliveryDateStart DateTime? @map("delivery_date_start") @db.Date
   deliveryDateEnd   DateTime? @map("delivery_date_end") @db.Date
 
@@ -226,6 +233,56 @@ model DocumentPaymentTerm {
 }
 
 // ============================================================
+// PAYMENT TERM TEMPLATE
+// ============================================================
+
+model PaymentTermTemplate {
+  id     String @id @default(cuid())
+  name   String
+  status Status @default(ACTIVE)
+
+  items     PaymentTermTemplateItem[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("payment_term_templates")
+}
+
+model PaymentTermTemplateItem {
+  id         String              @id @default(cuid())
+  templateId String              @map("template_id")
+  template   PaymentTermTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  sequence Int
+  name     String
+  type     PaymentTermType
+  value    Decimal  @db.Decimal(12, 2)
+  note     String?  @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([templateId])
+  @@map("payment_term_template_items")
+}
+
+// ============================================================
+// HOLIDAY
+// ============================================================
+
+model Holiday {
+  id          String   @id @default(cuid())
+  name        String
+  date        DateTime @db.Date
+  isRecurring Boolean  @default(false) @map("is_recurring")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@map("holidays")
+}
+
+// ============================================================
 // ENUMS
 // ============================================================
 
@@ -256,8 +313,11 @@ enum DocumentType {
 
 enum DocumentStatus {
   DRAFT
-  SENT
+  QUOTED
   CONFIRMED
+  SAMPLE
+  BILLED
+  PAID
   CANCELLED
 }
 

@@ -13,6 +13,7 @@ import {
 import { formatNumber } from "@/lib/thai-currency";
 import { Plus, Trash2, AlertTriangle } from "lucide-react";
 import type { PaymentTerm } from "@/hooks/use-payment-terms";
+import { PaymentTermTemplateSelect } from "./payment-term-template-select";
 
 interface PaymentTermsProps {
   terms: PaymentTerm[];
@@ -21,6 +22,8 @@ interface PaymentTermsProps {
   updateTerm: (id: string, updates: Partial<PaymentTerm>) => void;
   totalAmount: number;
   grandTotal: number;
+  paymentTermTemplates?: any[];
+  onApplyTemplate?: (templateItems: any[]) => void;
 }
 
 export function PaymentTermsSection({
@@ -30,18 +33,29 @@ export function PaymentTermsSection({
   updateTerm,
   totalAmount,
   grandTotal,
+  paymentTermTemplates,
+  onApplyTemplate,
 }: PaymentTermsProps) {
   const mismatch =
     terms.length > 0 && Math.abs(totalAmount - grandTotal) > 0.01;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
         <Label className="text-base font-semibold">เงื่อนไขการชำระเงิน</Label>
-        <Button type="button" variant="outline" size="sm" onClick={addTerm}>
-          <Plus className="h-4 w-4 mr-1" />
-          เพิ่มงวดชำระ
-        </Button>
+        <div className="flex items-center gap-2">
+          {paymentTermTemplates && paymentTermTemplates.length > 0 && onApplyTemplate && (
+            <PaymentTermTemplateSelect
+              templates={paymentTermTemplates}
+              hasExistingTerms={terms.length > 0}
+              onApply={onApplyTemplate}
+            />
+          )}
+          <Button type="button" variant="outline" size="sm" onClick={addTerm}>
+            <Plus className="h-4 w-4 mr-1" />
+            เพิ่มงวดชำระ
+          </Button>
+        </div>
       </div>
 
       {terms.length === 0 && (

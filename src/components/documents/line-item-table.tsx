@@ -2,9 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -13,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Image } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { ProductPicker } from "./product-picker";
 import { formatNumber } from "@/lib/thai-currency";
 import type { LineItem } from "@/hooks/use-line-items";
@@ -54,7 +53,6 @@ export function LineItemTable({
               <TableHead className="w-[90px] text-center">จำนวน</TableHead>
               <TableHead className="w-[120px] text-right">ราคาต่อหน่วย</TableHead>
               <TableHead className="w-[120px] text-right">รวม</TableHead>
-              <TableHead className="w-[60px] text-center">รูป</TableHead>
               <TableHead className="w-[50px]" />
             </TableRow>
           </TableHeader>
@@ -62,7 +60,7 @@ export function LineItemTable({
             {items.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={7}
                   className="text-center text-muted-foreground py-8"
                 >
                   ยังไม่มีรายการสินค้า กดปุ่ม &quot;เพิ่มรายการ&quot;
@@ -110,12 +108,15 @@ export function LineItemTable({
                   <Input
                     type="number"
                     min={1}
-                    value={item.quantity}
+                    value={item.quantity || ""}
                     onChange={(e) =>
                       updateItem(item.id, {
-                        quantity: parseInt(e.target.value) || 1,
+                        quantity: parseInt(e.target.value) || 0,
                       })
                     }
+                    onBlur={() => {
+                      if (!item.quantity) updateItem(item.id, { quantity: 1 });
+                    }}
                     className="h-9 text-center"
                   />
                 </TableCell>
@@ -135,17 +136,6 @@ export function LineItemTable({
                 </TableCell>
                 <TableCell className="text-right font-medium">
                   {formatNumber(item.lineTotal)}
-                </TableCell>
-                <TableCell className="text-center">
-                  <div className="flex items-center justify-center">
-                    <Switch
-                      checked={item.showImage}
-                      onCheckedChange={(checked) =>
-                        updateItem(item.id, { showImage: checked })
-                      }
-                      size="sm"
-                    />
-                  </div>
                 </TableCell>
                 <TableCell>
                   <Button
@@ -225,12 +215,15 @@ export function LineItemTable({
                 <Input
                   type="number"
                   min={1}
-                  value={item.quantity}
+                  value={item.quantity || ""}
                   onChange={(e) =>
                     updateItem(item.id, {
-                      quantity: parseInt(e.target.value) || 1,
+                      quantity: parseInt(e.target.value) || 0,
                     })
                   }
+                  onBlur={() => {
+                    if (!item.quantity) updateItem(item.id, { quantity: 1 });
+                  }}
                   className="h-9"
                 />
               </div>
@@ -253,20 +246,7 @@ export function LineItemTable({
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t">
-              <div className="flex items-center gap-2">
-                <Image className="h-4 w-4 text-muted-foreground" />
-                <Label className="text-xs text-muted-foreground">
-                  แสดงรูป
-                </Label>
-                <Switch
-                  checked={item.showImage}
-                  onCheckedChange={(checked) =>
-                    updateItem(item.id, { showImage: checked })
-                  }
-                  size="sm"
-                />
-              </div>
+            <div className="flex items-center justify-end pt-2 border-t">
               <span className="font-semibold">
                 {formatNumber(item.lineTotal)} บาท
               </span>

@@ -5,8 +5,11 @@ import { DocumentStatus } from "@/generated/prisma/client";
 
 const VALID_STATUSES: string[] = [
   DocumentStatus.DRAFT,
-  DocumentStatus.SENT,
+  DocumentStatus.QUOTED,
   DocumentStatus.CONFIRMED,
+  DocumentStatus.SAMPLE,
+  DocumentStatus.BILLED,
+  DocumentStatus.PAID,
   DocumentStatus.CANCELLED,
 ];
 
@@ -36,7 +39,7 @@ export async function PATCH(
     // Validate status
     if (!status || !VALID_STATUSES.includes(status)) {
       return NextResponse.json(
-        { error: "สถานะไม่ถูกต้อง กรุณาระบุ DRAFT, SENT, CONFIRMED หรือ CANCELLED" },
+        { error: "สถานะไม่ถูกต้อง" },
         { status: 400 }
       );
     }

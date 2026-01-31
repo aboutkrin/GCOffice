@@ -34,7 +34,9 @@ GCOffice is a Thai-language business document management app (quotations & invoi
 
 ### Database (Prisma + PostgreSQL)
 
-Schema at `prisma/schema.prisma`. Key models:
+Schema at `prisma/schema.prisma`. Prisma client is generated to `src/generated/prisma/` and uses `@prisma/adapter-pg` for connection pooling. The client singleton lives in `src/lib/prisma.ts`.
+
+Key models:
 - **Profile** — Synced from Supabase auth.users via DB trigger
 - **Company** — Business entities with logo, bank details, VAT config
 - **Customer** — COMPANY or INDIVIDUAL type, with lead source tracking
@@ -58,7 +60,7 @@ Supabase Auth with email/password. Four client configurations in `src/lib/supaba
 ### UI Stack
 
 - **shadcn/ui** (new-york style) with Radix primitives — components in `src/components/ui/`
-- **Tailwind CSS v4** — styling
+- **Tailwind CSS v4** — no `tailwind.config` file; all theme config is in `src/app/globals.css` via `@theme inline`
 - **react-hook-form** + **@hookform/resolvers** — form state with Zod validation
 - **@tanstack/react-table** — data tables
 - **Sarabun** Google Font for Thai text
@@ -93,6 +95,10 @@ Supabase Auth with email/password. Four client configurations in `src/lib/supaba
 
 - Path alias: `@/*` maps to `src/*`
 - `src/lib/utils.ts` exports `cn()` (clsx + tailwind-merge) and `serialize()` for Prisma Decimal-to-plain conversion
-- All user-facing text is in Thai
+- Call `serialize()` on Prisma query results before passing to Client Components (Decimal/Date objects are not serializable)
+- Server actions call `revalidatePath()` after mutations for cache invalidation
+- All user-facing text is in Thai; HTML lang is set to `"th"`
 - Zod validation error messages are in Thai
 - Icons from `lucide-react`
+- Remote images from Supabase storage are allowed in `next.config.ts` (`*.supabase.co`)
+- No test framework is configured; there are no tests in this project

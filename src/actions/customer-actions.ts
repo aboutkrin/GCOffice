@@ -6,7 +6,21 @@ import { revalidatePath } from "next/cache";
 
 export async function createCustomer(data: unknown) {
   const validated = customerSchema.parse(data);
-  const customer = await prisma.customer.create({ data: validated });
+
+  const customer = await prisma.$transaction(async (tx) => {
+    const last = await tx.customer.findFirst({
+      orderBy: { code: "desc" },
+      select: { code: true },
+    });
+
+    const lastNum = last ? parseInt(last.code.replace("CUS-", ""), 10) : 0;
+    const nextCode = `CUS-${String(lastNum + 1).padStart(4, "0")}`;
+
+    return tx.customer.create({
+      data: { ...validated, code: nextCode },
+    });
+  });
+
   revalidatePath("/customers");
   return customer;
 }

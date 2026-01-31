@@ -35,7 +35,15 @@ export async function getProductById(id: string) {
 
 export async function getProductCategories() {
   return prisma.productCategory.findMany({
+    include: { _count: { select: { products: true } } },
     orderBy: { sortOrder: "asc" },
+  });
+}
+
+export async function getProductCategoryById(id: string) {
+  return prisma.productCategory.findUnique({
+    where: { id },
+    include: { _count: { select: { products: true } } },
   });
 }
 

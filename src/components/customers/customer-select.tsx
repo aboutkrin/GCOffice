@@ -106,7 +106,7 @@ export function CustomerSelect({ value, onSelect, customers: initialCustomers }:
                       {customer.customerName}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {[customer.companyName, customer.phone]
+                      {[customer.code, customer.companyName, customer.phone]
                         .filter(Boolean)
                         .join(" | ")}
                     </span>

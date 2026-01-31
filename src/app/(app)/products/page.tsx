@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Tags } from "lucide-react";
 
 import { getProducts } from "@/data/products";
 import { Button } from "@/components/ui/button";
@@ -19,12 +19,20 @@ export default async function ProductsPage() {
             จัดการรายการสินค้าทั้งหมด
           </p>
         </div>
-        <Button asChild>
-          <Link href="/products/new">
-            <Plus className="size-4" />
-            เพิ่มสินค้า
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/categories">
+              <Tags className="size-4" />
+              หมวดหมู่
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href="/products/new">
+              <Plus className="size-4" />
+              เพิ่มสินค้า
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <ProductTable products={products} />

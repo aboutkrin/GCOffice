@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -9,10 +10,15 @@ import {
   Building2,
   FileText,
   Receipt,
+  ClipboardList,
+  Tags,
+  CalendarOff,
+  Settings,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const mainNavItems = [
   {
     href: "/dashboard",
     label: "แดชบอร์ด",
@@ -38,6 +44,24 @@ const navItems = [
     label: "ลูกค้า",
     icon: Users,
   },
+];
+
+const settingsNavItems = [
+  {
+    href: "/categories",
+    label: "หมวดหมู่สินค้า",
+    icon: Tags,
+  },
+  {
+    href: "/payment-terms",
+    label: "เงื่อนไขชำระเงิน",
+    icon: ClipboardList,
+  },
+  {
+    href: "/holidays",
+    label: "วันหยุด",
+    icon: CalendarOff,
+  },
   {
     href: "/companies",
     label: "บริษัท",
@@ -47,6 +71,11 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const isSettingsActive = settingsNavItems.some(
+    (item) =>
+      pathname === item.href || pathname.startsWith(item.href + "/")
+  );
+  const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col bg-card border-r">
@@ -59,7 +88,7 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto space-y-1 p-4">
-        {navItems.map((item) => {
+        {mainNavItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           const Icon = item.icon;
@@ -80,6 +109,54 @@ export function AppSidebar() {
             </Link>
           );
         })}
+
+        {/* การตั้งค่า submenu */}
+        <div>
+          <button
+            onClick={() => setSettingsOpen(!settingsOpen)}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+              isSettingsActive
+                ? "text-accent-foreground font-medium"
+                : "text-muted-foreground hover:bg-accent/50"
+            )}
+          >
+            <Settings className="size-4" />
+            <span className="flex-1 text-left">การตั้งค่า</span>
+            <ChevronDown
+              className={cn(
+                "size-4 transition-transform",
+                settingsOpen ? "rotate-0" : "-rotate-90"
+              )}
+            />
+          </button>
+          {settingsOpen && (
+            <div className="ml-4 space-y-1 mt-1">
+              {settingsNavItems.map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(item.href + "/");
+                const Icon = item.icon;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                      isActive
+                        ? "bg-accent text-accent-foreground font-medium"
+                        : "text-muted-foreground hover:bg-accent/50"
+                    )}
+                  >
+                    <Icon className="size-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </nav>
     </aside>
   );

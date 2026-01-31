@@ -16,5 +16,25 @@ export default async function QuotationPreviewPage({
     notFound();
   }
 
-  return <DocumentPreviewPage document={document as any} />;
+  // Use live company data so updates reflect in all documents
+  const documentWithLiveCompany = {
+    ...document,
+    companySnapshot: document.company
+      ? {
+          name: document.company.name,
+          address: document.company.address,
+          phone: document.company.phone,
+          email: document.company.email,
+          facebook: document.company.facebook,
+          lineOa: document.company.lineOa,
+          tiktok: document.company.tiktok,
+          logoUrl: document.company.logoUrl,
+          bankName: document.company.bankName,
+          accountName: document.company.accountName,
+          accountNumber: document.company.accountNumber,
+        }
+      : document.companySnapshot,
+  };
+
+  return <DocumentPreviewPage document={documentWithLiveCompany as any} />;
 }

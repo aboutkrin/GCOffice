@@ -3,37 +3,40 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { CalendarDays, Clock } from "lucide-react";
 import { formatThaiDate } from "@/lib/thai-date";
-import { cn } from "@/lib/utils";
 
 interface DeliveryInfoProps {
   footerNotes?: string;
   onFooterNotesChange: (value: string) => void;
-  productionDays?: string;
-  onProductionDaysChange: (value: string) => void;
-  deliveryDateStart?: Date | null;
-  onDeliveryDateStartChange: (value: Date | undefined) => void;
-  deliveryDateEnd?: Date | null;
-  onDeliveryDateEndChange: (value: Date | undefined) => void;
+  productionDaysMin: number | null;
+  onProductionDaysMinChange: (value: number | null) => void;
+  productionDaysMax: number | null;
+  onProductionDaysMaxChange: (value: number | null) => void;
+  skipWeekends: boolean;
+  onSkipWeekendsChange: (value: boolean) => void;
+  skipHolidays: boolean;
+  onSkipHolidaysChange: (value: boolean) => void;
+  productionDaysText: string;
+  deliveryDateStart: Date | null;
+  deliveryDateEnd: Date | null;
 }
 
 export function DeliveryInfo({
   footerNotes,
   onFooterNotesChange,
-  productionDays,
-  onProductionDaysChange,
+  productionDaysMin,
+  onProductionDaysMinChange,
+  productionDaysMax,
+  onProductionDaysMaxChange,
+  skipWeekends,
+  onSkipWeekendsChange,
+  skipHolidays,
+  onSkipHolidaysChange,
+  productionDaysText,
   deliveryDateStart,
-  onDeliveryDateStartChange,
   deliveryDateEnd,
-  onDeliveryDateEndChange,
 }: DeliveryInfoProps) {
   return (
     <div className="space-y-4">
@@ -47,70 +50,84 @@ export function DeliveryInfo({
         />
       </div>
 
-      <div className="space-y-2">
-        <Label>ระยะเวลาผลิต/จัดส่ง</Label>
-        <Input
-          value={productionDays || ""}
-          onChange={(e) => onProductionDaysChange(e.target.value)}
-          placeholder="เช่น 15-20 วันทำการ"
-        />
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>วันที่เริ่มจัดส่ง</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !deliveryDateStart && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {deliveryDateStart
-                  ? formatThaiDate(deliveryDateStart, "short")
-                  : "เลือกวันที่"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={deliveryDateStart || undefined}
-                onSelect={onDeliveryDateStartChange}
-              />
-            </PopoverContent>
-          </Popover>
+          <Label>จำนวนวันต่ำสุด</Label>
+          <Input
+            type="number"
+            min={1}
+            value={productionDaysMin ?? ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              onProductionDaysMinChange(val === "" ? null : parseInt(val, 10));
+            }}
+            placeholder="เช่น 4"
+          />
         </div>
-
         <div className="space-y-2">
-          <Label>วันที่สิ้นสุดจัดส่ง</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !deliveryDateEnd && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {deliveryDateEnd
-                  ? formatThaiDate(deliveryDateEnd, "short")
-                  : "เลือกวันที่"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={deliveryDateEnd || undefined}
-                onSelect={onDeliveryDateEndChange}
-              />
-            </PopoverContent>
-          </Popover>
+          <Label>จำนวนวันสูงสุด</Label>
+          <Input
+            type="number"
+            min={1}
+            value={productionDaysMax ?? ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              onProductionDaysMaxChange(val === "" ? null : parseInt(val, 10));
+            }}
+            placeholder="เช่น 7"
+          />
         </div>
       </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div className="space-y-0.5">
+            <Label className="text-sm font-medium">ข้ามวันเสาร์-อาทิตย์</Label>
+            <p className="text-xs text-muted-foreground">
+              นับเฉพาะวันจันทร์-ศุกร์
+            </p>
+          </div>
+          <Switch
+            checked={skipWeekends}
+            onCheckedChange={onSkipWeekendsChange}
+          />
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border p-3">
+          <div className="space-y-0.5">
+            <Label className="text-sm font-medium">ข้ามวันหยุดนักขัตฤกษ์</Label>
+            <p className="text-xs text-muted-foreground">
+              ข้ามวันหยุดที่กำหนดไว้ในระบบ
+            </p>
+          </div>
+          <Switch
+            checked={skipHolidays}
+            onCheckedChange={onSkipHolidaysChange}
+          />
+        </div>
+      </div>
+
+      {productionDaysText && (
+        <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <Clock className="size-4 text-muted-foreground" />
+            <span className="font-medium">ระยะเวลาผลิต/จัดส่ง:</span>
+            <span>{productionDaysText}</span>
+          </div>
+          {deliveryDateStart && (
+            <div className="flex items-center gap-2 text-sm">
+              <CalendarDays className="size-4 text-muted-foreground" />
+              <span className="font-medium">วันที่คาดว่าจะจัดส่ง:</span>
+              <span>
+                {formatThaiDate(deliveryDateStart, "short")}
+                {deliveryDateEnd &&
+                  deliveryDateStart.getTime() !== deliveryDateEnd.getTime() &&
+                  ` - ${formatThaiDate(deliveryDateEnd, "short")}`}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

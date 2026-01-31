@@ -56,7 +56,7 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
               {/* Product Name + Image + Details */}
               <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 sm:py-2">
                 <div className="flex items-start gap-2 sm:gap-3">
-                  {item.showImage && item.productImage && (
+                  {item.productImage && (
                     <div className="relative h-10 w-10 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded border border-gray-200">
                       <Image
                         src={item.productImage}

@@ -91,6 +91,13 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
             <CardTitle>ข้อมูลลูกค้า</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {initialData?.code && (
+              <div>
+                <label className="text-sm font-medium">รหัสลูกค้า</label>
+                <Input value={initialData.code} readOnly disabled className="mt-1" />
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="type"

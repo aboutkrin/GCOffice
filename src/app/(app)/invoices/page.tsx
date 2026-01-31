@@ -24,7 +24,7 @@ export default async function InvoicesPage() {
         </Link>
       </PageHeader>
 
-      <DocumentTable documents={documents} basePath="/invoices" />
+      <DocumentTable documents={documents} basePath="/invoices" documentType="INVOICE" />
     </div>
   );
 }

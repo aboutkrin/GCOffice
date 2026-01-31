@@ -29,7 +29,7 @@ export function useLineItems(initial: LineItem[] = []) {
         id: generateId(),
         sequence: prev.length + 1,
         productName: "",
-        showImage: false,
+        showImage: true,
         quantity: 1,
         unitPrice: 0,
         lineTotal: 0,

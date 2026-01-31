@@ -27,6 +27,8 @@ import { shareFile } from "@/lib/share";
 import {
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_STATUS_COLORS,
+  QUOTATION_STATUS_OPTIONS,
+  INVOICE_STATUS_OPTIONS,
 } from "@/lib/constants";
 
 interface ExportToolbarProps {
@@ -34,16 +36,17 @@ interface ExportToolbarProps {
   filename: string;
   documentId: string;
   currentStatus: string;
+  documentType: "QUOTATION" | "INVOICE";
 }
-
-const STATUS_OPTIONS = ["DRAFT", "SENT", "CONFIRMED", "CANCELLED"] as const;
 
 export function ExportToolbar({
   documentRef,
   filename,
   documentId,
   currentStatus,
+  documentType,
 }: ExportToolbarProps) {
+  const STATUS_OPTIONS = documentType === "QUOTATION" ? QUOTATION_STATUS_OPTIONS : INVOICE_STATUS_OPTIONS;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isExporting, setIsExporting] = useState(false);

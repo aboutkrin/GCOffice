@@ -1,42 +1,39 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { productSchema } from "@/lib/validators";
+import { productSchema, updateProductSchema, productCategorySchema } from "@/lib/validators";
+import { generateProductSku } from "@/lib/sku-generator";
 import { serialize } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 
 export async function createProduct(data: unknown) {
   const validated = productSchema.parse(data);
-  const product = await prisma.product.create({
-    data: {
-      sku: validated.sku,
-      name: validated.name,
-      description: validated.description,
-      categoryId: validated.categoryId || undefined,
-      width: validated.width,
-      height: validated.height,
-      sizeUnit: validated.sizeUnit,
-      basePrice: validated.basePrice,
-      imageUrl: validated.imageUrl,
-      status: validated.status,
-    },
+  const product = await prisma.$transaction(async (tx) => {
+    const sku = await generateProductSku(validated.categoryId, tx);
+    return tx.product.create({
+      data: {
+        sku,
+        name: validated.name,
+        description: validated.description,
+        categoryId: validated.categoryId,
+        basePrice: validated.basePrice,
+        imageUrl: validated.imageUrl,
+        status: validated.status,
+      },
+    });
   });
   revalidatePath("/products");
   return serialize(product);
 }
 
 export async function updateProduct(id: string, data: unknown) {
-  const validated = productSchema.parse(data);
+  const validated = updateProductSchema.parse(data);
   const product = await prisma.product.update({
     where: { id },
     data: {
-      sku: validated.sku,
       name: validated.name,
       description: validated.description,
-      categoryId: validated.categoryId || null,
-      width: validated.width,
-      height: validated.height,
-      sizeUnit: validated.sizeUnit,
+      categoryId: validated.categoryId,
       basePrice: validated.basePrice,
       imageUrl: validated.imageUrl,
       status: validated.status,
@@ -54,12 +51,64 @@ export async function deleteProduct(id: string) {
   revalidatePath("/products");
 }
 
-export async function createProductCategory(name: string) {
+export async function createProductCategory(data: unknown) {
+  const validated = productCategorySchema.parse(data);
   const category = await prisma.productCategory.create({
-    data: { name },
+    data: {
+      name: validated.name,
+      prefix: validated.prefix,
+    },
   });
   revalidatePath("/products");
+  revalidatePath("/categories");
   return category;
+}
+
+export async function updateProductCategory(id: string, data: unknown) {
+  const validated = productCategorySchema.parse(data);
+
+  const existing = await prisma.productCategory.findUnique({
+    where: { id },
+    include: { _count: { select: { products: true } } },
+  });
+
+  if (!existing) {
+    throw new Error("ไม่พบหมวดหมู่");
+  }
+
+  if (existing._count.products > 0 && existing.prefix !== validated.prefix) {
+    throw new Error("ไม่สามารถเปลี่ยนรหัสนำหน้าได้เนื่องจากมีสินค้าในหมวดหมู่นี้แล้ว");
+  }
+
+  const category = await prisma.productCategory.update({
+    where: { id },
+    data: {
+      name: validated.name,
+      prefix: validated.prefix,
+    },
+  });
+  revalidatePath("/products");
+  revalidatePath("/categories");
+  return category;
+}
+
+export async function deleteProductCategory(id: string) {
+  const existing = await prisma.productCategory.findUnique({
+    where: { id },
+    include: { _count: { select: { products: true } } },
+  });
+
+  if (!existing) {
+    throw new Error("ไม่พบหมวดหมู่");
+  }
+
+  if (existing._count.products > 0) {
+    throw new Error("ไม่สามารถลบหมวดหมู่ได้เนื่องจากมีสินค้าในหมวดหมู่นี้อยู่");
+  }
+
+  await prisma.productCategory.delete({ where: { id } });
+  revalidatePath("/products");
+  revalidatePath("/categories");
 }
 
 export async function searchProductsAction(query: string) {

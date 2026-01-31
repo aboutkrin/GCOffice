@@ -63,6 +63,10 @@ export async function createDocument(data: unknown) {
       grandTotal,
       footerNotes: validated.footerNotes,
       productionDays: validated.productionDays,
+      productionDaysMin: validated.productionDaysMin ?? undefined,
+      productionDaysMax: validated.productionDaysMax ?? undefined,
+      skipWeekends: validated.skipWeekends,
+      skipHolidays: validated.skipHolidays,
       deliveryDateStart: validated.deliveryDateStart,
       deliveryDateEnd: validated.deliveryDateEnd,
       sourceQuotationId:
@@ -153,6 +157,10 @@ export async function updateDocument(id: string, data: unknown) {
         grandTotal,
         footerNotes: validated.footerNotes,
         productionDays: validated.productionDays,
+        productionDaysMin: validated.productionDaysMin ?? null,
+        productionDaysMax: validated.productionDaysMax ?? null,
+        skipWeekends: validated.skipWeekends,
+        skipHolidays: validated.skipHolidays,
         deliveryDateStart: validated.deliveryDateStart ?? null,
         deliveryDateEnd: validated.deliveryDateEnd ?? null,
         lineItems: {

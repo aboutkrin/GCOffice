@@ -11,6 +11,7 @@ export async function getCustomers(params?: {
   if (params?.type) where.type = params.type;
   if (params?.search) {
     where.OR = [
+      { code: { contains: params.search, mode: "insensitive" } },
       { customerName: { contains: params.search, mode: "insensitive" } },
       { companyName: { contains: params.search, mode: "insensitive" } },
       { phone: { contains: params.search } },
@@ -32,6 +33,7 @@ export async function searchCustomers(query: string) {
     where: {
       status: "ACTIVE",
       OR: [
+        { code: { contains: query, mode: "insensitive" } },
         { customerName: { contains: query, mode: "insensitive" } },
         { companyName: { contains: query, mode: "insensitive" } },
       ],

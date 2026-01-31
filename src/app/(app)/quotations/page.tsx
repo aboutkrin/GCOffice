@@ -24,7 +24,7 @@ export default async function QuotationsPage() {
         </Link>
       </PageHeader>
 
-      <DocumentTable documents={documents} basePath="/quotations" />
+      <DocumentTable documents={documents} basePath="/quotations" documentType="QUOTATION" />
     </div>
   );
 }

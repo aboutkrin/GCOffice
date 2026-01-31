@@ -37,17 +37,19 @@ import { formatBaht } from "@/lib/thai-currency";
 import {
   DOCUMENT_STATUS_LABELS,
   DOCUMENT_STATUS_COLORS,
+  QUOTATION_STATUS_OPTIONS,
+  INVOICE_STATUS_OPTIONS,
 } from "@/lib/constants";
 import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal } from "lucide-react";
-
-const STATUS_OPTIONS = ["DRAFT", "SENT", "CONFIRMED", "CANCELLED"] as const;
 
 interface DocumentTableProps {
   documents: any[];
   basePath: string; // "/quotations" or "/invoices"
+  documentType: "QUOTATION" | "INVOICE";
 }
 
-export function DocumentTable({ documents, basePath }: DocumentTableProps) {
+export function DocumentTable({ documents, basePath, documentType }: DocumentTableProps) {
+  const STATUS_OPTIONS = documentType === "QUOTATION" ? QUOTATION_STATUS_OPTIONS : INVOICE_STATUS_OPTIONS;
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);

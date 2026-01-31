@@ -43,20 +43,22 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       where: { type: DocumentType.INVOICE },
     }),
 
-    // Pending documents (DRAFT or SENT)
+    // Pending documents (DRAFT, QUOTED, or BILLED)
     prisma.document.count({
       where: {
         status: {
-          in: [DocumentStatus.DRAFT, DocumentStatus.SENT],
+          in: [DocumentStatus.DRAFT, DocumentStatus.QUOTED, DocumentStatus.BILLED],
         },
       },
     }),
 
-    // This month's confirmed total
+    // This month's confirmed/paid total
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
-        status: DocumentStatus.CONFIRMED,
+        status: {
+          in: [DocumentStatus.CONFIRMED, DocumentStatus.PAID],
+        },
         documentDate: {
           gte: startOfMonth,
           lte: endOfMonth,

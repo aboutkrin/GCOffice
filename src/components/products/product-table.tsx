@@ -89,16 +89,6 @@ export function ProductTable({ products }: ProductTableProps) {
       cell: ({ row }) => row.original.category?.name ?? "-",
     },
     {
-      id: "size",
-      header: "ขนาด",
-      cell: ({ row }) => {
-        const { width, height, sizeUnit } = row.original;
-        if (!width && !height) return "-";
-        return `${width ?? "-"} x ${height ?? "-"} ${sizeUnit ?? "cm"}`;
-      },
-      enableGlobalFilter: false,
-    },
-    {
       accessorKey: "basePrice",
       header: "ราคา",
       cell: ({ row }) => formatNumber(row.original.basePrice),

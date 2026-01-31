@@ -28,6 +28,7 @@ export function DocumentPreviewPage({ document }: DocumentPreviewPageProps) {
         filename={document.documentNumber}
         documentId={document.id}
         currentStatus={document.status}
+        documentType={document.type}
       />
     </div>
   );

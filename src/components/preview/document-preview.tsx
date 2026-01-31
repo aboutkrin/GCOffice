@@ -24,6 +24,7 @@ interface CompanySnapshot {
 
 interface CustomerSnapshot {
   type: "COMPANY" | "INDIVIDUAL";
+  code?: string;
   companyName?: string;
   customerName: string;
   contactPerson?: string;
@@ -57,7 +58,7 @@ export interface DocumentData {
   id: string;
   type: "QUOTATION" | "INVOICE";
   documentNumber: string;
-  status: "DRAFT" | "SENT" | "CONFIRMED" | "CANCELLED";
+  status: "DRAFT" | "QUOTED" | "CONFIRMED" | "SAMPLE" | "BILLED" | "PAID" | "CANCELLED";
   documentDate: Date;
   companySnapshot: CompanySnapshot;
   customerSnapshot: CustomerSnapshot;

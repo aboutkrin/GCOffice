@@ -4,6 +4,7 @@ import { Phone, Mail, User, Building2, MapPin } from "lucide-react";
 
 interface CustomerSnapshot {
   type: "COMPANY" | "INDIVIDUAL";
+  code?: string;
   companyName?: string;
   customerName: string;
   contactPerson?: string;
@@ -36,9 +37,16 @@ export function PreviewCustomer({ customer }: PreviewCustomerProps) {
           ) : (
             <User className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
           )}
-          <span className="text-sm sm:text-base font-semibold text-gray-900 break-words">
-            {displayName}
-          </span>
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <span className="text-sm sm:text-base font-semibold text-gray-900 break-words">
+              {displayName}
+            </span>
+            {customer.code && (
+              <span className="text-xs text-gray-500 font-mono">
+                ({customer.code})
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Contact Person (for company type) */}

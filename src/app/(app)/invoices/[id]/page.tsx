@@ -4,6 +4,8 @@ import { DocumentForm } from "@/components/documents/document-form";
 import { getDocumentById } from "@/data/documents";
 import { getCompanies } from "@/data/companies";
 import { getCustomers } from "@/data/customers";
+import { getActivePaymentTermTemplates } from "@/data/payment-term-templates";
+import { getActiveHolidays } from "@/data/holidays";
 
 interface InvoiceEditPageProps {
   params: Promise<{ id: string }>;
@@ -16,10 +18,12 @@ export default async function InvoiceEditPage({
 }: InvoiceEditPageProps) {
   const { id } = await params;
 
-  const [document, companies, customers] = await Promise.all([
+  const [document, companies, customers, paymentTermTemplates, holidays] = await Promise.all([
     getDocumentById(id),
     getCompanies(),
     getCustomers({ status: "ACTIVE" }),
+    getActivePaymentTermTemplates(),
+    getActiveHolidays(),
   ]);
 
   if (!document) {
@@ -38,6 +42,8 @@ export default async function InvoiceEditPage({
         initialData={document}
         companies={companies}
         customers={customers}
+        paymentTermTemplates={paymentTermTemplates}
+        holidays={holidays}
       />
     </div>
   );

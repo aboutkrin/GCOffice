@@ -11,6 +11,9 @@ import {
   Building2,
   FileText,
   Receipt,
+  ClipboardList,
+  Tags,
+  CalendarOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/actions/auth-actions";
@@ -60,9 +63,24 @@ const navItems = [
     icon: Package,
   },
   {
+    href: "/categories",
+    label: "หมวดหมู่สินค้า",
+    icon: Tags,
+  },
+  {
     href: "/customers",
     label: "ลูกค้า",
     icon: Users,
+  },
+  {
+    href: "/payment-terms",
+    label: "เงื่อนไขชำระเงิน",
+    icon: ClipboardList,
+  },
+  {
+    href: "/holidays",
+    label: "วันหยุด",
+    icon: CalendarOff,
   },
   {
     href: "/companies",
