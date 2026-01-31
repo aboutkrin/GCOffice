@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { formatThaiDate } from "@/lib/thai-date";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
 import {
@@ -52,12 +51,11 @@ export function PreviewHeader({
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {company.logoUrl && (
             <div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={company.logoUrl}
                 alt={company.name}
-                fill
-                className="object-contain"
-                unoptimized
+                className="h-full w-full object-contain"
               />
             </div>
           )}

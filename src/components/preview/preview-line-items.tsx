@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { formatNumber } from "@/lib/thai-currency";
 
 interface LineItem {
@@ -58,12 +57,11 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
                 <div className="flex items-start gap-2 sm:gap-3">
                   {item.productImage && (
                     <div className="relative h-10 w-10 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded border border-gray-200">
-                      <Image
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
                         src={item.productImage}
                         alt={item.productName}
-                        fill
-                        className="object-cover"
-                        unoptimized
+                        className="h-full w-full object-cover"
                       />
                     </div>
                   )}
