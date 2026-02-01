@@ -1,47 +1,8 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useRef,
-  useEffect,
-} from "react";
-
-const ScrollHiddenContext = createContext(false);
-
-export function useScrollHidden() {
-  return useContext(ScrollHiddenContext);
-}
+import { useEffect } from "react";
 
 export function ScrollProvider({ children }: { children: React.ReactNode }) {
-  const [hidden, setHidden] = useState(false);
-  const lastScrollY = useRef(0);
-
-  useEffect(() => {
-    const main = document.querySelector("main");
-    if (!main) return;
-
-    const onScroll = () => {
-      const y = main.scrollTop;
-      const delta = y - lastScrollY.current;
-
-      // Ignore tiny scrolls to prevent jitter
-      if (Math.abs(delta) < 5) return;
-
-      if (delta > 0 && y > 56) {
-        setHidden(true);
-      } else if (delta < 0) {
-        setHidden(false);
-      }
-
-      lastScrollY.current = y;
-    };
-
-    main.addEventListener("scroll", onScroll, { passive: true });
-    return () => main.removeEventListener("scroll", onScroll);
-  }, []);
-
   // Fix iOS Safari white-space bug on keyboard dismiss.
   // When the virtual keyboard closes, the visual viewport grows but the
   // scroll container can be left scrolled past its valid range, creating
@@ -66,9 +27,5 @@ export function ScrollProvider({ children }: { children: React.ReactNode }) {
     return () => vv.removeEventListener("resize", onResize);
   }, []);
 
-  return (
-    <ScrollHiddenContext value={hidden}>
-      {children}
-    </ScrollHiddenContext>
-  );
+  return <>{children}</>;
 }

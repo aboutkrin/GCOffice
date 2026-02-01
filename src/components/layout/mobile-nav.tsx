@@ -4,13 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Package,
   FilePlus,
-  Users,
   FileText,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useScrollHidden } from "@/components/layout/scroll-provider";
 
 const mobileNavItems = [
   {
@@ -19,8 +17,8 @@ const mobileNavItems = [
     icon: LayoutDashboard,
   },
   {
-    href: "/invoices",
-    label: "ใบแจ้งหนี้",
+    href: "/quotations",
+    label: "ใบเสนอราคา",
     icon: FileText,
   },
   {
@@ -30,28 +28,17 @@ const mobileNavItems = [
     isPrimary: true,
   },
   {
-    href: "/products",
-    label: "สินค้า",
-    icon: Package,
-  },
-  {
-    href: "/customers",
-    label: "ลูกค้า",
-    icon: Users,
+    href: "/invoices",
+    label: "ใบแจ้งหนี้",
+    icon: Receipt,
   },
 ];
 
 export function MobileNav() {
   const pathname = usePathname();
-  const scrollHidden = useScrollHidden();
 
   return (
-    <nav className={cn(
-      "fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t shadow-lg",
-      "pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]",
-      "transition-transform duration-300 ease-in-out",
-      scrollHidden && "translate-y-full"
-    )}>
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t shadow-lg pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]">
       <div className="flex items-center justify-around h-16">
         {mobileNavItems.map((item) => {
           const isActive =
