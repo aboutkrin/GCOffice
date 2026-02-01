@@ -30,7 +30,7 @@ export default async function AppLayout({
       <ScrollProvider>
         <div className="flex-1 flex flex-col min-w-0">
           <AppHeader user={user} />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-6">{children}</main>
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-6">{children}</main>
         </div>
         <MobileNav />
       </ScrollProvider>
