@@ -562,7 +562,23 @@ export function DocumentForm({
           </CardContent>
         </Card>
 
-        {/* Section 3: Pricing Summary */}
+        {/* Section 3: Shipping */}
+        <Card>
+          <CardHeader>
+            <CardTitle>ค่าจัดส่ง</CardTitle>
+            <CardDescription>
+              ระบุค่าจัดส่งสินค้า (ถ้ามี)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ShippingSection
+              shippingCost={shippingCost}
+              onShippingCostChange={setShippingCost}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Section 4: Pricing Summary */}
         <Card>
           <CardHeader>
             <CardTitle>สรุปราคา</CardTitle>
@@ -581,22 +597,6 @@ export function DocumentForm({
               vatAmount={pricing.vatAmount}
               shippingCost={shippingCost}
               grandTotal={pricing.grandTotal}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Section 4: Shipping */}
-        <Card>
-          <CardHeader>
-            <CardTitle>ค่าจัดส่ง</CardTitle>
-            <CardDescription>
-              ระบุค่าจัดส่งสินค้า (ถ้ามี)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ShippingSection
-              shippingCost={shippingCost}
-              onShippingCostChange={setShippingCost}
             />
           </CardContent>
         </Card>
