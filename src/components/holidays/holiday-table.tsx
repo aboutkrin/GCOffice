@@ -1,18 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import {
-  useReactTable,
-  getCoreRowModel,
-  getFilteredRowModel,
-  flexRender,
-  type ColumnDef,
-} from "@tanstack/react-table";
 import { MoreHorizontal, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 
-import { deleteHoliday } from "@/actions/holiday-actions";
+import { deleteHoliday, deleteHolidayGroup } from "@/actions/holiday-actions";
 import { formatThaiDate } from "@/lib/thai-date";
 
 import { Button } from "@/components/ui/button";
@@ -43,92 +36,98 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface HolidayGroup {
+  ids: string[];
+  name: string;
+  startDate: string;
+  endDate: string;
+  isRecurring: boolean;
+}
+
+function groupHolidays(holidays: any[]): HolidayGroup[] {
+  if (holidays.length === 0) return [];
+
+  const groups: HolidayGroup[] = [];
+  let current: HolidayGroup = {
+    ids: [holidays[0].id],
+    name: holidays[0].name,
+    startDate: holidays[0].date,
+    endDate: holidays[0].date,
+    isRecurring: holidays[0].isRecurring,
+  };
+
+  for (let i = 1; i < holidays.length; i++) {
+    const h = holidays[i];
+    const prevDate = new Date(current.endDate);
+    const currDate = new Date(h.date);
+    const diffMs = currDate.getTime() - prevDate.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    if (
+      h.name === current.name &&
+      h.isRecurring === current.isRecurring &&
+      diffDays === 1
+    ) {
+      current.ids.push(h.id);
+      current.endDate = h.date;
+    } else {
+      groups.push(current);
+      current = {
+        ids: [h.id],
+        name: h.name,
+        startDate: h.date,
+        endDate: h.date,
+        isRecurring: h.isRecurring,
+      };
+    }
+  }
+  groups.push(current);
+
+  return groups;
+}
+
+function formatGroupDate(startDate: string, endDate: string): string {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (start.getTime() === end.getTime()) {
+    return formatThaiDate(start, "short");
+  }
+
+  return `${formatThaiDate(start, "short")} - ${formatThaiDate(end, "short")}`;
+}
+
 interface HolidayTableProps {
   holidays: any[];
 }
 
 export function HolidayTable({ holidays }: HolidayTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteGroup, setDeleteGroup] = useState<HolidayGroup | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const columns: ColumnDef<any>[] = [
-    {
-      accessorKey: "name",
-      header: "ชื่อวันหยุด",
-    },
-    {
-      accessorKey: "date",
-      header: "วันที่",
-      cell: ({ row }) => formatThaiDate(new Date(row.original.date), "short"),
-      enableGlobalFilter: false,
-    },
-    {
-      accessorKey: "isRecurring",
-      header: "ประเภท",
-      cell: ({ row }) =>
-        row.original.isRecurring ? (
-          <Badge variant="secondary">ทุกปี</Badge>
-        ) : (
-          <Badge variant="outline">เฉพาะปี</Badge>
-        ),
-      enableGlobalFilter: false,
-    },
-    {
-      id: "actions",
-      header: "จัดการ",
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-xs">
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link href={`/holidays/${row.original.id}`}>
-                <Pencil className="size-4" />
-                แก้ไข
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => setDeleteId(row.original.id)}
-            >
-              <Trash2 className="size-4" />
-              ลบ
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-      enableGlobalFilter: false,
-    },
-  ];
+  const groups = useMemo(() => groupHolidays(holidays), [holidays]);
 
-  const table = useReactTable({
-    data: holidays,
-    columns,
-    state: { globalFilter },
-    onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    globalFilterFn: (row, columnId, filterValue) => {
-      const search = filterValue.toLowerCase();
-      const name = String(row.original.name ?? "").toLowerCase();
-      return name.includes(search);
-    },
-  });
+  const filteredGroups = useMemo(() => {
+    if (!globalFilter) return groups;
+    const search = globalFilter.toLowerCase();
+    return groups.filter((g) => g.name.toLowerCase().includes(search));
+  }, [groups, globalFilter]);
 
   function handleDelete() {
-    if (!deleteId) return;
+    if (!deleteGroup) return;
     startTransition(async () => {
       try {
-        await deleteHoliday(deleteId);
+        if (deleteGroup.ids.length === 1) {
+          await deleteHoliday(deleteGroup.ids[0]);
+        } else {
+          await deleteHolidayGroup(deleteGroup.ids);
+        }
         toast.success("ลบวันหยุดเรียบร้อยแล้ว");
       } catch (error: any) {
         toast.error(error?.message ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
       } finally {
-        setDeleteId(null);
+        setDeleteGroup(null);
       }
     });
   }
@@ -148,32 +147,62 @@ export function HolidayTable({ holidays }: HolidayTableProps) {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
+            <TableRow>
+              <TableHead>ชื่อวันหยุด</TableHead>
+              <TableHead>วันที่</TableHead>
+              <TableHead>ประเภท</TableHead>
+              <TableHead>จัดการ</TableHead>
+            </TableRow>
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+            {filteredGroups.length ? (
+              filteredGroups.map((group) => (
+                <TableRow key={group.ids[0]}>
+                  <TableCell>{group.name}</TableCell>
+                  <TableCell>
+                    {formatGroupDate(group.startDate, group.endDate)}
+                    {group.ids.length > 1 && (
+                      <span className="ml-2 text-muted-foreground text-xs">
+                        ({group.ids.length} วัน)
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {group.isRecurring ? (
+                      <Badge variant="secondary">ทุกปี</Badge>
+                    ) : (
+                      <Badge variant="outline">เฉพาะปี</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon-xs">
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/holidays/${group.ids[0]}`}>
+                            <Pencil className="size-4" />
+                            แก้ไข
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => setDeleteGroup(group)}
+                        >
+                          <Trash2 className="size-4" />
+                          ลบ
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell colSpan={4} className="h-24 text-center">
                   ไม่พบข้อมูลวันหยุด
                 </TableCell>
               </TableRow>
@@ -182,12 +211,17 @@ export function HolidayTable({ holidays }: HolidayTableProps) {
         </Table>
       </div>
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <AlertDialog
+        open={!!deleteGroup}
+        onOpenChange={() => setDeleteGroup(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณต้องการลบวันหยุดนี้หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+              {deleteGroup && deleteGroup.ids.length > 1
+                ? `คุณต้องการลบวันหยุด "${deleteGroup.name}" (${deleteGroup.ids.length} วัน) หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`
+                : "คุณต้องการลบวันหยุดนี้หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

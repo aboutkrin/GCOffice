@@ -55,3 +55,8 @@ export async function deleteHoliday(id: string) {
   await prisma.holiday.delete({ where: { id } });
   revalidatePath("/holidays");
 }
+
+export async function deleteHolidayGroup(ids: string[]) {
+  await prisma.holiday.deleteMany({ where: { id: { in: ids } } });
+  revalidatePath("/holidays");
+}
