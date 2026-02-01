@@ -48,6 +48,7 @@ import { usePricing } from "@/hooks/use-pricing";
 
 import { LineItemTable } from "./line-item-table";
 import { PricingSummary } from "./pricing-summary";
+import { ShippingSection } from "./shipping-section";
 import { PaymentTermsSection } from "./payment-terms";
 import { DeliveryInfo } from "./delivery-info";
 
@@ -106,6 +107,9 @@ export function DocumentForm({
   );
   const [skipHolidays, setSkipHolidays] = useState<boolean>(
     initialData?.skipHolidays ?? true
+  );
+  const [shippingCost, setShippingCost] = useState<number>(
+    initialData?.shippingCost ? Number(initialData.shippingCost) : 0
   );
   const [productionDaysText, setProductionDaysText] = useState<string>("");
   const [deliveryDateStart, setDeliveryDateStart] = useState<Date | null>(null);
@@ -191,6 +195,7 @@ export function DocumentForm({
     discountValue,
     vatEnabled,
     vatRate,
+    shippingCost,
   });
 
   // Recalculate payment terms when grand total changes
@@ -289,8 +294,9 @@ export function DocumentForm({
     }));
     setTerms(newTerms);
 
-    // Pre-fill footer notes and production day settings
+    // Pre-fill footer notes, shipping, and production day settings
     setFooterNotes(q.footerNotes || "");
+    setShippingCost(q.shippingCost ? Number(q.shippingCost) : 0);
     setProductionDaysMin(q.productionDaysMin ?? null);
     setProductionDaysMax(q.productionDaysMax ?? null);
     setSkipWeekends(q.skipWeekends ?? false);
@@ -308,6 +314,7 @@ export function DocumentForm({
       discountValue,
       vatEnabled: formData.vatEnabled,
       vatRate: formData.vatRate,
+      shippingCost,
       footerNotes: footerNotes || undefined,
       productionDays: productionDaysText || undefined,
       productionDaysMin: productionDaysMin ?? undefined,
@@ -572,12 +579,29 @@ export function DocumentForm({
               vatRate={vatRate}
               onVatEnabledChange={(val) => form.setValue("vatEnabled", val)}
               vatAmount={pricing.vatAmount}
+              shippingCost={shippingCost}
               grandTotal={pricing.grandTotal}
             />
           </CardContent>
         </Card>
 
-        {/* Section 4: Payment Terms */}
+        {/* Section 4: Shipping */}
+        <Card>
+          <CardHeader>
+            <CardTitle>ค่าจัดส่ง</CardTitle>
+            <CardDescription>
+              ระบุค่าจัดส่งสินค้า (ถ้ามี)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ShippingSection
+              shippingCost={shippingCost}
+              onShippingCostChange={setShippingCost}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Section 5: Payment Terms */}
         <Card>
           <CardContent className="pt-6">
             <PaymentTermsSection
@@ -592,7 +616,7 @@ export function DocumentForm({
           </CardContent>
         </Card>
 
-        {/* Section 5: Notes & Delivery */}
+        {/* Section 6: Notes & Delivery */}
         <Card>
           <CardHeader>
             <CardTitle>หมายเหตุและการจัดส่ง</CardTitle>
@@ -616,7 +640,7 @@ export function DocumentForm({
           </CardContent>
         </Card>
 
-        {/* Section 6: Action Buttons */}
+        {/* Section 7: Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 justify-end">
           <Button
             type="button"

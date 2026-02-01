@@ -23,6 +23,7 @@ interface PricingSummaryProps {
   vatRate: number;
   onVatEnabledChange: (value: boolean) => void;
   vatAmount: number;
+  shippingCost?: number;
   grandTotal: number;
 }
 
@@ -37,6 +38,7 @@ export function PricingSummary({
   vatRate,
   onVatEnabledChange,
   vatAmount,
+  shippingCost = 0,
   grandTotal,
 }: PricingSummaryProps) {
   return (
@@ -116,6 +118,16 @@ export function PricingSummary({
           </span>
         </div>
       </div>
+
+      {/* Shipping */}
+      {shippingCost > 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">ค่าจัดส่ง</span>
+          <span className="text-sm font-medium">
+            {formatNumber(shippingCost)} บาท
+          </span>
+        </div>
+      )}
 
       {/* Grand Total */}
       <div className="border-t pt-3">

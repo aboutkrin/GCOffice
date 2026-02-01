@@ -8,6 +8,7 @@ interface PricingInput {
   discountValue?: number;
   vatEnabled: boolean;
   vatRate: number;
+  shippingCost?: number;
 }
 
 export function usePricing(input: PricingInput) {
@@ -18,6 +19,7 @@ export function usePricing(input: PricingInput) {
       discountValue = 0,
       vatEnabled,
       vatRate,
+      shippingCost = 0,
     } = input;
 
     let discountAmount = 0;
@@ -29,7 +31,7 @@ export function usePricing(input: PricingInput) {
 
     const afterDiscount = subtotal - discountAmount;
     const vatAmount = vatEnabled ? afterDiscount * (vatRate / 100) : 0;
-    const grandTotal = afterDiscount + vatAmount;
+    const grandTotal = afterDiscount + vatAmount + shippingCost;
 
     return { discountAmount, afterDiscount, vatAmount, grandTotal };
   }, [
@@ -38,5 +40,6 @@ export function usePricing(input: PricingInput) {
     input.discountValue,
     input.vatEnabled,
     input.vatRate,
+    input.shippingCost,
   ]);
 }
