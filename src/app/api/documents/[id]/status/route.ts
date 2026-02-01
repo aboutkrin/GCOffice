@@ -50,6 +50,7 @@ export async function PATCH(
     const updatedDocument = await prisma.document.update({
       where: { id },
       data: { status: status as DocumentStatus },
+      select: { id: true, status: true },
     });
 
     return NextResponse.json(updatedDocument);

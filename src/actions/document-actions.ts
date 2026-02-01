@@ -100,7 +100,14 @@ export async function createDocument(data: unknown) {
           }
         : undefined,
     },
-    include: { lineItems: true, paymentTerms: true },
+    select: {
+      id: true,
+      type: true,
+      documentNumber: true,
+      status: true,
+      lineItems: true,
+      paymentTerms: true,
+    },
   });
 
   revalidatePath("/quotations");
@@ -193,7 +200,14 @@ export async function updateDocument(id: string, data: unknown) {
             }
           : undefined,
       },
-      include: { lineItems: true, paymentTerms: true },
+      select: {
+        id: true,
+        type: true,
+        documentNumber: true,
+        status: true,
+        lineItems: true,
+        paymentTerms: true,
+      },
     });
   });
 
@@ -209,6 +223,7 @@ export async function updateDocumentStatus(
   const document = await prisma.document.update({
     where: { id },
     data: { status },
+    select: { id: true, status: true },
   });
   revalidatePath("/quotations");
   revalidatePath("/invoices");
@@ -218,7 +233,34 @@ export async function updateDocumentStatus(
 export async function getDocumentForShare(id: string) {
   const document = await prisma.document.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      type: true,
+      documentNumber: true,
+      status: true,
+      documentDate: true,
+      companyId: true,
+      companySnapshot: true,
+      customerId: true,
+      customerSnapshot: true,
+      subtotal: true,
+      discountType: true,
+      discountValue: true,
+      discountAmount: true,
+      vatEnabled: true,
+      vatRate: true,
+      vatAmount: true,
+      shippingCost: true,
+      grandTotal: true,
+      footerNotes: true,
+      productionDays: true,
+      productionDaysMin: true,
+      productionDaysMax: true,
+      skipWeekends: true,
+      skipHolidays: true,
+      deliveryDateStart: true,
+      deliveryDateEnd: true,
+      createdAt: true,
       lineItems: { orderBy: { sequence: "asc" } },
       paymentTerms: { orderBy: { sequence: "asc" } },
       company: true,
@@ -258,6 +300,7 @@ export async function deleteDocument(id: string) {
   await prisma.document.update({
     where: { id },
     data: { status: "CANCELLED" },
+    select: { id: true },
   });
   revalidatePath("/quotations");
   revalidatePath("/invoices");
