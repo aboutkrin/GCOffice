@@ -11,6 +11,7 @@ interface PreviewSummaryProps {
   vatEnabled: boolean;
   vatRate: number;
   vatAmount: number;
+  shippingCost?: number;
   grandTotal: number;
 }
 
@@ -22,6 +23,7 @@ export function PreviewSummary({
   vatEnabled,
   vatRate,
   vatAmount,
+  shippingCost = 0,
   grandTotal,
 }: PreviewSummaryProps) {
   const hasDiscount = discountAmount > 0;
@@ -77,6 +79,18 @@ export function PreviewSummary({
                 </td>
                 <td className="py-1 sm:py-1.5 text-right font-medium text-gray-900 w-24 sm:w-32">
                   {formatNumber(vatAmount)}
+                </td>
+              </tr>
+            )}
+
+            {/* Shipping */}
+            {shippingCost > 0 && (
+              <tr>
+                <td className="py-1 sm:py-1.5 pr-2 sm:pr-4 text-right text-gray-600">
+                  ค่าจัดส่ง
+                </td>
+                <td className="py-1 sm:py-1.5 text-right font-medium text-gray-900 w-24 sm:w-32">
+                  {formatNumber(shippingCost)}
                 </td>
               </tr>
             )}

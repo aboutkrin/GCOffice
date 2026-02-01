@@ -42,7 +42,8 @@ export async function createDocument(data: unknown) {
   const vatAmount = validated.vatEnabled
     ? afterDiscount * (validated.vatRate / 100)
     : 0;
-  const grandTotal = afterDiscount + vatAmount;
+  const shippingCost = validated.shippingCost || 0;
+  const grandTotal = afterDiscount + vatAmount + shippingCost;
 
   const document = await prisma.document.create({
     data: {
@@ -60,6 +61,7 @@ export async function createDocument(data: unknown) {
       vatEnabled: validated.vatEnabled,
       vatRate: validated.vatRate,
       vatAmount,
+      shippingCost,
       grandTotal,
       footerNotes: validated.footerNotes,
       productionDays: validated.productionDays,
@@ -124,7 +126,8 @@ export async function updateDocument(id: string, data: unknown) {
   const vatAmount = validated.vatEnabled
     ? afterDiscount * (validated.vatRate / 100)
     : 0;
-  const grandTotal = afterDiscount + vatAmount;
+  const shippingCost = validated.shippingCost || 0;
+  const grandTotal = afterDiscount + vatAmount + shippingCost;
 
   // Get fresh snapshots
   const company = await prisma.company.findUniqueOrThrow({
@@ -154,6 +157,7 @@ export async function updateDocument(id: string, data: unknown) {
         vatEnabled: validated.vatEnabled,
         vatRate: validated.vatRate,
         vatAmount,
+        shippingCost,
         grandTotal,
         footerNotes: validated.footerNotes,
         productionDays: validated.productionDays,
