@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Package,
   FilePlus,
+  Users,
   FileText,
-  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,8 +18,8 @@ const mobileNavItems = [
     icon: LayoutDashboard,
   },
   {
-    href: "/quotations",
-    label: "ใบเสนอราคา",
+    href: "/invoices",
+    label: "ใบแจ้งหนี้",
     icon: FileText,
   },
   {
@@ -28,9 +29,14 @@ const mobileNavItems = [
     isPrimary: true,
   },
   {
-    href: "/invoices",
-    label: "ใบแจ้งหนี้",
-    icon: Receipt,
+    href: "/products",
+    label: "สินค้า",
+    icon: Package,
+  },
+  {
+    href: "/customers",
+    label: "ลูกค้า",
+    icon: Users,
   },
 ];
 
