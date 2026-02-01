@@ -96,16 +96,16 @@ export function DocumentForm({
     initialData?.footerNotes || ""
   );
   const [productionDaysMin, setProductionDaysMin] = useState<number | null>(
-    initialData?.productionDaysMin ?? null
+    initialData?.productionDaysMin ?? 10
   );
   const [productionDaysMax, setProductionDaysMax] = useState<number | null>(
-    initialData?.productionDaysMax ?? null
+    initialData?.productionDaysMax ?? 20
   );
   const [skipWeekends, setSkipWeekends] = useState<boolean>(
-    initialData?.skipWeekends ?? false
+    initialData?.skipWeekends ?? true
   );
   const [skipHolidays, setSkipHolidays] = useState<boolean>(
-    initialData?.skipHolidays ?? false
+    initialData?.skipHolidays ?? true
   );
   const [productionDaysText, setProductionDaysText] = useState<string>("");
   const [deliveryDateStart, setDeliveryDateStart] = useState<Date | null>(null);
