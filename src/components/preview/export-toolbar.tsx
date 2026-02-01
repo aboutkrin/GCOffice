@@ -58,6 +58,30 @@ export function ExportToolbar({
     return documentRef.current;
   }, [documentRef]);
 
+  // Detect iOS (all iOS browsers use WebKit which doesn't support <a download>)
+  const getIsIOS = useCallback((): boolean => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent;
+    // Standard iOS detection + iPad detection (iPadOS reports as MacIntel with touch)
+    return /iPad|iPhone|iPod/.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  }, []);
+
+  // Pre-open a blank window synchronously (must be called in user gesture handler)
+  // to avoid iOS popup blocker, then navigate it to the blob URL after async export
+  const openIOSWindow = useCallback((): Window | null => {
+    if (!getIsIOS()) return null;
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(
+        '<html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>กำลังโหลด...</title></head>' +
+        '<body style="display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:sans-serif;">' +
+        '<p style="color:#666;font-size:16px;">กำลังสร้างไฟล์...</p></body></html>'
+      );
+    }
+    return win;
+  }, [getIsIOS]);
+
   // Force A4 width for export, then revert after capture
   const withA4Width = useCallback(
     async <T,>(el: HTMLElement, fn: () => Promise<T>): Promise<T> => {
@@ -88,38 +112,46 @@ export function ExportToolbar({
     const el = getElement();
     if (!el) return;
 
+    // Pre-open window synchronously (within user gesture) for iOS
+    const iosWindow = openIOSWindow();
+
     setIsExporting(true);
     setExportLabel("กำลังสร้างไฟล์ PDF...");
     try {
-      await withA4Width(el, () => exportToPdf(el, filename));
+      await withA4Width(el, () => exportToPdf(el, filename, iosWindow));
       toast.success("สร้างไฟล์ PDF สำเร็จ");
     } catch (error) {
       console.error("PDF export failed:", error);
+      if (iosWindow) iosWindow.close();
       toast.error("ไม่สามารถสร้างไฟล์ PDF ได้");
     } finally {
       setIsExporting(false);
       setExportLabel("");
     }
-  }, [getElement, filename, withA4Width]);
+  }, [getElement, filename, withA4Width, openIOSWindow]);
 
   // Export to JPG
   const handleExportJpg = useCallback(async () => {
     const el = getElement();
     if (!el) return;
 
+    // Pre-open window synchronously (within user gesture) for iOS
+    const iosWindow = openIOSWindow();
+
     setIsExporting(true);
     setExportLabel("กำลังสร้างรูปภาพ...");
     try {
-      await withA4Width(el, () => exportToJpg(el, filename));
+      await withA4Width(el, () => exportToJpg(el, filename, iosWindow));
       toast.success("สร้างรูปภาพสำเร็จ");
     } catch (error) {
       console.error("JPG export failed:", error);
+      if (iosWindow) iosWindow.close();
       toast.error("ไม่สามารถสร้างรูปภาพได้");
     } finally {
       setIsExporting(false);
       setExportLabel("");
     }
-  }, [getElement, filename, withA4Width]);
+  }, [getElement, filename, withA4Width, openIOSWindow]);
 
   // Share
   const handleShare = useCallback(async () => {

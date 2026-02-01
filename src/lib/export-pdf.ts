@@ -3,7 +3,8 @@ import jsPDF from "jspdf";
 
 export async function exportToPdf(
   element: HTMLElement,
-  filename: string
+  filename: string,
+  preOpenedWindow?: Window | null
 ): Promise<void> {
   const canvas = await html2canvas(element, {
     scale: 2,
@@ -36,5 +37,13 @@ export async function exportToPdf(
     heightLeft -= pdfHeight;
   }
 
-  pdf.save(`${filename}.pdf`);
+  if (preOpenedWindow) {
+    // iOS Safari: open PDF blob in pre-opened window
+    // iOS doesn't support <a download>, so we open in native PDF viewer instead
+    const pdfBlob = pdf.output("blob");
+    const url = URL.createObjectURL(pdfBlob);
+    preOpenedWindow.location.href = url;
+  } else {
+    pdf.save(`${filename}.pdf`);
+  }
 }
