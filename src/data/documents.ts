@@ -24,9 +24,15 @@ export async function getDocuments(params?: {
 
   const data = await prisma.document.findMany({
     where,
-    include: {
-      lineItems: { orderBy: { sequence: "asc" } },
-      paymentTerms: { orderBy: { sequence: "asc" } },
+    select: {
+      id: true,
+      type: true,
+      documentNumber: true,
+      status: true,
+      documentDate: true,
+      grandTotal: true,
+      customerSnapshot: true,
+      createdAt: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -39,7 +45,24 @@ export async function getConfirmedQuotations() {
       type: "QUOTATION",
       status: "CONFIRMED",
     },
-    include: {
+    select: {
+      id: true,
+      documentNumber: true,
+      documentDate: true,
+      grandTotal: true,
+      customerSnapshot: true,
+      companyId: true,
+      customerId: true,
+      vatEnabled: true,
+      vatRate: true,
+      discountType: true,
+      discountValue: true,
+      shippingCost: true,
+      footerNotes: true,
+      productionDaysMin: true,
+      productionDaysMax: true,
+      skipWeekends: true,
+      skipHolidays: true,
       lineItems: { orderBy: { sequence: "asc" } },
       paymentTerms: { orderBy: { sequence: "asc" } },
     },
