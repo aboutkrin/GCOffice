@@ -43,7 +43,7 @@ import {
   QUOTATION_STATUS_OPTIONS,
   INVOICE_STATUS_OPTIONS,
 } from "@/lib/constants";
-import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal, Loader2 } from "lucide-react";
+import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal, Loader2, FileDown, ImageIcon } from "lucide-react";
 
 interface DocumentTableProps {
   documents: any[];
@@ -352,10 +352,22 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
-                      onClick={() => router.push(`${basePath}/${doc.id}`)}
+                      onClick={() => router.push(`${basePath}/${doc.id}/preview`)}
                     >
                       <Eye className="h-4 w-4 mr-2" />
-                      ดู / แก้ไข
+                      ดูตัวอย่าง
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => router.push(`${basePath}/${doc.id}/preview?action=pdf`)}
+                    >
+                      <FileDown className="h-4 w-4 mr-2" />
+                      ส่งออก PDF
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => router.push(`${basePath}/${doc.id}/preview?action=jpg`)}
+                    >
+                      <ImageIcon className="h-4 w-4 mr-2" />
+                      ส่งออกรูปภาพ
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       disabled={isSharing}
@@ -363,6 +375,13 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
                     >
                       <Share2 className="h-4 w-4 mr-2" />
                       แชร์
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => router.push(`${basePath}/${doc.id}`)}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      แก้ไข
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
