@@ -21,7 +21,6 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useScrollHidden } from "@/components/layout/scroll-provider";
 import { signOut } from "@/actions/auth-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -106,7 +105,6 @@ const settingsNavItems = [
 export function AppHeader({ user }: AppHeaderProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const scrollHidden = useScrollHidden();
   const isSettingsActive = settingsNavItems.some(
     (item) =>
       pathname === item.href || pathname.startsWith(item.href + "/")
@@ -116,11 +114,7 @@ export function AppHeader({ user }: AppHeaderProps) {
   const userInitial = user.email ? user.email.charAt(0).toUpperCase() : "U";
 
   return (
-    <header className={cn(
-      "sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-card px-4 md:px-6",
-      "transition-[transform,margin-bottom] duration-300 ease-in-out",
-      scrollHidden && "max-md:-translate-y-full max-md:-mb-14"
-    )}>
+    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-card px-4 md:px-6">
       {/* Mobile menu button */}
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetTrigger asChild>
