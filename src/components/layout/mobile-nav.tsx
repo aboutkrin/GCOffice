@@ -48,6 +48,7 @@ export function MobileNav() {
   return (
     <nav className={cn(
       "fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t shadow-lg",
+      "pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]",
       "transition-transform duration-300 ease-in-out",
       scrollHidden && "translate-y-full"
     )}>

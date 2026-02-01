@@ -22,7 +22,7 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="h-dvh flex overflow-hidden">
+    <div className="h-dvh flex overflow-hidden pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] md:pt-0">
       <Suspense>
         <NavigationProgress />
       </Suspense>
@@ -30,7 +30,7 @@ export default async function AppLayout({
       <ScrollProvider>
         <div className="flex-1 flex flex-col min-w-0">
           <AppHeader user={user} />
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">{children}</main>
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:pb-6">{children}</main>
         </div>
         <MobileNav />
       </ScrollProvider>
