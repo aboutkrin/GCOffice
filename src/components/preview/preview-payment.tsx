@@ -46,6 +46,7 @@ export function PreviewPayment({
       {/* Horizontal layout: Bank info (left) + Payment terms (right) */}
       {hasPaymentTerms && hasBankInfo ? (
         <div>
+          {/* Row: Bank info (left) + Payment table (right) */}
           <div className="flex items-stretch gap-3">
             {/* Left: Bank Account Info + QR Code */}
             <div className="flex-1 min-w-0 rounded border border-gray-200 bg-blue-50/50 p-2 flex flex-col">
@@ -104,9 +105,9 @@ export function PreviewPayment({
               </div>
             </div>
 
-            {/* Right: Payment Terms Table + Delivery Info */}
-            <div className="w-full max-w-sm shrink-0 flex flex-col">
-              <table className="w-full border-collapse text-[10px]">
+            {/* Right: Payment Terms Table */}
+            <div className="w-full max-w-sm shrink-0">
+              <table className="w-full h-full border-collapse text-[10px]">
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="border border-gray-200 px-1 sm:px-2 py-1 text-center w-10 sm:w-14">
@@ -148,30 +149,36 @@ export function PreviewPayment({
                   ))}
                 </tbody>
               </table>
-              {hasDeliveryInfo && (
-                <div className="rounded border border-gray-200 p-2 mt-2 space-y-0.5">
-                  {productionDays && (
-                    <div className="text-[10px] text-gray-700">
-                      <span className="font-bold">ระยะเวลาผลิต/จัดส่ง:</span>{" "}
-                      {productionDays}
-                    </div>
-                  )}
-                  {(deliveryDateStart || deliveryDateEnd) && (
-                    <div className="text-[10px] text-gray-700">
-                      <span className="font-bold">
-                        วันที่คาดว่าจะได้รับสินค้า:
-                      </span>{" "}
+            </div>
+          </div>
+
+          {/* Delivery Info (full width below) */}
+          {hasDeliveryInfo && (
+            <div className="rounded border border-gray-200 p-2 mt-2 text-[10px] text-gray-700">
+              <div className="grid grid-cols-[auto_auto_1fr] gap-x-1.5 gap-y-0.5">
+                {productionDays && (
+                  <>
+                    <span className="font-bold text-right">ระยะเวลาผลิต/จัดส่ง</span>
+                    <span>:</span>
+                    <span>{productionDays}</span>
+                  </>
+                )}
+                {(deliveryDateStart || deliveryDateEnd) && (
+                  <>
+                    <span className="font-bold text-right">วันที่คาดว่าจะได้รับสินค้า</span>
+                    <span>:</span>
+                    <span>
                       {deliveryDateStart &&
                         formatThaiDate(new Date(deliveryDateStart))}
                       {deliveryDateStart && deliveryDateEnd && " - "}
                       {deliveryDateEnd &&
                         formatThaiDate(new Date(deliveryDateEnd))}
-                    </div>
-                  )}
-                </div>
-              )}
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       ) : (
         <>
