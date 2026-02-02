@@ -152,25 +152,29 @@ export function PreviewPayment({
                 </tbody>
               </table>
               {hasDeliveryInfo && (
-                <div className="rounded border border-gray-200 p-2 mt-2 space-y-0.5">
-                  {productionDays && (
-                    <div className="text-[10px] text-gray-700">
-                      <span className="font-bold">ระยะเวลาผลิต/จัดส่ง:</span>{" "}
-                      {productionDays}
-                    </div>
-                  )}
-                  {(deliveryDateStart || deliveryDateEnd) && (
-                    <div className="text-[10px] text-gray-700">
-                      <span className="font-bold">
-                        วันที่คาดว่าจะได้รับสินค้า:
-                      </span>{" "}
-                      {deliveryDateStart &&
-                        formatThaiDate(new Date(deliveryDateStart))}
-                      {deliveryDateStart && deliveryDateEnd && " - "}
-                      {deliveryDateEnd &&
-                        formatThaiDate(new Date(deliveryDateEnd))}
-                    </div>
-                  )}
+                <div className="rounded border border-gray-200 p-2 mt-2">
+                  <div className="grid grid-cols-[auto_auto_1fr] gap-x-1 gap-y-0.5 text-[10px] text-gray-700">
+                    {productionDays && (
+                      <>
+                        <span className="font-bold">ระยะเวลาผลิต/จัดส่ง</span>
+                        <span className="font-bold">:</span>
+                        <span>{productionDays}</span>
+                      </>
+                    )}
+                    {(deliveryDateStart || deliveryDateEnd) && (
+                      <>
+                        <span className="font-bold">วันที่คาดว่าจะได้รับสินค้า</span>
+                        <span className="font-bold">:</span>
+                        <span>
+                          {deliveryDateStart &&
+                            formatThaiDate(new Date(deliveryDateStart))}
+                          {deliveryDateStart && deliveryDateEnd && " - "}
+                          {deliveryDateEnd &&
+                            formatThaiDate(new Date(deliveryDateEnd))}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
