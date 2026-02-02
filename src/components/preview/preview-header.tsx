@@ -39,13 +39,13 @@ export function PreviewHeader({
     DOCUMENT_TYPE_LABELS[documentType] || documentType;
 
   return (
-    <div className="mb-6">
+    <div className="mb-3">
       {/* Top Row: Logo + Company Name | Document Type */}
-      <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="flex items-start justify-between gap-2 mb-1.5">
         {/* Left: Logo and Company Name */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           {company.logoUrl && (
-            <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded">
+            <div className="relative h-12 w-12 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={company.logoUrl}
@@ -59,7 +59,7 @@ export function PreviewHeader({
               {company.name}
             </h1>
             {company.taxId && (
-              <p className="text-xs text-gray-500">
+              <p className="text-[10px] text-gray-500">
                 เลขประจำตัวผู้เสียภาษี: {company.taxId}
               </p>
             )}
@@ -75,7 +75,7 @@ export function PreviewHeader({
       </div>
 
       {/* Company Contact Info */}
-      <div className="grid grid-cols-1 gap-1 text-xs text-gray-600">
+      <div className="grid grid-cols-1 gap-0.5 text-[10px] text-gray-600">
         {company.address && (
           <div className="flex items-start gap-1.5">
             <MapPin className="h-3 w-3 mt-0.5 shrink-0" />

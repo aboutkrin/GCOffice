@@ -34,21 +34,21 @@ export function PreviewPayment({
   if (!hasPaymentTerms && !hasBankInfo) return null;
 
   return (
-    <div className="mb-6">
+    <div className="mb-3">
       {/* Horizontal layout: Bank info (left) + Payment terms (right) */}
       {hasPaymentTerms && hasBankInfo ? (
         <div>
           <div className="flex items-stretch gap-3">
             {/* Left: Bank Account Info + QR Code */}
-            <div className="shrink-0 rounded border border-gray-200 bg-blue-50/50 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Landmark className="h-4 w-4 text-blue-600" />
-                <h4 className="text-xs font-bold text-gray-800">
+            <div className="shrink-0 rounded border border-gray-200 bg-blue-50/50 p-2">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Landmark className="h-3.5 w-3.5 text-blue-600" />
+                <h4 className="text-[10px] font-bold text-gray-800">
                   ข้อมูลบัญชีสำหรับโอนเงิน
                 </h4>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="grid grid-cols-1 gap-1 text-xs">
+              <div className="flex items-start gap-2">
+                <div className="grid grid-cols-1 gap-0.5 text-[10px]">
                   {company.bankName && (
                     <div className="flex items-center gap-2">
                       <span className="text-gray-500 w-16 shrink-0">ธนาคาร:</span>
@@ -88,9 +88,9 @@ export function PreviewPayment({
                     <img
                       src={company.promptpayQrUrl}
                       alt="PromptPay QR Code"
-                      className="h-20 w-20 object-contain"
+                      className="h-16 w-16 object-contain"
                     />
-                    <span className="text-xs text-gray-500 mt-1">พร้อมเพย์</span>
+                    <span className="text-[10px] text-gray-500 mt-1">พร้อมเพย์</span>
                   </div>
                 )}
               </div>
@@ -98,16 +98,16 @@ export function PreviewPayment({
 
             {/* Right: Payment Terms Table */}
             <div className="flex-1 min-w-0">
-              <table className="w-full border-collapse text-xs">
+              <table className="w-full border-collapse text-[10px]">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-center w-10 sm:w-14">
+                    <th className="border border-gray-200 px-1 sm:px-2 py-1 text-center w-10 sm:w-14">
                       งวดที่
                     </th>
-                    <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-left">
+                    <th className="border border-gray-200 px-1 sm:px-2 py-1 text-left">
                       เงื่อนไขการชำระเงิน
                     </th>
-                    <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-right w-20 sm:w-28">
+                    <th className="border border-gray-200 px-1 sm:px-2 py-1 text-right w-20 sm:w-28">
                       จำนวนเงิน (บาท)
                     </th>
                   </tr>
@@ -115,25 +115,25 @@ export function PreviewPayment({
                 <tbody>
                   {paymentTerms.map((term) => (
                     <tr key={term.sequence}>
-                      <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-center text-gray-600">
+                      <td className="border border-gray-200 px-1 sm:px-2 py-1 text-center text-gray-600">
                         {term.sequence}
                       </td>
-                      <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-gray-700">
+                      <td className="border border-gray-200 px-1 sm:px-2 py-1 text-gray-700">
                         <div className="flex items-baseline justify-between gap-2">
                           <span>{term.name}</span>
                           {term.type === "PERCENTAGE" && (
-                            <span className="text-xs text-gray-400 shrink-0">
+                            <span className="text-[10px] text-gray-400 shrink-0">
                               ({formatNumber(term.value)}%)
                             </span>
                           )}
                         </div>
                         {term.note && (
-                          <div className="text-xs text-gray-400 mt-0.5">
+                          <div className="text-[10px] text-gray-400 mt-0.5">
                             {term.note}
                           </div>
                         )}
                       </td>
-                      <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-right font-medium text-gray-900">
+                      <td className="border border-gray-200 px-1 sm:px-2 py-1 text-right font-medium text-gray-900">
                         {formatNumber(term.calculatedAmount)}
                       </td>
                     </tr>
@@ -148,19 +148,19 @@ export function PreviewPayment({
           {/* Payment Terms only (no bank info) */}
           {hasPaymentTerms && (
             <div className="mb-4">
-              <h3 className="mb-2 text-xs font-bold text-gray-800">
+              <h3 className="mb-2 text-[10px] font-bold text-gray-800">
                 เงื่อนไขการชำระเงิน
               </h3>
-              <table className="w-full border-collapse text-xs">
+              <table className="w-full border-collapse text-[10px]">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-center w-10 sm:w-16">
+                    <th className="border border-gray-200 px-1 sm:px-2 py-1 text-center w-10 sm:w-16">
                       งวดที่
                     </th>
-                    <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-left">
+                    <th className="border border-gray-200 px-1 sm:px-2 py-1 text-left">
                       เงื่อนไขการชำระเงิน
                     </th>
-                    <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-right w-20 sm:w-32">
+                    <th className="border border-gray-200 px-1 sm:px-2 py-1 text-right w-20 sm:w-32">
                       จำนวนเงิน (บาท)
                     </th>
                   </tr>
@@ -168,25 +168,25 @@ export function PreviewPayment({
                 <tbody>
                   {paymentTerms.map((term) => (
                     <tr key={term.sequence}>
-                      <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-center text-gray-600">
+                      <td className="border border-gray-200 px-1 sm:px-2 py-1 text-center text-gray-600">
                         {term.sequence}
                       </td>
-                      <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-gray-700">
+                      <td className="border border-gray-200 px-1 sm:px-2 py-1 text-gray-700">
                         <div className="flex items-baseline justify-between gap-2">
                           <span>{term.name}</span>
                           {term.type === "PERCENTAGE" && (
-                            <span className="text-xs text-gray-400 shrink-0">
+                            <span className="text-[10px] text-gray-400 shrink-0">
                               ({formatNumber(term.value)}%)
                             </span>
                           )}
                         </div>
                         {term.note && (
-                          <div className="text-xs text-gray-400 mt-0.5">
+                          <div className="text-[10px] text-gray-400 mt-0.5">
                             {term.note}
                           </div>
                         )}
                       </td>
-                      <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-right font-medium text-gray-900">
+                      <td className="border border-gray-200 px-1 sm:px-2 py-1 text-right font-medium text-gray-900">
                         {formatNumber(term.calculatedAmount)}
                       </td>
                     </tr>
@@ -201,12 +201,12 @@ export function PreviewPayment({
             <div className="rounded border border-gray-200 bg-blue-50/50 p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Landmark className="h-4 w-4 text-blue-600" />
-                <h4 className="text-xs font-bold text-gray-800">
+                <h4 className="text-[10px] font-bold text-gray-800">
                   ข้อมูลบัญชีสำหรับโอนเงิน
                 </h4>
               </div>
               <div className="flex items-start justify-between gap-4">
-                <div className="grid grid-cols-1 gap-1 text-xs">
+                <div className="grid grid-cols-1 gap-1 text-[10px]">
                   {company.bankName && (
                     <div className="flex items-center gap-2">
                       <span className="text-gray-500 w-20 shrink-0">ธนาคาร:</span>
@@ -248,7 +248,7 @@ export function PreviewPayment({
                       alt="PromptPay QR Code"
                       className="h-24 w-24 sm:h-28 sm:w-28 object-contain"
                     />
-                    <span className="text-xs text-gray-500 mt-1">พร้อมเพย์</span>
+                    <span className="text-[10px] text-gray-500 mt-1">พร้อมเพย์</span>
                   </div>
                 )}
               </div>
