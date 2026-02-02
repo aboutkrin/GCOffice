@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -125,7 +126,15 @@ export function AppHeader({ user }: AppHeaderProps) {
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
           <SheetHeader className="border-b px-6">
-            <SheetTitle className="text-left">GCOffice</SheetTitle>
+            <SheetTitle className="text-left">
+              <Image
+                src="/logo.png"
+                alt="GCOffice"
+                width={140}
+                height={44}
+                className="h-7 w-auto"
+              />
+            </SheetTitle>
           </SheetHeader>
           <nav className="flex-1 overflow-y-auto space-y-1 p-4">
             {mainNavItems.map((item) => {

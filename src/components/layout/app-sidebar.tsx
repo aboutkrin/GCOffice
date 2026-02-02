@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -87,8 +88,15 @@ export function AppSidebar() {
     <aside className="hidden md:flex md:w-64 md:flex-col bg-card border-r">
       {/* Logo */}
       <div className="flex h-14 items-center border-b px-6">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="text-xl font-bold tracking-tight">GCOffice</span>
+        <Link href="/dashboard" className="flex items-center">
+          <Image
+            src="/logo.png"
+            alt="GCOffice"
+            width={140}
+            height={44}
+            className="h-7 w-auto"
+            priority
+          />
         </Link>
       </div>
 

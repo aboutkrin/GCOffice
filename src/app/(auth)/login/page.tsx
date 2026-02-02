@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import Image from "next/image";
 import { signIn } from "@/actions/auth-actions";
 import {
   Card,
@@ -56,6 +57,15 @@ export default function LoginPage() {
   }
 
   return (
+    <div className="flex flex-col items-center gap-6">
+      <Image
+        src="/logo.png"
+        alt="GCOffice"
+        width={240}
+        height={75}
+        className="h-12 w-auto"
+        priority
+      />
     <Card>
       <CardHeader>
         <CardTitle className="text-2xl">เข้าสู่ระบบ</CardTitle>
@@ -111,5 +121,6 @@ export default function LoginPage() {
         </Form>
       </CardContent>
     </Card>
+    </div>
   );
 }
