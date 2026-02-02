@@ -33,14 +33,14 @@ export function PreviewFooter({
         {hasDeliveryInfo && (
           <div className="flex-1 min-w-0 rounded border border-gray-200 p-3 space-y-1">
             {productionDays && (
-              <div className="text-xs sm:text-sm text-gray-700">
+              <div className="text-xs text-gray-700">
                 <span className="font-bold">ระยะเวลาผลิต/จัดส่ง:</span>{" "}
                 {productionDays}
               </div>
             )}
 
             {(deliveryDateStart || deliveryDateEnd) && (
-              <div className="text-xs sm:text-sm text-gray-700">
+              <div className="text-xs text-gray-700">
                 <span className="font-bold">
                   วันที่คาดว่าจะได้รับสินค้า:
                 </span>{" "}
@@ -70,13 +70,13 @@ export function PreviewFooter({
             </div>
             <div className="mx-auto w-24 sm:w-40 border-b border-gray-400" />
             {createdBy?.firstName || createdBy?.lastName ? (
-              <p className="mt-1.5 text-xs sm:text-sm text-gray-700">
+              <p className="mt-1.5 text-xs text-gray-700">
                 {[createdBy.firstName, createdBy.lastName]
                   .filter(Boolean)
                   .join(" ")}
               </p>
             ) : null}
-            <p className="mt-1 text-xs sm:text-sm text-gray-700">
+            <p className="mt-1 text-xs text-gray-700">
               ผู้เสนอราคา / ผู้ออกเอกสาร
             </p>
             <p className="mt-1 text-xs text-gray-500">
@@ -91,7 +91,7 @@ export function PreviewFooter({
           <div className="text-center">
             <div className="h-12 sm:h-16" />
             <div className="mx-auto w-24 sm:w-40 border-b border-gray-400" />
-            <p className="mt-1.5 text-xs sm:text-sm text-gray-700">
+            <p className="mt-1.5 text-xs text-gray-700">
               ผู้อนุมัติ / ลูกค้า
             </p>
             <p className="mt-1 text-xs text-gray-500">
