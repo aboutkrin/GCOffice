@@ -55,7 +55,7 @@ export function PreviewHeader({
             </div>
           )}
           <div className="min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 break-words">
               {company.name}
             </h1>
             {company.taxId && (
@@ -68,7 +68,7 @@ export function PreviewHeader({
 
         {/* Right: Document Type */}
         <div className="text-right shrink-0">
-          <h2 className="text-xl sm:text-2xl font-bold text-primary">
+          <h2 className="text-2xl sm:text-4xl font-bold text-primary">
             {typeLabel}
           </h2>
         </div>
