@@ -37,19 +37,16 @@ export function PreviewPayment({
     <div className="mb-6">
       {/* Horizontal layout: Bank info (left) + Payment terms (right) */}
       {hasPaymentTerms && hasBankInfo ? (
-        <div>
-          <h3 className="mb-2 text-center text-sm font-bold text-gray-800">
-            เงื่อนไขการชำระเงิน
-          </h3>
-          <div className="flex items-start gap-3">
-            {/* Left: Bank Account Info */}
-            <div className="shrink-0 rounded border border-gray-200 bg-blue-50/50 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Landmark className="h-4 w-4 text-blue-600" />
-                <h4 className="text-xs sm:text-sm font-bold text-gray-800">
-                  ข้อมูลบัญชีสำหรับโอนเงิน
-                </h4>
-              </div>
+        <div className="flex items-stretch gap-3">
+          {/* Left: Bank Account Info + QR Code */}
+          <div className="flex-1 rounded border border-gray-200 overflow-hidden">
+            <div className="flex items-center gap-2 bg-blue-600 px-3 py-1.5">
+              <Landmark className="h-4 w-4 text-white" />
+              <h4 className="text-xs sm:text-sm font-bold text-white">
+                ข้อมูลบัญชีสำหรับโอนเงิน
+              </h4>
+            </div>
+            <div className="flex items-start gap-3 bg-blue-50/50 p-3">
               <div className="grid grid-cols-1 gap-1 text-xs sm:text-sm">
                 {company.bankName && (
                   <div className="flex items-center gap-2">
@@ -85,65 +82,70 @@ export function PreviewPayment({
                   </div>
                 )}
               </div>
+
+              {/* QR Code */}
+              {company.promptpayQrUrl && (
+                <div className="flex flex-col items-center shrink-0">
+                  <img
+                    src={company.promptpayQrUrl}
+                    alt="PromptPay QR Code"
+                    className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
+                  />
+                  <span className="text-xs text-gray-500 mt-1">พร้อมเพย์</span>
+                </div>
+              )}
             </div>
+          </div>
 
-            {/* Center: QR Code */}
-            {company.promptpayQrUrl && (
-              <div className="flex flex-col items-center shrink-0">
-                <img
-                  src={company.promptpayQrUrl}
-                  alt="PromptPay QR Code"
-                  className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
-                />
-                <span className="text-xs text-gray-500 mt-1">พร้อมเพย์</span>
-              </div>
-            )}
-
-            {/* Right: Payment Terms Table */}
-            <div className="flex-1 min-w-0">
-              <table className="w-full border-collapse text-xs sm:text-sm">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-center w-10 sm:w-14">
-                      งวดที่
-                    </th>
-                    <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-left">
-                      รายละเอียด
-                    </th>
-                    <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-right w-20 sm:w-28">
-                      จำนวนเงิน (บาท)
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paymentTerms.map((term) => (
-                    <tr key={term.sequence}>
-                      <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-center text-gray-600">
-                        {term.sequence}
-                      </td>
-                      <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-gray-700">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span>{term.name}</span>
-                          {term.type === "PERCENTAGE" && (
-                            <span className="text-xs text-gray-400 shrink-0">
-                              ({formatNumber(term.value)}%)
-                            </span>
-                          )}
-                        </div>
-                        {term.note && (
-                          <div className="text-xs text-gray-400 mt-0.5">
-                            {term.note}
-                          </div>
+          {/* Right: Payment Terms Table */}
+          <div className="flex-1 rounded border border-gray-200 overflow-hidden">
+            <div className="bg-blue-600 px-3 py-1.5">
+              <h4 className="text-xs sm:text-sm font-bold text-white text-center">
+                เงื่อนไขการชำระเงิน
+              </h4>
+            </div>
+            <table className="w-full border-collapse text-xs sm:text-sm">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-center w-10 sm:w-14">
+                    งวดที่
+                  </th>
+                  <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-left">
+                    รายละเอียด
+                  </th>
+                  <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-right w-20 sm:w-28">
+                    จำนวนเงิน (บาท)
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {paymentTerms.map((term) => (
+                  <tr key={term.sequence}>
+                    <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-center text-gray-600">
+                      {term.sequence}
+                    </td>
+                    <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-gray-700">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span>{term.name}</span>
+                        {term.type === "PERCENTAGE" && (
+                          <span className="text-xs text-gray-400 shrink-0">
+                            ({formatNumber(term.value)}%)
+                          </span>
                         )}
-                      </td>
-                      <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-right font-medium text-gray-900">
-                        {formatNumber(term.calculatedAmount)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                      {term.note && (
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {term.note}
+                        </div>
+                      )}
+                    </td>
+                    <td className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-right font-medium text-gray-900">
+                      {formatNumber(term.calculatedAmount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       ) : (
@@ -201,14 +203,14 @@ export function PreviewPayment({
 
           {/* Bank Account Info only (no payment terms) */}
           {hasBankInfo && (
-            <div className="rounded border border-gray-200 bg-blue-50/50 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Landmark className="h-4 w-4 text-blue-600" />
-                <h4 className="text-sm font-bold text-gray-800">
+            <div className="rounded border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-2 bg-blue-600 px-3 py-1.5">
+                <Landmark className="h-4 w-4 text-white" />
+                <h4 className="text-sm font-bold text-white">
                   ข้อมูลบัญชีสำหรับโอนเงิน
                 </h4>
               </div>
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start justify-between gap-4 bg-blue-50/50 p-3">
                 <div className="grid grid-cols-1 gap-1 text-sm">
                   {company.bankName && (
                     <div className="flex items-center gap-2">
