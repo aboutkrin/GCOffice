@@ -37,9 +37,9 @@ export function PreviewPayment({
     <div className="mb-6">
       {/* Horizontal layout: Bank info (left) + Payment terms (right) */}
       {hasPaymentTerms && hasBankInfo ? (
-        <div className="flex items-start gap-3">
+        <div className="flex items-stretch gap-3">
           {/* Left: Bank Account Info + QR Code */}
-          <div className="shrink-0 rounded border border-gray-200 overflow-hidden">
+          <div className="flex-1 rounded border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-2 bg-blue-600 px-3 py-1.5">
               <Landmark className="h-4 w-4 text-white" />
               <h4 className="text-xs sm:text-sm font-bold text-white">
@@ -98,10 +98,12 @@ export function PreviewPayment({
           </div>
 
           {/* Right: Payment Terms Table */}
-          <div className="flex-1 min-w-0">
-            <h3 className="mb-2 text-center text-sm font-bold text-gray-800">
-              เงื่อนไขการชำระเงิน
-            </h3>
+          <div className="flex-1 rounded border border-gray-200 overflow-hidden">
+            <div className="bg-blue-600 px-3 py-1.5">
+              <h4 className="text-xs sm:text-sm font-bold text-white text-center">
+                เงื่อนไขการชำระเงิน
+              </h4>
+            </div>
             <table className="w-full border-collapse text-xs sm:text-sm">
               <thead>
                 <tr className="bg-gray-100">
