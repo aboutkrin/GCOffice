@@ -104,8 +104,8 @@ export function PreviewPayment({
               </div>
             </div>
 
-            {/* Right: Payment Terms Table */}
-            <div className="flex-1 min-w-0">
+            {/* Right: Payment Terms Table + Delivery Info */}
+            <div className="flex-1 min-w-0 flex flex-col">
               <table className="w-full border-collapse text-[10px]">
                 <thead>
                   <tr className="bg-gray-100">
@@ -148,6 +148,28 @@ export function PreviewPayment({
                   ))}
                 </tbody>
               </table>
+              {hasDeliveryInfo && (
+                <div className="rounded border border-gray-200 p-2 mt-2 space-y-0.5">
+                  {productionDays && (
+                    <div className="text-[10px] text-gray-700">
+                      <span className="font-bold">ระยะเวลาผลิต/จัดส่ง:</span>{" "}
+                      {productionDays}
+                    </div>
+                  )}
+                  {(deliveryDateStart || deliveryDateEnd) && (
+                    <div className="text-[10px] text-gray-700">
+                      <span className="font-bold">
+                        วันที่คาดว่าจะได้รับสินค้า:
+                      </span>{" "}
+                      {deliveryDateStart &&
+                        formatThaiDate(new Date(deliveryDateStart))}
+                      {deliveryDateStart && deliveryDateEnd && " - "}
+                      {deliveryDateEnd &&
+                        formatThaiDate(new Date(deliveryDateEnd))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -265,29 +287,6 @@ export function PreviewPayment({
         </>
       )}
 
-      {/* Delivery Info */}
-      {hasDeliveryInfo && (
-        <div className="mt-2 rounded border border-gray-200 p-2 space-y-0.5">
-          {productionDays && (
-            <div className="text-[10px] text-gray-700">
-              <span className="font-bold">ระยะเวลาผลิต/จัดส่ง:</span>{" "}
-              {productionDays}
-            </div>
-          )}
-          {(deliveryDateStart || deliveryDateEnd) && (
-            <div className="text-[10px] text-gray-700">
-              <span className="font-bold">
-                วันที่คาดว่าจะได้รับสินค้า:
-              </span>{" "}
-              {deliveryDateStart &&
-                formatThaiDate(new Date(deliveryDateStart))}
-              {deliveryDateStart && deliveryDateEnd && " - "}
-              {deliveryDateEnd &&
-                formatThaiDate(new Date(deliveryDateEnd))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
