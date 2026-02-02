@@ -89,7 +89,7 @@ export function PreviewPayment({
                   <img
                     src={company.promptpayQrUrl}
                     alt="PromptPay QR Code"
-                    className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
+                    className="h-16 w-16 sm:h-20 sm:w-20 object-contain"
                   />
                   <span className="text-xs text-gray-500 mt-1">พร้อมเพย์</span>
                 </div>
@@ -251,7 +251,7 @@ export function PreviewPayment({
                     <img
                       src={company.promptpayQrUrl}
                       alt="PromptPay QR Code"
-                      className="h-24 w-24 sm:h-28 sm:w-28 object-contain"
+                      className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
                     />
                     <span className="text-xs text-gray-500 mt-1">พร้อมเพย์</span>
                   </div>
