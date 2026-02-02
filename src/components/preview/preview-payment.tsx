@@ -48,60 +48,62 @@ export function PreviewPayment({
         <div>
           {/* Row: Bank info (left) + Payment table (right) */}
           <div className="flex items-stretch gap-3">
-            {/* Left: Bank Account Info + QR Code */}
-            <div className="flex-1 min-w-0 rounded border border-gray-200 bg-blue-50/50 p-2 flex flex-col">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Landmark className="h-3.5 w-3.5 text-blue-600" />
-                <h4 className="text-[10px] font-bold text-gray-800">
-                  ข้อมูลบัญชีสำหรับโอนเงิน
-                </h4>
-              </div>
-              <div className="flex items-center justify-between gap-2 flex-1">
-                <div className="grid grid-cols-1 gap-0.5 text-[10px]">
-                  {company.bankName && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500 w-16 shrink-0">ธนาคาร:</span>
-                      <div className="flex items-center gap-1.5">
-                        {company.bankLogoUrl && (
-                          <img
-                            src={company.bankLogoUrl}
-                            alt={company.bankName}
-                            className="h-4 w-4 object-contain shrink-0"
-                          />
-                        )}
+            {/* Left: Bank Account Info + QR Code — height driven by right column */}
+            <div className="flex-1 min-w-0 relative">
+              <div className="absolute inset-0 rounded border border-gray-200 bg-blue-50/50 p-2 flex flex-col overflow-hidden">
+                <div className="flex items-center gap-1.5 mb-1.5 shrink-0">
+                  <Landmark className="h-3.5 w-3.5 text-blue-600" />
+                  <h4 className="text-[10px] font-bold text-gray-800">
+                    ข้อมูลบัญชีสำหรับโอนเงิน
+                  </h4>
+                </div>
+                <div className="flex items-center justify-between gap-2 flex-1 min-h-0">
+                  <div className="grid grid-cols-1 gap-0.5 text-[10px]">
+                    {company.bankName && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500 w-16 shrink-0">ธนาคาร:</span>
+                        <div className="flex items-center gap-1.5">
+                          {company.bankLogoUrl && (
+                            <img
+                              src={company.bankLogoUrl}
+                              alt={company.bankName}
+                              className="h-4 w-4 object-contain shrink-0"
+                            />
+                          )}
+                          <span className="font-medium text-gray-800">
+                            {company.bankName}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {company.accountName && (
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-16 shrink-0">ชื่อบัญชี:</span>
                         <span className="font-medium text-gray-800">
-                          {company.bankName}
+                          {company.accountName}
                         </span>
                       </div>
-                    </div>
-                  )}
-                  {company.accountName && (
-                    <div className="flex gap-2">
-                      <span className="text-gray-500 w-16 shrink-0">ชื่อบัญชี:</span>
-                      <span className="font-medium text-gray-800">
-                        {company.accountName}
-                      </span>
-                    </div>
-                  )}
-                  {company.accountNumber && (
-                    <div className="flex gap-2">
-                      <span className="text-gray-500 w-16 shrink-0">เลขที่บัญชี:</span>
-                      <span className="font-medium text-gray-800 tracking-wide">
-                        {company.accountNumber}
-                      </span>
+                    )}
+                    {company.accountNumber && (
+                      <div className="flex gap-2">
+                        <span className="text-gray-500 w-16 shrink-0">เลขที่บัญชี:</span>
+                        <span className="font-medium text-gray-800 tracking-wide">
+                          {company.accountNumber}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {company.promptpayQrUrl && (
+                    <div className="flex flex-col items-center shrink-0 justify-center min-h-0">
+                      <img
+                        src={company.promptpayQrUrl}
+                        alt="PromptPay QR Code"
+                        className="max-h-full w-auto aspect-square object-contain"
+                      />
+                      <span className="text-[10px] text-gray-500 mt-0.5 shrink-0">พร้อมเพย์</span>
                     </div>
                   )}
                 </div>
-                {company.promptpayQrUrl && (
-                  <div className="flex flex-col items-center shrink-0 justify-center">
-                    <img
-                      src={company.promptpayQrUrl}
-                      alt="PromptPay QR Code"
-                      className="w-full max-w-[100px] aspect-square object-contain"
-                    />
-                    <span className="text-[10px] text-gray-500 mt-0.5">พร้อมเพย์</span>
-                  </div>
-                )}
               </div>
             </div>
 
