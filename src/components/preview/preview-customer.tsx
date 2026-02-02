@@ -47,16 +47,9 @@ export function PreviewCustomer({
             ) : (
               <User className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
             )}
-            <div className="flex flex-wrap items-baseline gap-x-2">
-              <span className="text-sm sm:text-base font-semibold text-gray-900 break-words">
-                {displayName}
-              </span>
-              {customer.code && (
-                <span className="text-xs text-gray-500 font-mono">
-                  ({customer.code})
-                </span>
-              )}
-            </div>
+            <span className="text-sm sm:text-base font-semibold text-gray-900 break-words">
+              {displayName}
+            </span>
           </div>
 
           {/* Tax ID */}
@@ -101,16 +94,14 @@ export function PreviewCustomer({
       </div>
 
       {/* Right: Document Date & Number */}
-      <div className="shrink-0 rounded border border-gray-200 p-3 sm:p-4 text-right">
-        <div className="space-y-1 text-xs sm:text-sm text-gray-700">
-          <div>
-            <span className="font-semibold">วันที่:</span>{" "}
-            {formatThaiDate(new Date(documentDate))}
-          </div>
-          <div>
-            <span className="font-semibold">เลขที่:</span>{" "}
-            {documentNumber}
-          </div>
+      <div className="shrink-0 rounded border border-gray-200 p-3 sm:p-4">
+        <div className="grid grid-cols-[auto_auto_1fr] gap-x-1.5 gap-y-1 text-xs sm:text-sm text-gray-700">
+          <span className="font-semibold text-right">วันที่</span>
+          <span>:</span>
+          <span>{formatThaiDate(new Date(documentDate))}</span>
+          <span className="font-semibold text-right">เลขที่</span>
+          <span>:</span>
+          <span>{documentNumber}</span>
         </div>
       </div>
     </div>
