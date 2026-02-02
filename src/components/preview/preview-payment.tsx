@@ -38,10 +38,7 @@ export function PreviewPayment({
       {/* Horizontal layout: Bank info (left) + Payment terms (right) */}
       {hasPaymentTerms && hasBankInfo ? (
         <div>
-          <h3 className="mb-2 text-center text-xs font-bold text-gray-800">
-            เงื่อนไขการชำระเงิน
-          </h3>
-          <div className="flex items-start gap-3">
+          <div className="flex items-stretch gap-3">
             {/* Left: Bank Account Info + QR Code */}
             <div className="shrink-0 rounded border border-gray-200 bg-blue-50/50 p-3">
               <div className="flex items-center gap-2 mb-2">
