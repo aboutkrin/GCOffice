@@ -23,91 +23,95 @@ export function PreviewFooter({
   documentDate,
   createdBy,
 }: PreviewFooterProps) {
-  const hasNotes = footerNotes || productionDays || deliveryDateStart;
+  const hasDeliveryInfo = productionDays || deliveryDateStart || deliveryDateEnd;
 
   return (
     <div>
-      {/* Notes & Delivery Info */}
-      {hasNotes && (
-        <div className="mb-6 space-y-2">
-          {footerNotes && (
-            <div>
-              <h4 className="text-sm font-bold text-gray-800 mb-1">
-                หมายเหตุ
-              </h4>
-              <p className="text-sm text-gray-600 whitespace-pre-line">
-                {footerNotes}
-              </p>
-            </div>
-          )}
+      {/* Delivery Info (left) + Signatures (right) */}
+      <div className="flex items-start gap-4 sm:gap-6">
+        {/* Left: Delivery Info Box */}
+        {hasDeliveryInfo && (
+          <div className="flex-1 min-w-0 rounded border border-gray-200 p-3 space-y-1">
+            {productionDays && (
+              <div className="text-xs sm:text-sm text-gray-700">
+                <span className="font-bold">ระยะเวลาผลิต/จัดส่ง:</span>{" "}
+                {productionDays}
+              </div>
+            )}
 
-          {productionDays && (
-            <div className="text-sm text-gray-700">
-              <span className="font-semibold">ระยะเวลาผลิต/จัดส่ง:</span>{" "}
-              {productionDays}
-            </div>
-          )}
-
-          {(deliveryDateStart || deliveryDateEnd) && (
-            <div className="text-sm text-gray-700">
-              <span className="font-semibold">
-                วันที่คาดว่าจะได้รับสินค้า:
-              </span>{" "}
-              {deliveryDateStart &&
-                formatThaiDate(new Date(deliveryDateStart))}
-              {deliveryDateStart && deliveryDateEnd && " - "}
-              {deliveryDateEnd &&
-                formatThaiDate(new Date(deliveryDateEnd))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Signature Lines */}
-      <div className="mt-6 sm:mt-10 grid grid-cols-2 gap-4 sm:gap-8 pt-4">
-        {/* Left: Issuer */}
-        <div className="text-center">
-          <div className="flex items-end justify-center h-16 sm:h-20">
-            {createdBy?.signatureUrl && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={createdBy.signatureUrl}
-                alt="ลายเซ็น"
-                className="max-h-16 sm:max-h-20 w-auto object-contain"
-              />
+            {(deliveryDateStart || deliveryDateEnd) && (
+              <div className="text-xs sm:text-sm text-gray-700">
+                <span className="font-bold">
+                  วันที่คาดว่าจะได้รับสินค้า:
+                </span>{" "}
+                {deliveryDateStart &&
+                  formatThaiDate(new Date(deliveryDateStart))}
+                {deliveryDateStart && deliveryDateEnd && " - "}
+                {deliveryDateEnd &&
+                  formatThaiDate(new Date(deliveryDateEnd))}
+              </div>
             )}
           </div>
-          <div className="mx-auto w-28 sm:w-48 border-b border-gray-400" />
-          {createdBy?.firstName || createdBy?.lastName ? (
-            <p className="mt-2 text-xs sm:text-sm text-gray-700">
-              {[createdBy.firstName, createdBy.lastName]
-                .filter(Boolean)
-                .join(" ")}
-            </p>
-          ) : null}
-          <p className="mt-1 text-xs sm:text-sm text-gray-700">
-            ผู้เสนอราคา / ผู้ออกเอกสาร
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            วันที่{" "}
-            {documentDate
-              ? formatThaiDate(new Date(documentDate))
-              : "____/____/________"}
-          </p>
-        </div>
+        )}
 
-        {/* Right: Approver */}
-        <div className="text-center">
-          <div className="mb-10 sm:mb-16" />
-          <div className="mx-auto w-28 sm:w-48 border-b border-gray-400" />
-          <p className="mt-2 text-xs sm:text-sm text-gray-700">
-            ผู้อนุมัติ / ลูกค้า
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            วันที่ ____/____/________
-          </p>
+        {/* Right: Signature Lines */}
+        <div className={`grid grid-cols-2 gap-4 sm:gap-6 ${hasDeliveryInfo ? "flex-1" : "w-full"}`}>
+          {/* Left: Issuer */}
+          <div className="text-center">
+            <div className="flex items-end justify-center h-12 sm:h-16">
+              {createdBy?.signatureUrl && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={createdBy.signatureUrl}
+                  alt="ลายเซ็น"
+                  className="max-h-12 sm:max-h-16 w-auto object-contain"
+                />
+              )}
+            </div>
+            <div className="mx-auto w-24 sm:w-40 border-b border-gray-400" />
+            {createdBy?.firstName || createdBy?.lastName ? (
+              <p className="mt-1.5 text-xs sm:text-sm text-gray-700">
+                {[createdBy.firstName, createdBy.lastName]
+                  .filter(Boolean)
+                  .join(" ")}
+              </p>
+            ) : null}
+            <p className="mt-1 text-xs sm:text-sm text-gray-700">
+              ผู้เสนอราคา / ผู้ออกเอกสาร
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              วันที่{" "}
+              {documentDate
+                ? formatThaiDate(new Date(documentDate))
+                : "____/____/________"}
+            </p>
+          </div>
+
+          {/* Right: Approver */}
+          <div className="text-center">
+            <div className="h-12 sm:h-16" />
+            <div className="mx-auto w-24 sm:w-40 border-b border-gray-400" />
+            <p className="mt-1.5 text-xs sm:text-sm text-gray-700">
+              ผู้อนุมัติ / ลูกค้า
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              วันที่ ____/____/________
+            </p>
+          </div>
         </div>
       </div>
+
+      {/* Notes (below) */}
+      {footerNotes && (
+        <div className="mt-3">
+          <h4 className="text-xs font-bold text-gray-800 mb-0.5 underline">
+            หมายเหตุ
+          </h4>
+          <p className="text-xs text-gray-600 whitespace-pre-line leading-relaxed">
+            {footerNotes}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -100,16 +100,18 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
         ref={ref}
         className="w-full max-w-[210mm] md:min-h-[297mm] mx-auto bg-white p-4 sm:p-8 shadow-lg print:shadow-none print:p-0 print:w-[210mm] print:max-w-none print:min-h-[297mm]"
       >
-        {/* Header: Company + Document Type + Number + Date */}
+        {/* Header: Company + Document Type */}
         <PreviewHeader
           company={doc.companySnapshot}
           documentType={doc.type}
-          documentNumber={doc.documentNumber}
-          documentDate={doc.documentDate}
         />
 
-        {/* Customer Info */}
-        <PreviewCustomer customer={doc.customerSnapshot} />
+        {/* Customer Info + Document Date/Number */}
+        <PreviewCustomer
+          customer={doc.customerSnapshot}
+          documentDate={doc.documentDate}
+          documentNumber={doc.documentNumber}
+        />
 
         {/* Line Items Table */}
         <PreviewLineItems items={doc.lineItems} />
