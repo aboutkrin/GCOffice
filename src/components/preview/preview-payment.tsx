@@ -98,7 +98,7 @@ export function PreviewPayment({
                       <img
                         src={company.promptpayQrUrl}
                         alt="PromptPay QR Code"
-                        className="max-h-full w-auto aspect-square object-contain"
+                        className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
                       />
                       <span className="text-[10px] text-gray-500 mt-0.5 shrink-0">พร้อมเพย์</span>
                     </div>
