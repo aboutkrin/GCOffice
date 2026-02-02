@@ -21,7 +21,7 @@ interface PreviewLineItemsProps {
 export function PreviewLineItems({ items }: PreviewLineItemsProps) {
   return (
     <div className="mb-6">
-      <table className="w-full border-collapse text-xs sm:text-sm">
+      <table className="w-full border-collapse text-[12px] leading-4">
         <thead>
           <tr className="bg-gray-800 text-white">
             <th className="border border-gray-700 px-1.5 sm:px-3 py-1.5 sm:py-2 text-center w-7 sm:w-12">

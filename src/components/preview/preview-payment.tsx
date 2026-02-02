@@ -38,7 +38,7 @@ export function PreviewPayment({
       {/* Horizontal layout: Bank info (left) + Payment terms (right) */}
       {hasPaymentTerms && hasBankInfo ? (
         <div>
-          <h3 className="mb-2 text-center text-sm font-bold text-gray-800">
+          <h3 className="mb-2 text-center text-[12px] leading-4 font-bold text-gray-800">
             เงื่อนไขการชำระเงิน
           </h3>
           <div className="flex items-start gap-3">
@@ -46,11 +46,11 @@ export function PreviewPayment({
             <div className="shrink-0 rounded border border-gray-200 bg-blue-50/50 p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Landmark className="h-4 w-4 text-blue-600" />
-                <h4 className="text-xs sm:text-sm font-bold text-gray-800">
+                <h4 className="text-[12px] leading-4 font-bold text-gray-800">
                   ข้อมูลบัญชีสำหรับโอนเงิน
                 </h4>
               </div>
-              <div className="grid grid-cols-1 gap-1 text-xs sm:text-sm">
+              <div className="grid grid-cols-1 gap-1 text-[12px] leading-4">
                 {company.bankName && (
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500 w-16 sm:w-20 shrink-0">ธนาคาร:</span>
@@ -101,7 +101,7 @@ export function PreviewPayment({
 
             {/* Right: Payment Terms Table */}
             <div className="flex-1 min-w-0">
-              <table className="w-full border-collapse text-xs sm:text-sm">
+              <table className="w-full border-collapse text-[12px] leading-4">
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-center w-10 sm:w-14">
@@ -151,10 +151,10 @@ export function PreviewPayment({
           {/* Payment Terms only (no bank info) */}
           {hasPaymentTerms && (
             <div className="mb-4">
-              <h3 className="mb-2 text-sm font-bold text-gray-800">
+              <h3 className="mb-2 text-[12px] leading-4 font-bold text-gray-800">
                 เงื่อนไขการชำระเงิน
               </h3>
-              <table className="w-full border-collapse text-xs sm:text-sm">
+              <table className="w-full border-collapse text-[12px] leading-4">
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="border border-gray-200 px-1.5 sm:px-3 py-1.5 text-center w-10 sm:w-16">
@@ -204,12 +204,12 @@ export function PreviewPayment({
             <div className="rounded border border-gray-200 bg-blue-50/50 p-3">
               <div className="flex items-center gap-2 mb-2">
                 <Landmark className="h-4 w-4 text-blue-600" />
-                <h4 className="text-sm font-bold text-gray-800">
+                <h4 className="text-[12px] leading-4 font-bold text-gray-800">
                   ข้อมูลบัญชีสำหรับโอนเงิน
                 </h4>
               </div>
               <div className="flex items-start justify-between gap-4">
-                <div className="grid grid-cols-1 gap-1 text-sm">
+                <div className="grid grid-cols-1 gap-1 text-[12px] leading-4">
                   {company.bankName && (
                     <div className="flex items-center gap-2">
                       <span className="text-gray-500 w-20 shrink-0">ธนาคาร:</span>

@@ -37,7 +37,7 @@ export function PreviewSummary({
   return (
     <div className="mb-6 flex justify-end">
       <div className="w-full max-w-sm">
-        <table className="w-full text-xs sm:text-sm">
+        <table className="w-full text-[12px] leading-4">
           <tbody>
             {/* Subtotal */}
             <tr>
@@ -97,10 +97,10 @@ export function PreviewSummary({
 
             {/* Grand Total */}
             <tr className="border-t-2 border-gray-800">
-              <td className="pt-2 pb-1 pr-2 sm:pr-4 text-right text-sm sm:text-base font-bold text-gray-900">
+              <td className="pt-2 pb-1 pr-2 sm:pr-4 text-right text-[12px] leading-4 font-bold text-gray-900">
                 รวมทั้งสิ้น
               </td>
-              <td className="pt-2 pb-1 text-right text-base sm:text-lg font-bold text-primary w-24 sm:w-32">
+              <td className="pt-2 pb-1 text-right text-[12px] leading-4 font-bold text-primary w-24 sm:w-32">
                 {formatNumber(grandTotal)}
               </td>
             </tr>
@@ -114,7 +114,7 @@ export function PreviewSummary({
         </table>
 
         {/* Thai Baht Text */}
-        <div className="mt-2 rounded bg-gray-50 px-3 py-2 text-center text-sm text-gray-700 border border-gray-200">
+        <div className="mt-2 rounded bg-gray-50 px-3 py-2 text-center text-[12px] leading-4 text-gray-700 border border-gray-200">
           <span className="font-medium">({bahtText(grandTotal)})</span>
         </div>
       </div>
