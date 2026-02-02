@@ -92,13 +92,13 @@ export function PreviewPayment({
                   )}
                 </div>
                 {company.promptpayQrUrl && (
-                  <div className="flex flex-col items-center shrink-0">
+                  <div className="flex flex-col items-center shrink-0 justify-center">
                     <img
                       src={company.promptpayQrUrl}
                       alt="PromptPay QR Code"
-                      className="h-16 w-16 object-contain"
+                      className="w-full max-w-[100px] aspect-square object-contain"
                     />
-                    <span className="text-[10px] text-gray-500 mt-1">พร้อมเพย์</span>
+                    <span className="text-[10px] text-gray-500 mt-0.5">พร้อมเพย์</span>
                   </div>
                 )}
               </div>
