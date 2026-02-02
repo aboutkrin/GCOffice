@@ -98,7 +98,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
       <div
         id="document-preview"
         ref={ref}
-        className="w-full max-w-[210mm] md:min-h-[297mm] mx-auto bg-white p-4 sm:p-8 shadow-lg print:shadow-none print:p-0 print:w-[210mm] print:max-w-none print:min-h-[297mm]"
+        className="w-full max-w-[210mm] md:min-h-[297mm] mx-auto bg-white p-4 sm:p-6 shadow-lg print:shadow-none print:p-0 print:w-[210mm] print:max-w-none print:min-h-[297mm]"
       >
         {/* Header: Company + Document Type */}
         <PreviewHeader
@@ -129,7 +129,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           grandTotal={doc.grandTotal}
         />
 
-        {/* Payment Terms + Bank Info */}
+        {/* Payment Terms + Bank Info + Delivery */}
         <PreviewPayment
           paymentTerms={doc.paymentTerms}
           company={{
@@ -139,14 +139,14 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
             bankLogoUrl: doc.companySnapshot.bankLogoUrl,
             promptpayQrUrl: doc.companySnapshot.promptpayQrUrl,
           }}
-        />
-
-        {/* Footer: Notes, Delivery, Signatures */}
-        <PreviewFooter
-          footerNotes={doc.footerNotes}
           productionDays={doc.productionDays}
           deliveryDateStart={doc.deliveryDateStart}
           deliveryDateEnd={doc.deliveryDateEnd}
+        />
+
+        {/* Footer: Notes, Signatures */}
+        <PreviewFooter
+          footerNotes={doc.footerNotes}
           documentDate={doc.documentDate}
           createdBy={doc.createdBy}
         />
