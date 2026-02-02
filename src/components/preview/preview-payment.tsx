@@ -48,14 +48,14 @@ export function PreviewPayment({
         <div>
           <div className="flex items-stretch gap-3">
             {/* Left: Bank Account Info + QR Code */}
-            <div className="flex-1 min-w-0 rounded border border-gray-200 bg-blue-50/50 p-2">
+            <div className="flex-1 min-w-0 rounded border border-gray-200 bg-blue-50/50 p-2 flex flex-col">
               <div className="flex items-center gap-1.5 mb-1.5">
                 <Landmark className="h-3.5 w-3.5 text-blue-600" />
                 <h4 className="text-[10px] font-bold text-gray-800">
                   ข้อมูลบัญชีสำหรับโอนเงิน
                 </h4>
               </div>
-              <div className="flex items-start gap-2">
+              <div className="flex items-center justify-between gap-2 flex-1">
                 <div className="grid grid-cols-1 gap-0.5 text-[10px]">
                   {company.bankName && (
                     <div className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export function PreviewPayment({
                           <span>{term.name}</span>
                           {term.type === "PERCENTAGE" && (
                             <span className="text-[10px] text-gray-400 shrink-0">
-                              ({formatNumber(term.value)}%)
+                              ({parseFloat(term.value.toString())}%)
                             </span>
                           )}
                         </div>
@@ -206,7 +206,7 @@ export function PreviewPayment({
                           <span>{term.name}</span>
                           {term.type === "PERCENTAGE" && (
                             <span className="text-[10px] text-gray-400 shrink-0">
-                              ({formatNumber(term.value)}%)
+                              ({parseFloat(term.value.toString())}%)
                             </span>
                           )}
                         </div>
