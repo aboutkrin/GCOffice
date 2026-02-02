@@ -41,7 +41,7 @@ export function PreviewHeader({
   return (
     <div className="mb-3">
       {/* Top Row: Logo + Company Name | Document Type */}
-      <div className="flex items-start justify-between gap-2 mb-1.5">
+      <div className="flex items-center justify-between gap-2 mb-1.5">
         {/* Left: Logo and Company Name */}
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           {company.logoUrl && (
@@ -68,7 +68,7 @@ export function PreviewHeader({
 
         {/* Right: Document Type */}
         <div className="text-right shrink-0">
-          <h2 className="text-2xl sm:text-4xl font-bold text-primary">
+          <h2 className="text-lg sm:text-2xl font-bold text-primary">
             {typeLabel}
           </h2>
         </div>
