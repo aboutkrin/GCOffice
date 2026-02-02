@@ -1,6 +1,7 @@
 "use client";
 
 import { formatNumber } from "@/lib/thai-currency";
+import { formatThaiDate } from "@/lib/thai-date";
 import { Landmark } from "lucide-react";
 
 interface PaymentTerm {
@@ -21,17 +22,24 @@ interface PreviewPaymentProps {
     bankLogoUrl?: string;
     promptpayQrUrl?: string;
   };
+  productionDays?: string;
+  deliveryDateStart?: Date;
+  deliveryDateEnd?: Date;
 }
 
 export function PreviewPayment({
   paymentTerms,
   company,
+  productionDays,
+  deliveryDateStart,
+  deliveryDateEnd,
 }: PreviewPaymentProps) {
   const hasPaymentTerms = paymentTerms.length > 0;
   const hasBankInfo =
     company.bankName || company.accountName || company.accountNumber;
+  const hasDeliveryInfo = productionDays || deliveryDateStart || deliveryDateEnd;
 
-  if (!hasPaymentTerms && !hasBankInfo) return null;
+  if (!hasPaymentTerms && !hasBankInfo && !hasDeliveryInfo) return null;
 
   return (
     <div className="mb-3">
@@ -255,6 +263,30 @@ export function PreviewPayment({
             </div>
           )}
         </>
+      )}
+
+      {/* Delivery Info */}
+      {hasDeliveryInfo && (
+        <div className="mt-2 rounded border border-gray-200 p-2 space-y-0.5">
+          {productionDays && (
+            <div className="text-[10px] text-gray-700">
+              <span className="font-bold">ระยะเวลาผลิต/จัดส่ง:</span>{" "}
+              {productionDays}
+            </div>
+          )}
+          {(deliveryDateStart || deliveryDateEnd) && (
+            <div className="text-[10px] text-gray-700">
+              <span className="font-bold">
+                วันที่คาดว่าจะได้รับสินค้า:
+              </span>{" "}
+              {deliveryDateStart &&
+                formatThaiDate(new Date(deliveryDateStart))}
+              {deliveryDateStart && deliveryDateEnd && " - "}
+              {deliveryDateEnd &&
+                formatThaiDate(new Date(deliveryDateEnd))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

@@ -4,9 +4,6 @@ import { formatThaiDate } from "@/lib/thai-date";
 
 interface PreviewFooterProps {
   footerNotes?: string;
-  productionDays?: string;
-  deliveryDateStart?: Date;
-  deliveryDateEnd?: Date;
   documentDate?: Date;
   createdBy?: {
     firstName?: string | null;
@@ -17,45 +14,14 @@ interface PreviewFooterProps {
 
 export function PreviewFooter({
   footerNotes,
-  productionDays,
-  deliveryDateStart,
-  deliveryDateEnd,
   documentDate,
   createdBy,
 }: PreviewFooterProps) {
-  const hasDeliveryInfo = productionDays || deliveryDateStart || deliveryDateEnd;
-
   return (
     <div>
-      {/* Delivery Info (left) + Signatures (right) */}
-      <div className="flex items-start gap-3 sm:gap-4">
-        {/* Left: Delivery Info Box */}
-        {hasDeliveryInfo && (
-          <div className="flex-1 min-w-0 rounded border border-gray-200 p-2 space-y-0.5">
-            {productionDays && (
-              <div className="text-[10px] text-gray-700">
-                <span className="font-bold">ระยะเวลาผลิต/จัดส่ง:</span>{" "}
-                {productionDays}
-              </div>
-            )}
-
-            {(deliveryDateStart || deliveryDateEnd) && (
-              <div className="text-[10px] text-gray-700">
-                <span className="font-bold">
-                  วันที่คาดว่าจะได้รับสินค้า:
-                </span>{" "}
-                {deliveryDateStart &&
-                  formatThaiDate(new Date(deliveryDateStart))}
-                {deliveryDateStart && deliveryDateEnd && " - "}
-                {deliveryDateEnd &&
-                  formatThaiDate(new Date(deliveryDateEnd))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Right: Signature Lines */}
-        <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${hasDeliveryInfo ? "flex-1" : "w-full"}`}>
+      {/* Signatures */}
+      <div>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
           {/* Left: Issuer */}
           <div className="text-center">
             <div className="flex items-end justify-center h-8 sm:h-12">
