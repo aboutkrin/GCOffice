@@ -75,7 +75,7 @@ export function PreviewHeader({
       </div>
 
       {/* Company Contact Info */}
-      <div className="grid grid-cols-1 gap-1 text-xs text-gray-600">
+      <div className="grid grid-cols-1 gap-1 text-[12px] leading-4 text-gray-600">
         {company.address && (
           <div className="flex items-start gap-1.5">
             <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
