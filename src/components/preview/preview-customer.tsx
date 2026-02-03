@@ -73,7 +73,7 @@ export function PreviewCustomer({
 
           {/* Phone & Email row */}
           <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-1">
-            <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] text-gray-700">
+            <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] text-gray-700 min-w-[70px]">
               <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 text-gray-400" />
               <span>{customer.phone || "-"}</span>
             </div>
