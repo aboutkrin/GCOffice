@@ -61,25 +61,25 @@ export function PreviewCustomer({
           {isCompany && (
             <div className="flex items-center gap-2 text-[10px] text-gray-700">
               <User className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-              <span>{customer.contactPerson ? `ผู้ติดต่อ: ${customer.contactPerson}` : ""}</span>
+              <span>{customer.contactPerson ? `ผู้ติดต่อ: ${customer.contactPerson}` : "-"}</span>
             </div>
           )}
 
           {/* Address */}
           <div className="flex items-start gap-2 text-[10px] text-gray-700">
             <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-gray-400" />
-            <span>{customer.address || ""}</span>
+            <span>{customer.address || "-"}</span>
           </div>
 
           {/* Phone & Email row */}
           <div className="flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-1">
             <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] text-gray-700">
               <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 text-gray-400" />
-              <span>{customer.phone || ""}</span>
+              <span>{customer.phone || "-"}</span>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] text-gray-700 min-w-0">
               <Mail className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0 text-gray-400" />
-              <span className="break-all">{customer.email || ""}</span>
+              <span className="break-all">{customer.email || "-"}</span>
             </div>
           </div>
         </div>
