@@ -40,7 +40,7 @@ export function PreviewCustomer({
         </h3>
 
         <div className="space-y-0.5">
-          {/* Customer/Company Name */}
+          {/* Customer/Company Name + Tax ID */}
           <div className="flex items-start gap-2">
             {isCompany ? (
               <Building2 className="h-4 w-4 mt-0.5 shrink-0 text-gray-400" />
@@ -49,15 +49,13 @@ export function PreviewCustomer({
             )}
             <span className="text-[10px] font-semibold text-gray-900 break-words">
               {displayName}
+              {customer.taxId && (
+                <span className="ml-2 font-normal text-gray-700">
+                  เลขประจำตัวผู้เสียภาษี: {customer.taxId}
+                </span>
+              )}
             </span>
           </div>
-
-          {/* Tax ID */}
-          {customer.taxId && (
-            <div className="flex items-center gap-2 text-[10px] text-gray-700">
-              <span>เลขประจำตัวผู้เสียภาษี: {customer.taxId}</span>
-            </div>
-          )}
 
           {/* Contact Person (for company type) */}
           {isCompany && customer.contactPerson && (
