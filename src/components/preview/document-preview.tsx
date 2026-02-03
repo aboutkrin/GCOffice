@@ -98,7 +98,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
       <div
         id="document-preview"
         ref={ref}
-        className="w-full max-w-[210mm] md:min-h-[297mm] mx-auto bg-white p-4 sm:p-6 shadow-lg print:shadow-none print:p-0 print:w-[210mm] print:max-w-none print:min-h-[297mm]"
+        className="w-full max-w-[210mm] min-h-[297mm] mx-auto bg-white p-4 sm:p-6 shadow-lg flex flex-col print:shadow-none print:p-0 print:w-[210mm] print:max-w-none print:min-h-[297mm]"
       >
         {/* Header: Company + Document Type */}
         <PreviewHeader
@@ -115,6 +115,9 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
 
         {/* Line Items Table */}
         <PreviewLineItems items={doc.lineItems} />
+
+        {/* Spacer: pushes summary and below to the bottom of the A4 page */}
+        <div className="flex-grow" />
 
         {/* Summary: Subtotal, Discount, VAT, Grand Total */}
         <PreviewSummary
