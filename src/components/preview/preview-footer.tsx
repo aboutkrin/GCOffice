@@ -70,10 +70,8 @@ export function PreviewFooter({
       {/* Notes (below) */}
       {footerNotes && (
         <div className="mt-2">
-          <h4 className="text-[10px] font-bold text-gray-800 mb-0.5 underline">
-            หมายเหตุ
-          </h4>
           <p className="text-[10px] text-gray-600 whitespace-pre-line leading-relaxed">
+            <span className="font-bold text-gray-800">หมายเหตุ</span>{" "}
             {footerNotes}
           </p>
         </div>
