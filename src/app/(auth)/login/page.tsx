@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/form";
 
 const loginSchema = z.object({
-  email: z.string().email("กรุณากรอกอีเมลที่ถูกต้อง"),
+  username: z.string().min(1, "กรุณากรอกชื่อผู้ใช้"),
   password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
 });
 
@@ -38,7 +38,7 @@ export default function LoginPage() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -68,15 +68,15 @@ export default function LoginPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="email"
+              name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>อีเมล</FormLabel>
+                  <FormLabel>ชื่อผู้ใช้</FormLabel>
                   <FormControl>
                     <Input
-                      type="email"
-                      placeholder="email@example.com"
-                      autoComplete="email"
+                      type="text"
+                      placeholder="username"
+                      autoComplete="username"
                       {...field}
                     />
                   </FormControl>
