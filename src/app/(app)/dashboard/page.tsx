@@ -21,7 +21,30 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardPage() {
   const stats = await getDashboardStats();
 
-  const statCards = [
+  const thisMonthCards = [
+    {
+      title: "ใบเสนอราคาเดือนนี้",
+      value: stats.thisMonthQuotations.toLocaleString(),
+      icon: FileText,
+    },
+    {
+      title: "ใบแจ้งหนี้เดือนนี้",
+      value: stats.thisMonthInvoices.toLocaleString(),
+      icon: Receipt,
+    },
+    {
+      title: "รอดำเนินการเดือนนี้",
+      value: stats.thisMonthPendingDocuments.toLocaleString(),
+      icon: Clock,
+    },
+    {
+      title: "ยอดรวมเดือนนี้",
+      value: formatBaht(stats.thisMonthConfirmedTotal),
+      icon: Banknote,
+    },
+  ];
+
+  const allTimeCards = [
     {
       title: "ใบเสนอราคาทั้งหมด",
       value: stats.totalQuotations.toLocaleString(),
@@ -33,13 +56,13 @@ export default async function DashboardPage() {
       icon: Receipt,
     },
     {
-      title: "รอดำเนินการ",
-      value: stats.pendingDocuments.toLocaleString(),
+      title: "รอดำเนินการทั้งหมด",
+      value: stats.totalPendingDocuments.toLocaleString(),
       icon: Clock,
     },
     {
-      title: "ยอดรวมเดือนนี้",
-      value: formatBaht(stats.thisMonthConfirmedTotal),
+      title: "ยอดรวมทั้งหมด",
+      value: formatBaht(stats.totalConfirmedTotal),
       icon: Banknote,
     },
   ];
@@ -51,21 +74,44 @@ export default async function DashboardPage() {
         description="ภาพรวมเอกสารและข้อมูลสรุป"
       />
 
-      {/* Stat Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((card) => (
-          <Card key={card.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              <card.icon className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{card.value}</p>
-            </CardContent>
-          </Card>
-        ))}
+      {/* This Month Stats */}
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold mb-4">เดือนนี้</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {thisMonthCards.map((card) => (
+            <Card key={card.title}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {card.title}
+                </CardTitle>
+                <card.icon className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{card.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* All Time Stats */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">ทั้งหมด</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {allTimeCards.map((card) => (
+            <Card key={card.title}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {card.title}
+                </CardTitle>
+                <card.icon className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{card.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
 
       {/* Recent Documents */}
