@@ -7,19 +7,24 @@ const globalForPrisma = globalThis as unknown as {
   pool: pg.Pool | undefined;
 };
 
-const connectionString =
+const rawConnectionString =
   process.env.POSTGRES_URL_NON_POOLING ??
   process.env.POSTGRES_URL ??
   process.env.DATABASE_URL!;
 
-const isSupabase = connectionString?.includes("supabase.co");
+const isSupabase = rawConnectionString?.includes("supabase.co");
+
+// For Supabase, we need to handle SSL properly
+// Replace sslmode=require with sslmode=no-verify to skip certificate verification
+const connectionString = isSupabase
+  ? rawConnectionString?.replace(/sslmode=require/, "sslmode=no-verify")
+  : rawConnectionString;
 
 const pool =
   globalForPrisma.pool ??
   new pg.Pool({
     connectionString,
     max: 10,
-    ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
   });
 
 const adapter = new PrismaPg(pool);
