@@ -10,7 +10,7 @@ const globalForPrisma = globalThis as unknown as {
 const pool =
   globalForPrisma.pool ??
   new pg.Pool({
-    connectionString: process.env.DATABASE_URL!,
+    connectionString: process.env.POSTGRES_URL ?? process.env.DATABASE_URL!,
     max: 10,
   });
 
