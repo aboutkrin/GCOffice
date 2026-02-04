@@ -93,11 +93,11 @@ export function PreviewCustomer({
       {/* Right: Document Date & Number */}
       <div className="shrink-0 rounded border border-gray-200 p-2 sm:p-3">
         <div className="grid grid-cols-[auto_auto_1fr] gap-x-1.5 gap-y-1 text-[10px] text-gray-700">
-          <span className="font-semibold text-right">วันที่</span>
-          <span>:</span>
+          <span className="font-semibold text-right text-black">วันที่</span>
+          <span className="text-black">:</span>
           <span>{formatThaiDate(new Date(documentDate))}</span>
-          <span className="font-semibold text-right">เลขที่</span>
-          <span>:</span>
+          <span className="font-semibold text-right text-black">เลขที่</span>
+          <span className="text-black">:</span>
           <span>{documentNumber}</span>
         </div>
       </div>
