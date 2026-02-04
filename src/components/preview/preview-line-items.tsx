@@ -61,6 +61,7 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
                       <img
                         src={item.productImage}
                         alt={item.productName}
+                        crossOrigin="anonymous"
                         className="h-full w-full object-cover"
                       />
                     </div>

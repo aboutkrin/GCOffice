@@ -52,23 +52,23 @@ export function PreviewCustomer({
             </span>
           </div>
 
-          {/* Contact Person & Tax ID (same line) */}
-          {(customer.contactPerson || customer.taxId) && (
+          {/* Contact Person */}
+          {customer.contactPerson && (
             <div className="flex items-center gap-2 text-[10px] text-gray-700">
               <User className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-              <span>
-                {customer.contactPerson && `ผู้ติดต่อ: ${customer.contactPerson}`}
-                {customer.contactPerson && customer.taxId && "  "}
-                {customer.taxId && `เลขประจำตัวผู้เสียภาษี: ${customer.taxId}`}
-              </span>
+              <span>ผู้ติดต่อ: {customer.contactPerson}</span>
             </div>
           )}
 
-          {/* Address */}
-          {customer.address && (
+          {/* Address & Tax ID (same line) */}
+          {(customer.address || customer.taxId) && (
             <div className="flex items-start gap-2 text-[10px] text-gray-700">
               <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-gray-400" />
-              <span>{customer.address}</span>
+              <span>
+                {customer.address}
+                {customer.address && customer.taxId && "  "}
+                {customer.taxId && `เลขประจำตัวผู้เสียภาษี: ${customer.taxId}`}
+              </span>
             </div>
           )}
 
