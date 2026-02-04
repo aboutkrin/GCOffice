@@ -105,7 +105,7 @@ export function PricingSummary({
             ราคาหลังหักส่วนลด
           </span>
           <span className="text-sm font-medium">
-            {formatNumber(subtotal - discountAmount)} บาท
+            {formatNumber(subtotal + shippingCost - discountAmount)} บาท
           </span>
         </div>
       )}
