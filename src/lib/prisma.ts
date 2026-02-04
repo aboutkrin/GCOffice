@@ -7,15 +7,15 @@ const globalForPrisma = globalThis as unknown as {
   pool: pg.Pool | undefined;
 };
 
+// Use pooled URL for serverless (Supabase Supavisor handles pooling)
 const rawConnectionString =
-  process.env.POSTGRES_URL_NON_POOLING ??
   process.env.POSTGRES_URL ??
+  process.env.POSTGRES_URL_NON_POOLING ??
   process.env.DATABASE_URL!;
 
 const isSupabase = rawConnectionString?.includes("supabase.co");
 
-// For Supabase, we need to handle SSL properly
-// Replace sslmode=require with sslmode=no-verify to skip certificate verification
+// For Supabase, replace sslmode=require with sslmode=no-verify to skip certificate verification
 const connectionString = isSupabase
   ? rawConnectionString?.replace(/sslmode=require/, "sslmode=no-verify")
   : rawConnectionString;
@@ -24,7 +24,8 @@ const pool =
   globalForPrisma.pool ??
   new pg.Pool({
     connectionString,
-    max: 10,
+    // Keep pool small for serverless - Supabase Supavisor handles connection pooling
+    max: 1,
   });
 
 const adapter = new PrismaPg(pool);
