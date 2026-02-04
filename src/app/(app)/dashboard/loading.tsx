@@ -9,14 +9,30 @@ export default function DashboardLoading() {
         <Skeleton className="mt-2 h-4 w-64" />
       </div>
 
-      {/* Stats cards skeleton */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="rounded-lg border bg-card p-6">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="mt-3 h-7 w-16" />
-          </div>
-        ))}
+      {/* This Month Stats cards skeleton */}
+      <div className="mb-6">
+        <Skeleton className="h-6 w-24 mb-4" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={`thisMonth-${i}`} className="rounded-lg border bg-card p-6">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="mt-3 h-7 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* All Time Stats cards skeleton */}
+      <div>
+        <Skeleton className="h-6 w-20 mb-4" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={`allTime-${i}`} className="rounded-lg border bg-card p-6">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="mt-3 h-7 w-16" />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Recent documents table skeleton */}
