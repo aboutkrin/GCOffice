@@ -30,7 +30,7 @@ interface ProductForCost {
 }
 
 interface ProductCostTableProps {
-  products: ProductForCost[];
+  products: any[];
   total: number;
   page: number;
   totalPages: number;
