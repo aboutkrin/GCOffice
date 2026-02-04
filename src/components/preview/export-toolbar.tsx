@@ -153,6 +153,29 @@ export function ExportToolbar({
     }
   }, [getElement, filename, withA4Width, openIOSWindow]);
 
+  // Preload images helper
+  const preloadImages = useCallback(async (element: HTMLElement): Promise<void> => {
+    const images = element.querySelectorAll("img");
+    const promises = Array.from(images).map(async (img) => {
+      if (!img.src || img.src.startsWith("data:")) return;
+
+      try {
+        const response = await fetch(img.src, { mode: "cors" });
+        const blob = await response.blob();
+        const dataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        img.src = dataUrl;
+      } catch (error) {
+        console.warn("Failed to preload image:", img.src, error);
+      }
+    });
+
+    await Promise.all(promises);
+  }, []);
+
   // Share
   const handleShare = useCallback(async () => {
     const el = getElement();
@@ -161,6 +184,9 @@ export function ExportToolbar({
     setIsExporting(true);
     setExportLabel("กำลังสร้างไฟล์...");
     try {
+      // Preload images first
+      await preloadImages(el);
+
       const canvas = await html2canvas(el, {
         scale: 3,
         useCORS: true,
@@ -197,7 +223,7 @@ export function ExportToolbar({
       setIsExporting(false);
       setExportLabel("");
     }
-  }, [getElement, filename]);
+  }, [getElement, filename, preloadImages]);
 
   // Print
   const handlePrint = useCallback(() => {
