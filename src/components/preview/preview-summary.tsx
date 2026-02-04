@@ -27,7 +27,8 @@ export function PreviewSummary({
   grandTotal,
 }: PreviewSummaryProps) {
   const hasDiscount = discountAmount > 0;
-  const afterDiscount = subtotal - discountAmount;
+  const subtotalWithShipping = subtotal + shippingCost;
+  const afterDiscount = subtotalWithShipping - discountAmount;
 
   const discountLabel =
     discountType === "PERCENTAGE" && discountValue
@@ -48,6 +49,18 @@ export function PreviewSummary({
                 {formatNumber(subtotal)}
               </td>
             </tr>
+
+            {/* Shipping */}
+            {shippingCost > 0 && (
+              <tr>
+                <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
+                  ค่าจัดส่ง
+                </td>
+                <td className="py-0.5 sm:py-1 text-right font-medium text-gray-900 w-24 sm:w-32">
+                  {formatNumber(shippingCost)}
+                </td>
+              </tr>
+            )}
 
             {/* Discount */}
             {hasDiscount && (
@@ -79,18 +92,6 @@ export function PreviewSummary({
                 </td>
                 <td className="py-0.5 sm:py-1 text-right font-medium text-gray-900 w-24 sm:w-32">
                   {formatNumber(vatAmount)}
-                </td>
-              </tr>
-            )}
-
-            {/* Shipping */}
-            {shippingCost > 0 && (
-              <tr>
-                <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
-                  ค่าจัดส่ง
-                </td>
-                <td className="py-0.5 sm:py-1 text-right font-medium text-gray-900 w-24 sm:w-32">
-                  {formatNumber(shippingCost)}
                 </td>
               </tr>
             )}

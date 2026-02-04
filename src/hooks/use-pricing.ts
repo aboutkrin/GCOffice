@@ -22,16 +22,20 @@ export function usePricing(input: PricingInput) {
       shippingCost = 0,
     } = input;
 
+    // Include shipping in subtotal before discount
+    const subtotalWithShipping = subtotal + shippingCost;
+
     let discountAmount = 0;
     if (discountType === "PERCENTAGE") {
-      discountAmount = subtotal * (discountValue / 100);
+      discountAmount = subtotalWithShipping * (discountValue / 100);
     } else if (discountType === "AMOUNT") {
       discountAmount = discountValue;
     }
 
-    const afterDiscount = subtotal - discountAmount;
+    const afterDiscount = subtotalWithShipping - discountAmount;
+    // VAT is calculated on afterDiscount (which includes shipping)
     const vatAmount = vatEnabled ? afterDiscount * (vatRate / 100) : 0;
-    const grandTotal = afterDiscount + vatAmount + shippingCost;
+    const grandTotal = afterDiscount + vatAmount;
 
     return { discountAmount, afterDiscount, vatAmount, grandTotal };
   }, [
