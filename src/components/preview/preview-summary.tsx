@@ -26,9 +26,9 @@ export function PreviewSummary({
   shippingCost = 0,
   grandTotal,
 }: PreviewSummaryProps) {
-  const hasDiscount = discountAmount > 0;
-  const subtotalWithShipping = subtotal + shippingCost;
-  const afterDiscount = subtotalWithShipping - discountAmount;
+  const hasDiscount = Number(discountAmount) > 0;
+  const subtotalWithShipping = Number(subtotal) + Number(shippingCost);
+  const afterDiscount = subtotalWithShipping - Number(discountAmount);
 
   const discountLabel =
     discountType === "PERCENTAGE" && discountValue
