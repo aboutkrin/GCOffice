@@ -94,6 +94,12 @@ model Product {
 
   basePrice Decimal @map("base_price") @db.Decimal(12, 2)
 
+  // Cost tracking fields (CNY)
+  costPrice          Decimal? @map("cost_price") @db.Decimal(12, 2)
+  exchangeRate       Decimal? @map("exchange_rate") @db.Decimal(10, 4)
+  weightPerBox       Decimal? @map("weight_per_box") @db.Decimal(10, 2)
+  shippingCostPerBox Decimal? @map("shipping_cost_per_box") @db.Decimal(12, 2)
+
   categoryId String?          @map("category_id")
   category   ProductCategory? @relation(fields: [categoryId], references: [id])
 

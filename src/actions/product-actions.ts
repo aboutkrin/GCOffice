@@ -120,3 +120,25 @@ export async function getProductCategoriesAction() {
   const { getProductCategories } = await import("@/data/products");
   return getProductCategories();
 }
+
+export async function updateProductCost(
+  id: string,
+  data: {
+    costPrice?: number | null;
+    exchangeRate?: number | null;
+    weightPerBox?: number | null;
+    shippingCostPerBox?: number | null;
+  }
+) {
+  const product = await prisma.product.update({
+    where: { id },
+    data: {
+      costPrice: data.costPrice ?? null,
+      exchangeRate: data.exchangeRate ?? null,
+      weightPerBox: data.weightPerBox ?? null,
+      shippingCostPerBox: data.shippingCostPerBox ?? null,
+    },
+  });
+  revalidatePath("/product-costs");
+  return serialize(product);
+}
