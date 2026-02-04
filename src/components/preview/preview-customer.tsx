@@ -52,18 +52,15 @@ export function PreviewCustomer({
             </span>
           </div>
 
-          {/* Tax ID */}
-          {customer.taxId && (
-            <div className="flex items-center gap-2 text-[10px] text-gray-700">
-              <span>เลขประจำตัวผู้เสียภาษี: {customer.taxId}</span>
-            </div>
-          )}
-
-          {/* Contact Person */}
-          {customer.contactPerson && (
+          {/* Contact Person & Tax ID (same line) */}
+          {(customer.contactPerson || customer.taxId) && (
             <div className="flex items-center gap-2 text-[10px] text-gray-700">
               <User className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-              <span>ผู้ติดต่อ: {customer.contactPerson}</span>
+              <span>
+                {customer.contactPerson && `ผู้ติดต่อ: ${customer.contactPerson}`}
+                {customer.contactPerson && customer.taxId && "  "}
+                {customer.taxId && `เลขประจำตัวผู้เสียภาษี: ${customer.taxId}`}
+              </span>
             </div>
           )}
 
