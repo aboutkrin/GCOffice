@@ -31,19 +31,23 @@ export async function createDocument(data: unknown) {
     0
   );
 
+  // Include shipping in subtotal before discount (same as frontend use-pricing.ts)
+  const shippingCost = validated.shippingCost || 0;
+  const subtotalWithShipping = subtotal + shippingCost;
+
   let discountAmount = 0;
   if (validated.discountType === "PERCENTAGE" && validated.discountValue) {
-    discountAmount = subtotal * (validated.discountValue / 100);
+    discountAmount = subtotalWithShipping * (validated.discountValue / 100);
   } else if (validated.discountType === "AMOUNT" && validated.discountValue) {
     discountAmount = validated.discountValue;
   }
 
-  const afterDiscount = subtotal - discountAmount;
+  const afterDiscount = subtotalWithShipping - discountAmount;
+  // VAT is calculated on afterDiscount (which includes shipping)
   const vatAmount = validated.vatEnabled
     ? afterDiscount * (validated.vatRate / 100)
     : 0;
-  const shippingCost = validated.shippingCost || 0;
-  const grandTotal = afterDiscount + vatAmount + shippingCost;
+  const grandTotal = afterDiscount + vatAmount;
 
   const document = await prisma.document.create({
     data: {
@@ -116,18 +120,24 @@ export async function updateDocument(id: string, data: unknown) {
     (sum, item) => sum + item.quantity * Number(item.unitPrice),
     0
   );
+
+  // Include shipping in subtotal before discount (same as frontend use-pricing.ts)
+  const shippingCost = validated.shippingCost || 0;
+  const subtotalWithShipping = subtotal + shippingCost;
+
   let discountAmount = 0;
   if (validated.discountType === "PERCENTAGE" && validated.discountValue) {
-    discountAmount = subtotal * (validated.discountValue / 100);
+    discountAmount = subtotalWithShipping * (validated.discountValue / 100);
   } else if (validated.discountType === "AMOUNT" && validated.discountValue) {
     discountAmount = validated.discountValue;
   }
-  const afterDiscount = subtotal - discountAmount;
+
+  const afterDiscount = subtotalWithShipping - discountAmount;
+  // VAT is calculated on afterDiscount (which includes shipping)
   const vatAmount = validated.vatEnabled
     ? afterDiscount * (validated.vatRate / 100)
     : 0;
-  const shippingCost = validated.shippingCost || 0;
-  const grandTotal = afterDiscount + vatAmount + shippingCost;
+  const grandTotal = afterDiscount + vatAmount;
 
   // Get fresh snapshots
   const company = await prisma.company.findUniqueOrThrow({
