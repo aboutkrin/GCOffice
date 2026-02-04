@@ -63,10 +63,12 @@ function groupHolidays(holidays: any[]): HolidayGroup[] {
     const diffMs = currDate.getTime() - prevDate.getTime();
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
+    // Allow merging for same date (duplicates, diffDays=0) or consecutive date (diffDays=1)
     if (
       h.name === current.name &&
       h.isRecurring === current.isRecurring &&
-      diffDays === 1
+      diffDays >= 0 &&
+      diffDays <= 1
     ) {
       current.ids.push(h.id);
       current.endDate = h.date;
