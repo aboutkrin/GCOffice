@@ -81,3 +81,44 @@ export async function searchProducts(query: string, categoryId?: string) {
   });
   return serialize(data);
 }
+
+export async function getProductsForCost(params?: {
+  search?: string;
+  page?: number;
+  perPage?: number;
+}) {
+  const where: any = {
+    status: "ACTIVE",
+  };
+
+  if (params?.search) {
+    where.OR = [
+      { name: { contains: params.search, mode: "insensitive" } },
+      { sku: { contains: params.search, mode: "insensitive" } },
+    ];
+  }
+
+  const page = params?.page ?? 1;
+  const perPage = params?.perPage ?? 20;
+
+  const [data, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        costPrice: true,
+        exchangeRate: true,
+        weightPerBox: true,
+        shippingCostPerBox: true,
+      },
+      orderBy: { name: "asc" },
+      skip: (page - 1) * perPage,
+      take: perPage,
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return { products: serialize(data), total };
+}
