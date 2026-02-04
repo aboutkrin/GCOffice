@@ -52,6 +52,13 @@ export function PreviewCustomer({
             </span>
           </div>
 
+          {/* Tax ID */}
+          {customer.taxId && (
+            <div className="flex items-center gap-2 text-[10px] text-gray-700">
+              <span>เลขประจำตัวผู้เสียภาษี: {customer.taxId}</span>
+            </div>
+          )}
+
           {/* Contact Person */}
           {customer.contactPerson && (
             <div className="flex items-center gap-2 text-[10px] text-gray-700">
@@ -60,15 +67,11 @@ export function PreviewCustomer({
             </div>
           )}
 
-          {/* Address & Tax ID (same line) */}
-          {(customer.address || customer.taxId) && (
+          {/* Address */}
+          {customer.address && (
             <div className="flex items-start gap-2 text-[10px] text-gray-700">
               <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0 text-gray-400" />
-              <span>
-                {customer.address}
-                {customer.address && customer.taxId && "  "}
-                {customer.taxId && `เลขประจำตัวผู้เสียภาษี: ${customer.taxId}`}
-              </span>
+              <span>{customer.address}</span>
             </div>
           )}
 

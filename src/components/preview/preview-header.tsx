@@ -58,11 +58,6 @@ export function PreviewHeader({
             <h1 className="text-lg sm:text-2xl font-bold text-gray-900 break-words">
               {company.name}
             </h1>
-            {company.taxId && (
-              <p className="text-[10px] text-gray-500">
-                เลขประจำตัวผู้เสียภาษี: {company.taxId}
-              </p>
-            )}
           </div>
         </div>
 
@@ -76,10 +71,14 @@ export function PreviewHeader({
 
       {/* Company Contact Info */}
       <div className="grid grid-cols-1 gap-0.5 text-[10px] text-gray-600">
-        {company.address && (
+        {(company.address || company.taxId) && (
           <div className="flex items-start gap-1.5">
             <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
-            <span>{company.address}</span>
+            <span>
+              {company.address}
+              {company.address && company.taxId && "  "}
+              {company.taxId && `เลขประจำตัวผู้เสียภาษี: ${company.taxId}`}
+            </span>
           </div>
         )}
         <div className="flex flex-wrap gap-x-4 gap-y-1">
