@@ -10,7 +10,10 @@ const globalForPrisma = globalThis as unknown as {
 const pool =
   globalForPrisma.pool ??
   new pg.Pool({
-    connectionString: process.env.POSTGRES_URL ?? process.env.DATABASE_URL!,
+    connectionString:
+      process.env.POSTGRES_URL_NON_POOLING ??
+      process.env.POSTGRES_URL ??
+      process.env.DATABASE_URL!,
     max: 10,
     ssl:
       process.env.NODE_ENV === "production"
