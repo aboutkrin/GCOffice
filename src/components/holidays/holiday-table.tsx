@@ -88,6 +88,13 @@ function groupHolidays(holidays: any[]): HolidayGroup[] {
   return groups;
 }
 
+function getDayCount(startDate: string, endDate: string): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffMs = end.getTime() - start.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
+}
+
 function formatGroupDate(startDate: string, endDate: string): string {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -163,9 +170,9 @@ export function HolidayTable({ holidays }: HolidayTableProps) {
                   <TableCell>{group.name}</TableCell>
                   <TableCell>
                     {formatGroupDate(group.startDate, group.endDate)}
-                    {group.ids.length > 1 && (
+                    {group.startDate !== group.endDate && (
                       <span className="ml-2 text-muted-foreground text-xs">
-                        ({group.ids.length} วัน)
+                        ({getDayCount(group.startDate, group.endDate)} วัน)
                       </span>
                     )}
                   </TableCell>
