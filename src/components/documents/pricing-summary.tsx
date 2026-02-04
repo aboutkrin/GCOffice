@@ -49,6 +49,16 @@ export function PricingSummary({
         <span className="text-sm font-medium">{formatNumber(subtotal)} บาท</span>
       </div>
 
+      {/* Shipping */}
+      {shippingCost > 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">ค่าจัดส่ง</span>
+          <span className="text-sm font-medium">
+            {formatNumber(shippingCost)} บาท
+          </span>
+        </div>
+      )}
+
       {/* Discount */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -118,16 +128,6 @@ export function PricingSummary({
           </span>
         </div>
       </div>
-
-      {/* Shipping */}
-      {shippingCost > 0 && (
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">ค่าจัดส่ง</span>
-          <span className="text-sm font-medium">
-            {formatNumber(shippingCost)} บาท
-          </span>
-        </div>
-      )}
 
       {/* Grand Total */}
       <div className="border-t pt-3">
