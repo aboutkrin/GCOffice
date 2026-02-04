@@ -54,7 +54,7 @@ export function PreviewPayment({
                 <div className="flex items-center gap-1.5 mb-1.5 shrink-0">
                   <Landmark className="h-3.5 w-3.5 text-blue-600" />
                   <h4 className="text-[10px] font-bold text-gray-800">
-                    ข้อมูลบัญชีสำหรับโอนเงิน
+                    ข้อมูลบัญชีสำหรับการชำระ
                   </h4>
                 </div>
                 <div className="flex items-center justify-between gap-2 flex-1 min-h-0">
@@ -239,7 +239,7 @@ export function PreviewPayment({
               <div className="flex items-center gap-2 mb-2">
                 <Landmark className="h-4 w-4 text-blue-600" />
                 <h4 className="text-[10px] font-bold text-gray-800">
-                  ข้อมูลบัญชีสำหรับโอนเงิน
+                  ข้อมูลบัญชีสำหรับการชำระ
                 </h4>
               </div>
               <div className="flex items-start justify-between gap-4">
