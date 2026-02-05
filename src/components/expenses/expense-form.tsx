@@ -16,6 +16,10 @@ import {
   updateExpense,
   createExpenseCategory,
 } from "@/actions/expense-actions";
+import {
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_METHOD_OPTIONS,
+} from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +69,7 @@ export function ExpenseForm({ initialData, categories }: ExpenseFormProps) {
         ? new Date(initialData.expenseDate)
         : new Date(),
       categoryId: initialData?.categoryId ?? "",
+      paymentMethod: initialData?.paymentMethod ?? "TRANSFER",
       notes: initialData?.notes ?? "",
     },
   });
@@ -200,6 +205,31 @@ export function ExpenseForm({ initialData, categories }: ExpenseFormProps) {
                       {categoryList.map((cat: any) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="paymentMethod"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>วิธีการชำระ</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="เลือกวิธีการชำระ" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {PAYMENT_METHOD_OPTIONS.map((method) => (
+                        <SelectItem key={method} value={method}>
+                          {PAYMENT_METHOD_LABELS[method]}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -67,3 +67,13 @@ export const SYNC_TRIGGER_LABELS: Record<string, string> = {
   MANUAL: "ซิงค์เอง",
   SCHEDULED: "อัตโนมัติ",
 };
+
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: "เงินสด",
+  TRANSFER: "โอนเงิน",
+  CREDIT_CARD: "บัตรเครดิต",
+  PROMPTPAY: "พร้อมเพย์",
+  OTHER: "อื่นๆ",
+};
+
+export const PAYMENT_METHOD_OPTIONS = ["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"] as const;
