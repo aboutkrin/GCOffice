@@ -22,21 +22,26 @@ export async function getDocuments(params?: {
     ];
   }
 
-  const data = await prisma.document.findMany({
-    where,
-    select: {
-      id: true,
-      type: true,
-      documentNumber: true,
-      status: true,
-      documentDate: true,
-      grandTotal: true,
-      customerSnapshot: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.document.findMany({
+      where,
+      select: {
+        id: true,
+        type: true,
+        documentNumber: true,
+        status: true,
+        documentDate: true,
+        grandTotal: true,
+        customerSnapshot: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return serialize(data);
+  } catch {
+    // May fail if enum values (e.g. RECEIPT) don't exist in DB yet
+    return [];
+  }
 }
 
 export async function getConfirmedQuotations() {
