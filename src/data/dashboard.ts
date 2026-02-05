@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { DocumentType, DocumentStatus } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 
 export interface DashboardStats {
@@ -139,5 +140,78 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     totalConfirmedTotal: totalConfirmed._sum.grandTotal?.toNumber() ?? 0,
     // Recent documents
     recentDocuments: serialize(recentDocuments) as RecentDocument[],
+  };
+}
+
+// Monthly sales chart data
+
+export interface MonthlySalesData {
+  month: number;
+  monthLabel: string;
+  total: number;
+}
+
+export interface MonthlySalesResult {
+  year: number;
+  yearBE: number;
+  grandTotal: number;
+  monthlySales: MonthlySalesData[];
+  availableYears: number[];
+}
+
+const THAI_MONTHS_SHORT = [
+  "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+  "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
+];
+
+export async function getMonthlySales(year: number): Promise<MonthlySalesResult> {
+  const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
+
+  const [monthlyData, yearsData] = await Promise.all([
+    // Monthly totals for the given year
+    prisma.$queryRaw<{ month: number; total: number }[]>`
+      SELECT
+        EXTRACT(MONTH FROM document_date)::int AS month,
+        COALESCE(SUM(grand_total), 0)::float8 AS total
+      FROM documents
+      WHERE status IN (${Prisma.join(confirmedStatuses)})
+        AND EXTRACT(YEAR FROM document_date) = ${year}
+      GROUP BY EXTRACT(MONTH FROM document_date)
+      ORDER BY month
+    `,
+    // Available years that have documents
+    prisma.$queryRaw<{ year: number }[]>`
+      SELECT DISTINCT EXTRACT(YEAR FROM document_date)::int AS year
+      FROM documents
+      ORDER BY year DESC
+    `,
+  ]);
+
+  // Build full 12-month array
+  const monthlySales: MonthlySalesData[] = Array.from({ length: 12 }, (_, i) => {
+    const monthNum = i + 1;
+    const found = monthlyData.find((d) => d.month === monthNum);
+    return {
+      month: monthNum,
+      monthLabel: THAI_MONTHS_SHORT[i],
+      total: found ? found.total : 0,
+    };
+  });
+
+  const grandTotal = monthlySales.reduce((sum, m) => sum + m.total, 0);
+  const availableYears = yearsData.map((d) => d.year);
+
+  // Ensure current year is always available
+  if (!availableYears.includes(year)) {
+    availableYears.unshift(year);
+    availableYears.sort((a, b) => b - a);
+  }
+
+  return {
+    year,
+    yearBE: year + 543,
+    grandTotal,
+    monthlySales,
+    availableYears,
   };
 }

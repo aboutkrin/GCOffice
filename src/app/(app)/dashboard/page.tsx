@@ -11,7 +11,8 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layout/page-header";
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge";
-import { getDashboardStats } from "@/data/dashboard";
+import { getDashboardStats, getMonthlySales } from "@/data/dashboard";
+import { SalesChart } from "@/components/dashboard/sales-chart";
 import { formatBaht } from "@/lib/thai-currency";
 import { formatThaiDate } from "@/lib/thai-date";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
@@ -19,7 +20,11 @@ import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const stats = await getDashboardStats();
+  const currentYear = new Date().getFullYear();
+  const [stats, monthlySales] = await Promise.all([
+    getDashboardStats(),
+    getMonthlySales(currentYear),
+  ]);
 
   const thisMonthCards = [
     {
@@ -112,6 +117,12 @@ export default async function DashboardPage() {
             </Card>
           ))}
         </div>
+      </div>
+
+      {/* Monthly Sales Chart */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold mb-4">ยอดขายรายเดือน</h2>
+        <SalesChart initialData={monthlySales} />
       </div>
 
       {/* Recent Documents */}
