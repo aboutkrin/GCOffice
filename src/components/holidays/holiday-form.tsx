@@ -15,7 +15,7 @@ import {
   type HolidayRangeFormData,
 } from "@/lib/validators";
 import { createHolidayRange, updateHoliday } from "@/actions/holiday-actions";
-import { formatThaiDate } from "@/lib/thai-date";
+import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -140,7 +140,9 @@ export function HolidayForm({ initialData }: HolidayFormProps) {
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) =>
+                            field.onChange(date ? toUTCNoon(date) : undefined)
+                          }
                         />
                       </PopoverContent>
                     </Popover>
@@ -180,18 +182,28 @@ export function HolidayForm({ initialData }: HolidayFormProps) {
                       mode="range"
                       selected={dateRange}
                       onSelect={(range) => {
-                        setDateRange(range);
-                        if (range?.from) {
-                          createForm.setValue("startDate", range.from, {
+                        const normalized = range
+                          ? {
+                              from: range.from
+                                ? toUTCNoon(range.from)
+                                : undefined,
+                              to: range.to
+                                ? toUTCNoon(range.to)
+                                : undefined,
+                            }
+                          : undefined;
+                        setDateRange(normalized);
+                        if (normalized?.from) {
+                          createForm.setValue("startDate", normalized.from, {
                             shouldValidate: true,
                           });
                         }
-                        if (range?.to) {
-                          createForm.setValue("endDate", range.to, {
+                        if (normalized?.to) {
+                          createForm.setValue("endDate", normalized.to, {
                             shouldValidate: true,
                           });
-                        } else if (range?.from) {
-                          createForm.setValue("endDate", range.from, {
+                        } else if (normalized?.from) {
+                          createForm.setValue("endDate", normalized.from, {
                             shouldValidate: true,
                           });
                         }

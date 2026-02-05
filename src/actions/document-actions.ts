@@ -7,9 +7,11 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { DocumentStatus } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
+import { toUTCNoon } from "@/lib/thai-date";
 
 export async function createDocument(data: unknown) {
   const validated = documentSchema.parse(data);
+  validated.documentDate = toUTCNoon(validated.documentDate);
 
   const supabase = await createClient();
   const {
@@ -73,8 +75,8 @@ export async function createDocument(data: unknown) {
       productionDaysMax: validated.productionDaysMax ?? undefined,
       skipWeekends: validated.skipWeekends,
       skipHolidays: validated.skipHolidays,
-      deliveryDateStart: validated.deliveryDateStart,
-      deliveryDateEnd: validated.deliveryDateEnd,
+      deliveryDateStart: validated.deliveryDateStart ? toUTCNoon(validated.deliveryDateStart) : undefined,
+      deliveryDateEnd: validated.deliveryDateEnd ? toUTCNoon(validated.deliveryDateEnd) : undefined,
       sourceQuotationId:
         validated.type === "INVOICE" ? validated.sourceQuotationId : undefined,
       createdById: user.id,
@@ -114,6 +116,7 @@ export async function createDocument(data: unknown) {
 
 export async function updateDocument(id: string, data: unknown) {
   const validated = documentSchema.parse(data);
+  validated.documentDate = toUTCNoon(validated.documentDate);
 
   // Calculate totals
   const subtotal = validated.lineItems.reduce(
@@ -175,8 +178,8 @@ export async function updateDocument(id: string, data: unknown) {
         productionDaysMax: validated.productionDaysMax ?? null,
         skipWeekends: validated.skipWeekends,
         skipHolidays: validated.skipHolidays,
-        deliveryDateStart: validated.deliveryDateStart ?? null,
-        deliveryDateEnd: validated.deliveryDateEnd ?? null,
+        deliveryDateStart: validated.deliveryDateStart ? toUTCNoon(validated.deliveryDateStart) : null,
+        deliveryDateEnd: validated.deliveryDateEnd ? toUTCNoon(validated.deliveryDateEnd) : null,
         lineItems: {
           create: validated.lineItems.map((item) => ({
             sequence: item.sequence,
