@@ -21,12 +21,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+interface ProductCategory {
+  id: string;
+  name: string;
+  _count: { products: number };
+}
+
 interface ProductCostTableProps {
   products: ProductForCost[];
   total: number;
   page: number;
   totalPages: number;
   search: string;
+  categories: ProductCategory[];
+  selectedCategoryId: string;
 }
 
 interface EditingRow {
@@ -42,6 +50,8 @@ export function ProductCostTable({
   page,
   totalPages,
   search,
+  categories,
+  selectedCategoryId,
 }: ProductCostTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -124,6 +134,10 @@ export function ProductCostTable({
   const clearFilters = () => {
     setSearchValue("");
     router.push(pathname);
+  };
+
+  const handleCategoryChange = (categoryId: string) => {
+    updateParams({ category: categoryId === selectedCategoryId ? "" : categoryId });
   };
 
   const getEditingRow = (product: ProductForCost): EditingRow => {
@@ -241,10 +255,10 @@ export function ProductCostTable({
               className="pl-9"
             />
           </form>
-          {search && (
+          {(search || selectedCategoryId) && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>
               <X className="size-4" />
-              ล้างการค้นหา
+              ล้างตัวกรอง
             </Button>
           )}
         </div>
@@ -274,6 +288,31 @@ export function ProductCostTable({
           </Button>
         </div>
       </div>
+
+      {/* Category Filter */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground shrink-0">หมวดหมู่:</span>
+          <Button
+            variant={selectedCategoryId === "" ? "default" : "outline"}
+            size="sm"
+            onClick={() => updateParams({ category: "" })}
+          >
+            ทั้งหมด
+          </Button>
+          {categories.map((cat) => (
+            <Button
+              key={cat.id}
+              variant={selectedCategoryId === cat.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleCategoryChange(cat.id)}
+            >
+              {cat.name}
+              <span className="ml-1 text-xs opacity-70">({cat._count.products})</span>
+            </Button>
+          ))}
+        </div>
+      )}
 
       {/* Table */}
       <div className="rounded-md border overflow-x-auto">

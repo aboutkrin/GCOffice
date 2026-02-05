@@ -96,12 +96,17 @@ export interface ProductForCost {
 
 export async function getProductsForCost(params?: {
   search?: string;
+  categoryId?: string;
   page?: number;
   perPage?: number;
 }): Promise<{ products: ProductForCost[]; total: number }> {
   const where: any = {
     status: "ACTIVE",
   };
+
+  if (params?.categoryId) {
+    where.categoryId = params.categoryId;
+  }
 
   if (params?.search) {
     where.OR = [
