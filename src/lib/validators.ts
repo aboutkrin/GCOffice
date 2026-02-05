@@ -169,7 +169,21 @@ export const profileSchema = z.object({
   signatureUrl: z.string().optional(),
 });
 
+export const expenseCategorySchema = z.object({
+  name: z.string().min(1, "กรุณาระบุชื่อหมวดหมู่"),
+});
+
+export const expenseSchema = z.object({
+  name: z.string().min(1, "กรุณาระบุรายการค่าใช้จ่าย"),
+  amount: z.coerce.number().min(0, "จำนวนเงินต้องไม่ติดลบ"),
+  expenseDate: z.coerce.date({ error: "กรุณาเลือกวันที่" }),
+  categoryId: z.string().min(1, "กรุณาเลือกหมวดหมู่"),
+  notes: z.string().optional(),
+});
+
 export type PaymentTermTemplateItemFormData = z.infer<typeof paymentTermTemplateItemSchema>;
 export type PaymentTermTemplateFormData = z.infer<typeof paymentTermTemplateSchema>;
 export type WooCommerceConfigFormData = z.infer<typeof wooCommerceConfigSchema>;
 export type ProfileFormData = z.infer<typeof profileSchema>;
+export type ExpenseCategoryFormData = z.infer<typeof expenseCategorySchema>;
+export type ExpenseFormData = z.infer<typeof expenseSchema>;

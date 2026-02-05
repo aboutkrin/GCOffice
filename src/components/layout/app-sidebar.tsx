@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ShoppingCart,
   Calculator,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,11 @@ const mainNavItems = [
     href: "/customers",
     label: "ลูกค้า",
     icon: Users,
+  },
+  {
+    href: "/expenses",
+    label: "ค่าใช้จ่ายรายเดือน",
+    icon: Wallet,
   },
 ];
 
