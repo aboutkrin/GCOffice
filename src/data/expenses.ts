@@ -9,6 +9,22 @@ async function ensureExpenseTables() {
   try {
     // Check if table exists with a simple query
     await prisma.$queryRaw`SELECT 1 FROM expense_categories LIMIT 1`;
+    // Tables exist — ensure payment_method column was added (migration may not have run)
+    try {
+      await prisma.$queryRaw`SELECT payment_method FROM expenses LIMIT 1`;
+    } catch {
+      // Column missing — add PaymentMethod enum and column
+      await prisma.$executeRawUnsafe(`
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PaymentMethod') THEN
+            CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT_CARD', 'PROMPTPAY', 'OTHER');
+          END IF;
+        END $$
+      `).catch(() => {});
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE "expenses" ADD COLUMN IF NOT EXISTS "payment_method" "PaymentMethod" NOT NULL DEFAULT 'TRANSFER'`
+      ).catch(() => {});
+    }
     tablesCreated = true;
   } catch {
     // Tables don't exist yet - create them one statement at a time

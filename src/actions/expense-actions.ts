@@ -8,6 +8,22 @@ import { revalidatePath } from "next/cache";
 async function ensureExpenseTables() {
   try {
     await prisma.$queryRaw`SELECT 1 FROM expense_categories LIMIT 1`;
+    // Tables exist — ensure payment_method column was added (migration may not have run)
+    try {
+      await prisma.$queryRaw`SELECT payment_method FROM expenses LIMIT 1`;
+    } catch {
+      // Column missing — add PaymentMethod enum and column
+      await prisma.$executeRawUnsafe(`
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PaymentMethod') THEN
+            CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT_CARD', 'PROMPTPAY', 'OTHER');
+          END IF;
+        END $$
+      `).catch(() => {});
+      await prisma.$executeRawUnsafe(
+        `ALTER TABLE "expenses" ADD COLUMN IF NOT EXISTS "payment_method" "PaymentMethod" NOT NULL DEFAULT 'TRANSFER'`
+      ).catch(() => {});
+    }
   } catch {
     try {
       await prisma.$executeRawUnsafe(`
@@ -63,76 +79,116 @@ async function ensureExpenseTables() {
 }
 
 export async function createExpense(data: unknown) {
-  await ensureExpenseTables();
-  const validated = expenseSchema.parse(data);
+  try {
+    await ensureExpenseTables();
+    const validated = expenseSchema.parse(data);
 
-  const expense = await prisma.expense.create({
-    data: {
-      name: validated.name,
-      amount: validated.amount,
-      expenseDate: validated.expenseDate,
-      categoryId: validated.categoryId,
-      paymentMethod: validated.paymentMethod,
-      notes: validated.notes,
-    },
-  });
+    const expense = await prisma.expense.create({
+      data: {
+        name: validated.name,
+        amount: validated.amount,
+        expenseDate: validated.expenseDate,
+        categoryId: validated.categoryId,
+        paymentMethod: validated.paymentMethod,
+        notes: validated.notes,
+      },
+    });
 
-  revalidatePath("/expenses");
-  return serialize(expense);
+    revalidatePath("/expenses");
+    return serialize(expense);
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "ไม่สามารถบันทึกค่าใช้จ่ายได้ กรุณาลองใหม่อีกครั้ง"
+    );
+  }
 }
 
 export async function updateExpense(id: string, data: unknown) {
-  const validated = expenseSchema.parse(data);
+  try {
+    const validated = expenseSchema.parse(data);
 
-  const expense = await prisma.expense.update({
-    where: { id },
-    data: {
-      name: validated.name,
-      amount: validated.amount,
-      expenseDate: validated.expenseDate,
-      categoryId: validated.categoryId,
-      paymentMethod: validated.paymentMethod,
-      notes: validated.notes,
-    },
-  });
+    const expense = await prisma.expense.update({
+      where: { id },
+      data: {
+        name: validated.name,
+        amount: validated.amount,
+        expenseDate: validated.expenseDate,
+        categoryId: validated.categoryId,
+        paymentMethod: validated.paymentMethod,
+        notes: validated.notes,
+      },
+    });
 
-  revalidatePath("/expenses");
-  return serialize(expense);
+    revalidatePath("/expenses");
+    return serialize(expense);
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "ไม่สามารถบันทึกค่าใช้จ่ายได้ กรุณาลองใหม่อีกครั้ง"
+    );
+  }
 }
 
 export async function deleteExpense(id: string) {
-  await prisma.expense.delete({
-    where: { id },
-  });
-  revalidatePath("/expenses");
+  try {
+    await prisma.expense.delete({
+      where: { id },
+    });
+    revalidatePath("/expenses");
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "ไม่สามารถลบค่าใช้จ่ายได้ กรุณาลองใหม่อีกครั้ง"
+    );
+  }
 }
 
 export async function createExpenseCategory(data: unknown) {
-  await ensureExpenseTables();
-  const validated = expenseCategorySchema.parse(data);
+  try {
+    await ensureExpenseTables();
+    const validated = expenseCategorySchema.parse(data);
 
-  const category = await prisma.expenseCategory.create({
-    data: {
-      name: validated.name,
-    },
-  });
+    const category = await prisma.expenseCategory.create({
+      data: {
+        name: validated.name,
+      },
+    });
 
-  revalidatePath("/expenses");
-  return { id: category.id, name: category.name, sortOrder: category.sortOrder, status: category.status };
+    revalidatePath("/expenses");
+    return { id: category.id, name: category.name, sortOrder: category.sortOrder, status: category.status };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "ไม่สามารถเพิ่มหมวดหมู่ได้ กรุณาลองใหม่อีกครั้ง"
+    );
+  }
 }
 
 export async function deleteExpenseCategory(id: string) {
-  const existing = await prisma.expenseCategory.findUnique({
-    where: { id },
-    include: { _count: { select: { expenses: true } } },
-  });
+  try {
+    const existing = await prisma.expenseCategory.findUnique({
+      where: { id },
+      include: { _count: { select: { expenses: true } } },
+    });
 
-  if (!existing) throw new Error("ไม่พบหมวดหมู่");
+    if (!existing) throw new Error("ไม่พบหมวดหมู่");
 
-  if (existing._count.expenses > 0) {
-    throw new Error("ไม่สามารถลบหมวดหมู่ได้เนื่องจากมีค่าใช้จ่ายในหมวดหมู่นี้อยู่");
+    if (existing._count.expenses > 0) {
+      throw new Error("ไม่สามารถลบหมวดหมู่ได้เนื่องจากมีค่าใช้จ่ายในหมวดหมู่นี้อยู่");
+    }
+
+    await prisma.expenseCategory.delete({ where: { id } });
+    revalidatePath("/expenses");
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "ไม่สามารถลบหมวดหมู่ได้ กรุณาลองใหม่อีกครั้ง"
+    );
   }
-
-  await prisma.expenseCategory.delete({ where: { id } });
-  revalidatePath("/expenses");
 }
