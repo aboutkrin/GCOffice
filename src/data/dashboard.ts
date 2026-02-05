@@ -36,9 +36,16 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     },
   };
 
+  const nonDraftStatuses = [
+    DocumentStatus.QUOTED,
+    DocumentStatus.CONFIRMED,
+    DocumentStatus.SAMPLE,
+    DocumentStatus.BILLED,
+    DocumentStatus.PAID,
+    DocumentStatus.CANCELLED,
+  ];
   const pendingStatuses = [DocumentStatus.QUOTED, DocumentStatus.BILLED];
   const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
-  const excludeDraft = { status: { not: DocumentStatus.DRAFT } };
 
   const [
     thisMonthQuotations,
@@ -48,11 +55,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     recentDocuments,
   ] = await Promise.all([
     prisma.document.count({
-      where: { type: DocumentType.QUOTATION, ...excludeDraft, ...thisMonthFilter },
+      where: { type: DocumentType.QUOTATION, status: { in: nonDraftStatuses }, ...thisMonthFilter },
     }),
 
     prisma.document.count({
-      where: { type: DocumentType.INVOICE, ...excludeDraft, ...thisMonthFilter },
+      where: { type: DocumentType.INVOICE, status: { in: nonDraftStatuses }, ...thisMonthFilter },
     }),
 
     prisma.document.count({
@@ -71,7 +78,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
 
     prisma.document.findMany({
-      where: excludeDraft,
+      where: { status: { in: nonDraftStatuses } },
       select: {
         id: true,
         type: true,
@@ -119,16 +126,23 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     },
   };
 
+  const nonDraftStatuses = [
+    DocumentStatus.QUOTED,
+    DocumentStatus.CONFIRMED,
+    DocumentStatus.SAMPLE,
+    DocumentStatus.BILLED,
+    DocumentStatus.PAID,
+    DocumentStatus.CANCELLED,
+  ];
   const pendingStatuses = [DocumentStatus.QUOTED, DocumentStatus.BILLED];
   const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
-  const excludeDraft = { status: { not: DocumentStatus.DRAFT } };
 
   const [quotations, invoices, pendingDocuments, confirmed, yearsData] = await Promise.all([
     prisma.document.count({
-      where: { type: DocumentType.QUOTATION, ...excludeDraft, ...yearFilter },
+      where: { type: DocumentType.QUOTATION, status: { in: nonDraftStatuses }, ...yearFilter },
     }),
     prisma.document.count({
-      where: { type: DocumentType.INVOICE, ...excludeDraft, ...yearFilter },
+      where: { type: DocumentType.INVOICE, status: { in: nonDraftStatuses }, ...yearFilter },
     }),
     prisma.document.count({
       where: { status: { in: pendingStatuses }, ...yearFilter },
