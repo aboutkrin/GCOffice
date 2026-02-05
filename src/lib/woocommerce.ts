@@ -11,6 +11,7 @@ export interface WooCommerceProduct {
   description: string;
   short_description: string;
   regular_price: string;
+  sale_price: string;
   price: string;
   status: string;
   images: { id: number; src: string }[];
