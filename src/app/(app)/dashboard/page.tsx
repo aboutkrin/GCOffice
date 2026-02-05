@@ -11,8 +11,7 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layout/page-header";
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge";
-import { getDashboardStats, getMonthlySales, getYearlyStats, getMonthlyRevenueAndCost } from "@/data/dashboard";
-import { SalesChart } from "@/components/dashboard/sales-chart";
+import { getDashboardStats, getYearlyStats, getMonthlyRevenueAndCost } from "@/data/dashboard";
 import { YearlyStatsCards } from "@/components/dashboard/yearly-stats-cards";
 import { RevenueExpenseSection } from "@/components/dashboard/revenue-expense-section";
 import { formatBaht } from "@/lib/thai-currency";
@@ -23,9 +22,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const currentYear = new Date().getFullYear();
-  const [stats, monthlySales, yearlyStats, revenueExpense] = await Promise.all([
+  const [stats, yearlyStats, revenueExpense] = await Promise.all([
     getDashboardStats(),
-    getMonthlySales(currentYear),
     getYearlyStats(currentYear),
     getMonthlyRevenueAndCost(currentYear),
   ]);
@@ -87,12 +85,6 @@ export default async function DashboardPage() {
       <div className="mt-8">
         <h2 className="text-lg font-semibold mb-4">ภาพรวมรายรับและรายจ่าย</h2>
         <RevenueExpenseSection initialData={revenueExpense} />
-      </div>
-
-      {/* Monthly Sales Chart */}
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-4">ยอดขายรายเดือน</h2>
-        <SalesChart initialData={monthlySales} />
       </div>
 
       {/* Recent Documents */}
