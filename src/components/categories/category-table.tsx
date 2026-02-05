@@ -49,6 +49,7 @@ interface CategoryTableProps {
 export function CategoryTable({ categories }: CategoryTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteProductCount, setDeleteProductCount] = useState(0);
   const [isPending, startTransition] = useTransition();
 
   const columns: ColumnDef<any>[] = [
@@ -91,7 +92,10 @@ export function CategoryTable({ categories }: CategoryTableProps) {
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
-              onClick={() => setDeleteId(row.original.id)}
+              onClick={() => {
+                setDeleteId(row.original.id);
+                setDeleteProductCount(row.original._count?.products ?? 0);
+              }}
             >
               <Trash2 className="size-4" />
               ลบ
@@ -122,12 +126,15 @@ export function CategoryTable({ categories }: CategoryTableProps) {
     if (!deleteId) return;
     startTransition(async () => {
       try {
-        await deleteProductCategory(deleteId);
+        await deleteProductCategory(deleteId, {
+          forceDeleteProducts: deleteProductCount > 0,
+        });
         toast.success("ลบหมวดหมู่เรียบร้อยแล้ว");
       } catch (error: any) {
         toast.error(error?.message ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
       } finally {
         setDeleteId(null);
+        setDeleteProductCount(0);
       }
     });
   }
@@ -181,12 +188,14 @@ export function CategoryTable({ categories }: CategoryTableProps) {
         </Table>
       </div>
 
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+      <AlertDialog open={!!deleteId} onOpenChange={() => { setDeleteId(null); setDeleteProductCount(0); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณต้องการลบหมวดหมู่นี้หรือไม่? หมวดหมู่ที่มีสินค้าอยู่จะไม่สามารถลบได้
+              {deleteProductCount > 0
+                ? `หมวดหมู่นี้มีสินค้าอยู่ ${deleteProductCount} รายการ การลบหมวดหมู่จะลบสินค้าทั้งหมดในหมวดหมู่นี้ด้วย คุณต้องการดำเนินการต่อหรือไม่?`
+                : "คุณต้องการลบหมวดหมู่นี้หรือไม่?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -196,7 +205,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
               variant="destructive"
               disabled={isPending}
             >
-              ลบ
+              {deleteProductCount > 0 ? "ลบหมวดหมู่และสินค้า" : "ลบ"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

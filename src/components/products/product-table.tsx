@@ -22,7 +22,7 @@ import {
 import { toast } from "sonner";
 
 import { formatNumber } from "@/lib/thai-currency";
-import { deleteProduct } from "@/actions/product-actions";
+import { deleteProduct, permanentDeleteProduct } from "@/actions/product-actions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,6 +85,7 @@ export function ProductTable({
   const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(filters.search);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [permanentDeleteId, setPermanentDeleteId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const updateParams = useCallback(
@@ -193,13 +194,23 @@ export function ProductTable({
                 แก้ไข
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => setDeleteId(row.original.id)}
-            >
-              <Trash2 className="size-4" />
-              ลบ
-            </DropdownMenuItem>
+            {row.original.status === "ACTIVE" ? (
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setDeleteId(row.original.id)}
+              >
+                <Trash2 className="size-4" />
+                ลบ
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setPermanentDeleteId(row.original.id)}
+              >
+                <Trash2 className="size-4" />
+                ลบถาวร
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -222,6 +233,20 @@ export function ProductTable({
         toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
       } finally {
         setDeleteId(null);
+      }
+    });
+  }
+
+  function handlePermanentDelete() {
+    if (!permanentDeleteId) return;
+    startTransition(async () => {
+      try {
+        await permanentDeleteProduct(permanentDeleteId);
+        toast.success("ลบสินค้าถาวรเรียบร้อยแล้ว");
+      } catch {
+        toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+      } finally {
+        setPermanentDeleteId(null);
       }
     });
   }
@@ -367,7 +392,7 @@ export function ProductTable({
         </div>
       )}
 
-      {/* Delete confirmation */}
+      {/* Delete confirmation (soft delete) */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -384,6 +409,28 @@ export function ProductTable({
               disabled={isPending}
             >
               ลบ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Permanent delete confirmation */}
+      <AlertDialog open={!!permanentDeleteId} onOpenChange={() => setPermanentDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบถาวร</AlertDialogTitle>
+            <AlertDialogDescription>
+              คุณต้องการลบสินค้านี้ออกจากระบบถาวรหรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePermanentDelete}
+              variant="destructive"
+              disabled={isPending}
+            >
+              ลบถาวร
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

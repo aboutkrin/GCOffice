@@ -51,6 +51,13 @@ export async function deleteProduct(id: string) {
   revalidatePath("/products");
 }
 
+export async function permanentDeleteProduct(id: string) {
+  await prisma.product.delete({ where: { id } });
+  revalidatePath("/products");
+  revalidatePath("/product-costs");
+  revalidatePath("/categories");
+}
+
 export async function createProductCategory(data: unknown) {
   const validated = productCategorySchema.parse(data);
   const category = await prisma.productCategory.create({
@@ -92,7 +99,10 @@ export async function updateProductCategory(id: string, data: unknown) {
   return category;
 }
 
-export async function deleteProductCategory(id: string) {
+export async function deleteProductCategory(
+  id: string,
+  options?: { forceDeleteProducts?: boolean }
+) {
   const existing = await prisma.productCategory.findUnique({
     where: { id },
     include: { _count: { select: { products: true } } },
@@ -102,12 +112,19 @@ export async function deleteProductCategory(id: string) {
     throw new Error("ไม่พบหมวดหมู่");
   }
 
-  if (existing._count.products > 0) {
+  if (existing._count.products > 0 && !options?.forceDeleteProducts) {
     throw new Error("ไม่สามารถลบหมวดหมู่ได้เนื่องจากมีสินค้าในหมวดหมู่นี้อยู่");
   }
 
-  await prisma.productCategory.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    if (existing._count.products > 0) {
+      await tx.product.deleteMany({ where: { categoryId: id } });
+    }
+    await tx.productCategory.delete({ where: { id } });
+  });
+
   revalidatePath("/products");
+  revalidatePath("/product-costs");
   revalidatePath("/categories");
 }
 
