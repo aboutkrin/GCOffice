@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT_CARD', 'PROMPTPAY', 'CHECK', 'OTHER');
+CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT_CARD', 'PROMPTPAY', 'OTHER');
 
 -- AlterTable
 ALTER TABLE "expenses" ADD COLUMN "payment_method" "PaymentMethod" NOT NULL DEFAULT 'TRANSFER';

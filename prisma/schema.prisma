@@ -404,7 +404,6 @@ enum PaymentMethod {
   TRANSFER
   CREDIT_CARD
   PROMPTPAY
-  CHECK
   OTHER
 }
 

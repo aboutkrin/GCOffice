@@ -73,8 +73,7 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   TRANSFER: "โอนเงิน",
   CREDIT_CARD: "บัตรเครดิต",
   PROMPTPAY: "พร้อมเพย์",
-  CHECK: "เช็ค",
   OTHER: "อื่นๆ",
 };
 
-export const PAYMENT_METHOD_OPTIONS = ["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "CHECK", "OTHER"] as const;
+export const PAYMENT_METHOD_OPTIONS = ["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"] as const;

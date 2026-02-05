@@ -178,7 +178,7 @@ export const expenseSchema = z.object({
   amount: z.coerce.number().min(0, "จำนวนเงินต้องไม่ติดลบ"),
   expenseDate: z.coerce.date({ error: "กรุณาเลือกวันที่" }),
   categoryId: z.string().min(1, "กรุณาเลือกหมวดหมู่"),
-  paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "CHECK", "OTHER"], {
+  paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"], {
     error: "กรุณาเลือกวิธีการชำระ",
   }).default("TRANSFER"),
   notes: z.string().optional(),
