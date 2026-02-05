@@ -82,11 +82,23 @@ export async function searchProducts(query: string, categoryId?: string) {
   return serialize(data);
 }
 
+export interface ProductForCost {
+  id: string;
+  sku: string;
+  name: string;
+  imageUrl: string | null;
+  basePrice: number;
+  costPrice: number | null;
+  exchangeRate: number | null;
+  weightPerBox: number | null;
+  shippingCostPerBox: number | null;
+}
+
 export async function getProductsForCost(params?: {
   search?: string;
   page?: number;
   perPage?: number;
-}) {
+}): Promise<{ products: ProductForCost[]; total: number }> {
   const where: any = {
     status: "ACTIVE",
   };

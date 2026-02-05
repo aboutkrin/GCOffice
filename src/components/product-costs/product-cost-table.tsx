@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { formatNumber } from "@/lib/thai-currency";
 import { updateProductCost } from "@/actions/product-actions";
+import { type ProductForCost } from "@/data/products";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,18 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-interface ProductForCost {
-  id: string;
-  sku: string;
-  name: string;
-  imageUrl: string | null;
-  basePrice: number;
-  costPrice: number | null;
-  exchangeRate: number | null;
-  weightPerBox: number | null;
-  shippingCostPerBox: number | null;
-}
 
 interface ProductCostTableProps {
   products: ProductForCost[];
