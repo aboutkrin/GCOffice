@@ -12,7 +12,7 @@ import {
 import { MoreHorizontal, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 
-import { deletePaymentTermTemplate } from "@/actions/payment-term-template-actions";
+import { deletePaymentTermTemplate, permanentDeletePaymentTermTemplate } from "@/actions/payment-term-template-actions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,6 +49,7 @@ interface PaymentTermTemplateTableProps {
 export function PaymentTermTemplateTable({ templates }: PaymentTermTemplateTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [permanentDeleteId, setPermanentDeleteId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const columns: ColumnDef<any>[] = [
@@ -105,13 +106,23 @@ export function PaymentTermTemplateTable({ templates }: PaymentTermTemplateTable
                 แก้ไข
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => setDeleteId(row.original.id)}
-            >
-              <Trash2 className="size-4" />
-              ลบ
-            </DropdownMenuItem>
+            {row.original.status === "ACTIVE" ? (
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setDeleteId(row.original.id)}
+              >
+                <Trash2 className="size-4" />
+                ลบ
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => setPermanentDeleteId(row.original.id)}
+              >
+                <Trash2 className="size-4" />
+                ลบถาวร
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -143,6 +154,20 @@ export function PaymentTermTemplateTable({ templates }: PaymentTermTemplateTable
         toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
       } finally {
         setDeleteId(null);
+      }
+    });
+  }
+
+  function handlePermanentDelete() {
+    if (!permanentDeleteId) return;
+    startTransition(async () => {
+      try {
+        await permanentDeletePaymentTermTemplate(permanentDeleteId);
+        toast.success("ลบเทมเพลตถาวรเรียบร้อยแล้ว");
+      } catch {
+        toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+      } finally {
+        setPermanentDeleteId(null);
       }
     });
   }
@@ -226,6 +251,27 @@ export function PaymentTermTemplateTable({ templates }: PaymentTermTemplateTable
               disabled={isPending}
             >
               ลบ
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!permanentDeleteId} onOpenChange={() => setPermanentDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ยืนยันการลบถาวร</AlertDialogTitle>
+            <AlertDialogDescription>
+              คุณต้องการลบเทมเพลตนี้ออกจากระบบถาวรหรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePermanentDelete}
+              variant="destructive"
+              disabled={isPending}
+            >
+              ลบถาวร
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

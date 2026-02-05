@@ -63,3 +63,8 @@ export async function deletePaymentTermTemplate(id: string) {
   });
   revalidatePath("/payment-terms");
 }
+
+export async function permanentDeletePaymentTermTemplate(id: string) {
+  await prisma.paymentTermTemplate.delete({ where: { id } });
+  revalidatePath("/payment-terms");
+}
