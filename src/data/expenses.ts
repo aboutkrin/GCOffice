@@ -178,10 +178,11 @@ export async function getExpenseCategories() {
   await ensureExpenseTables();
 
   try {
-    return await prisma.expenseCategory.findMany({
+    const categories = await prisma.expenseCategory.findMany({
       where: { status: "ACTIVE" },
       orderBy: { sortOrder: "asc" },
     });
+    return serialize(categories);
   } catch {
     return [];
   }
