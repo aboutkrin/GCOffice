@@ -134,5 +134,5 @@ export async function getProductsForCost(params?: {
     prisma.product.count({ where }),
   ]);
 
-  return { products: serialize(data), total };
+  return { products: serialize(data) as ProductForCost[], total };
 }
