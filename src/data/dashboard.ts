@@ -36,7 +36,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     },
   };
 
-  const pendingStatuses = [DocumentStatus.DRAFT, DocumentStatus.QUOTED, DocumentStatus.BILLED];
+  const excludeDraft = { status: { not: DocumentStatus.DRAFT } };
+  const pendingStatuses = [DocumentStatus.QUOTED, DocumentStatus.BILLED];
   const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
 
   const [
@@ -47,11 +48,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     recentDocuments,
   ] = await Promise.all([
     prisma.document.count({
-      where: { type: DocumentType.QUOTATION, ...thisMonthFilter },
+      where: { type: DocumentType.QUOTATION, ...excludeDraft, ...thisMonthFilter },
     }),
 
     prisma.document.count({
-      where: { type: DocumentType.INVOICE, ...thisMonthFilter },
+      where: { type: DocumentType.INVOICE, ...excludeDraft, ...thisMonthFilter },
     }),
 
     prisma.document.count({
@@ -70,6 +71,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
 
     prisma.document.findMany({
+      where: excludeDraft,
       select: {
         id: true,
         type: true,
@@ -117,15 +119,16 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     },
   };
 
-  const pendingStatuses = [DocumentStatus.DRAFT, DocumentStatus.QUOTED, DocumentStatus.BILLED];
+  const excludeDraft = { status: { not: DocumentStatus.DRAFT } };
+  const pendingStatuses = [DocumentStatus.QUOTED, DocumentStatus.BILLED];
   const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
 
   const [quotations, invoices, pendingDocuments, confirmed, yearsData] = await Promise.all([
     prisma.document.count({
-      where: { type: DocumentType.QUOTATION, ...yearFilter },
+      where: { type: DocumentType.QUOTATION, ...excludeDraft, ...yearFilter },
     }),
     prisma.document.count({
-      where: { type: DocumentType.INVOICE, ...yearFilter },
+      where: { type: DocumentType.INVOICE, ...excludeDraft, ...yearFilter },
     }),
     prisma.document.count({
       where: { status: { in: pendingStatuses }, ...yearFilter },
