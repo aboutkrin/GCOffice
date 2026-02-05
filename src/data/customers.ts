@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { CustomerType, Status } from "@/generated/prisma/client";
+import { serialize } from "@/lib/utils";
 
 export async function getCustomers(params?: {
   search?: string;
@@ -18,18 +19,20 @@ export async function getCustomers(params?: {
     ];
   }
 
-  return prisma.customer.findMany({
+  const data = await prisma.customer.findMany({
     where,
     orderBy: { createdAt: "desc" },
   });
+  return serialize(data);
 }
 
 export async function getCustomerById(id: string) {
-  return prisma.customer.findUnique({ where: { id } });
+  const data = await prisma.customer.findUnique({ where: { id } });
+  return serialize(data);
 }
 
 export async function searchCustomers(query: string) {
-  return prisma.customer.findMany({
+  const data = await prisma.customer.findMany({
     where: {
       status: "ACTIVE",
       OR: [
@@ -41,4 +44,5 @@ export async function searchCustomers(query: string) {
     take: 20,
     orderBy: { customerName: "asc" },
   });
+  return serialize(data);
 }

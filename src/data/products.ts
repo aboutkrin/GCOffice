@@ -45,17 +45,19 @@ export async function getProductById(id: string) {
 }
 
 export async function getProductCategories() {
-  return prisma.productCategory.findMany({
+  const data = await prisma.productCategory.findMany({
     include: { _count: { select: { products: true } } },
     orderBy: { sortOrder: "asc" },
   });
+  return serialize(data);
 }
 
 export async function getProductCategoryById(id: string) {
-  return prisma.productCategory.findUnique({
+  const data = await prisma.productCategory.findUnique({
     where: { id },
     include: { _count: { select: { products: true } } },
   });
+  return serialize(data);
 }
 
 export async function searchProducts(query: string, categoryId?: string) {
