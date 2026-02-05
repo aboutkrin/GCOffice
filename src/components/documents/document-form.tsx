@@ -38,7 +38,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { CalendarIcon, Save, FileText, Loader2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatThaiDate } from "@/lib/thai-date";
+import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
 import { formatBaht } from "@/lib/thai-currency";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
 
@@ -166,8 +166,8 @@ export function DocumentForm({
     resolver: zodResolver(formSchema) as any,
     defaultValues: {
       documentDate: initialData?.documentDate
-        ? new Date(initialData.documentDate)
-        : new Date(),
+        ? toUTCNoon(new Date(initialData.documentDate))
+        : toUTCNoon(new Date()),
       companyId: initialData?.companyId || "",
       customerId: initialData?.customerId || "",
       vatEnabled: initialData?.vatEnabled ?? true,
@@ -531,7 +531,9 @@ export function DocumentForm({
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(date) =>
+                            field.onChange(date ? toUTCNoon(date) : undefined)
+                          }
                         />
                       </PopoverContent>
                     </Popover>

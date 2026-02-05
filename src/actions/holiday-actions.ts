@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { holidaySchema, holidayRangeSchema } from "@/lib/validators";
 import { serialize } from "@/lib/utils";
+import { toUTCNoon } from "@/lib/thai-date";
 import { revalidatePath } from "next/cache";
 
 export async function createHoliday(data: unknown) {
@@ -10,7 +11,7 @@ export async function createHoliday(data: unknown) {
   const holiday = await prisma.holiday.create({
     data: {
       name: validated.name,
-      date: validated.date,
+      date: toUTCNoon(validated.date),
       isRecurring: validated.isRecurring,
     },
   });
@@ -21,11 +22,12 @@ export async function createHoliday(data: unknown) {
 export async function createHolidayRange(data: unknown) {
   const validated = holidayRangeSchema.parse(data);
   const dates: Date[] = [];
-  const current = new Date(validated.startDate);
-  const end = new Date(validated.endDate);
+  const start = toUTCNoon(validated.startDate);
+  const end = toUTCNoon(validated.endDate);
+  const current = new Date(start);
   while (current <= end) {
     dates.push(new Date(current));
-    current.setDate(current.getDate() + 1);
+    current.setUTCDate(current.getUTCDate() + 1);
   }
   await prisma.holiday.createMany({
     data: dates.map((date) => ({
@@ -43,7 +45,7 @@ export async function updateHoliday(id: string, data: unknown) {
     where: { id },
     data: {
       name: validated.name,
-      date: validated.date,
+      date: toUTCNoon(validated.date),
       isRecurring: validated.isRecurring,
     },
   });

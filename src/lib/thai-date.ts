@@ -38,3 +38,16 @@ export function formatThaiDateTime(date: Date): string {
 export function toBuddhistYear(date: Date): number {
   return date.getFullYear() + 543;
 }
+
+/**
+ * Normalize a local-timezone Date to UTC noon, preserving the calendar date.
+ * Prevents timezone offsets (e.g. Bangkok UTC+7) from shifting the date
+ * when stored in PostgreSQL DATE columns or displayed with UTC methods.
+ *
+ * Example: April 6 00:00 Bangkok (= April 5 17:00 UTC) → April 6 12:00 UTC
+ */
+export function toUTCNoon(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0)
+  );
+}
