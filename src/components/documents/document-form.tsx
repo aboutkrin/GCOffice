@@ -67,11 +67,12 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 interface DocumentFormProps {
-  type: "QUOTATION" | "INVOICE";
+  type: "QUOTATION" | "INVOICE" | "RECEIPT";
   initialData?: any;
   companies: any[];
   customers: any[];
   quotations?: any[];
+  invoices?: any[];
   paymentTermTemplates?: any[];
   holidays?: Holiday[];
 }
@@ -82,6 +83,7 @@ export function DocumentForm({
   companies,
   customers,
   quotations,
+  invoices,
   paymentTermTemplates,
   holidays = [],
 }: DocumentFormProps) {
@@ -116,6 +118,9 @@ export function DocumentForm({
   const [deliveryDateEnd, setDeliveryDateEnd] = useState<Date | null>(null);
   const [sourceQuotationId, setSourceQuotationId] = useState<string | undefined>(
     initialData?.sourceQuotationId || undefined
+  );
+  const [sourceInvoiceId, setSourceInvoiceId] = useState<string | undefined>(
+    initialData?.sourceInvoiceId || undefined
   );
 
   const isEditing = !!initialData;
@@ -303,6 +308,60 @@ export function DocumentForm({
     setSkipHolidays(q.skipHolidays ?? false);
   };
 
+  const handleInvoiceSelect = (invoiceId: string) => {
+    const inv = invoices?.find((i: any) => i.id === invoiceId);
+    if (!inv) return;
+
+    setSourceInvoiceId(invoiceId);
+
+    // Pre-fill company and customer
+    form.setValue("companyId", inv.companyId);
+    form.setValue("customerId", inv.customerId);
+
+    // Pre-fill VAT settings
+    form.setValue("vatEnabled", inv.vatEnabled);
+    form.setValue("vatRate", Number(inv.vatRate));
+
+    // Pre-fill discount
+    setDiscountType(inv.discountType || null);
+    setDiscountValue(inv.discountValue ? Number(inv.discountValue) : 0);
+
+    // Pre-fill line items
+    const newItems = inv.lineItems.map((item: any, idx: number) => ({
+      id: Math.random().toString(36).substr(2, 9),
+      sequence: idx + 1,
+      productSku: item.productSku || undefined,
+      productName: item.productName || "",
+      productImage: item.productImage || undefined,
+      showImage: item.showImage ?? false,
+      details: item.details || undefined,
+      quantity: item.quantity || 1,
+      unitPrice: Number(item.unitPrice) || 0,
+      lineTotal: Number(item.lineTotal) || 0,
+    }));
+    setItems(newItems);
+
+    // Pre-fill payment terms
+    const newTerms = inv.paymentTerms.map((term: any, idx: number) => ({
+      id: Math.random().toString(36).substr(2, 9),
+      sequence: idx + 1,
+      name: term.name || "",
+      type: term.type || "PERCENTAGE",
+      value: Number(term.value) || 0,
+      calculatedAmount: Number(term.calculatedAmount) || 0,
+      note: term.note || undefined,
+    }));
+    setTerms(newTerms);
+
+    // Pre-fill footer notes, shipping, and production day settings
+    setFooterNotes(inv.footerNotes || "");
+    setShippingCost(inv.shippingCost ? Number(inv.shippingCost) : 0);
+    setProductionDaysMin(inv.productionDaysMin ?? null);
+    setProductionDaysMax(inv.productionDaysMax ?? null);
+    setSkipWeekends(inv.skipWeekends ?? false);
+    setSkipHolidays(inv.skipHolidays ?? false);
+  };
+
   const assembleData = (formData: FormData) => {
     return {
       type,
@@ -310,6 +369,7 @@ export function DocumentForm({
       companyId: formData.companyId,
       customerId: formData.customerId,
       sourceQuotationId: type === "INVOICE" ? sourceQuotationId : undefined,
+      sourceInvoiceId: type === "RECEIPT" ? sourceInvoiceId : undefined,
       discountType,
       discountValue,
       vatEnabled: formData.vatEnabled,
@@ -354,6 +414,11 @@ export function DocumentForm({
       return;
     }
 
+    if (type === "RECEIPT" && !isEditing && !sourceInvoiceId) {
+      alert("กรุณาเลือกใบแจ้งหนี้ที่ชำระแล้ว");
+      return;
+    }
+
     if (items.length === 0) {
       alert("กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ");
       return;
@@ -375,7 +440,12 @@ export function DocumentForm({
         await createDocument(data);
       }
 
-      const basePath = type === "QUOTATION" ? "/quotations" : "/invoices";
+      const basePathMap: Record<string, string> = {
+        QUOTATION: "/quotations",
+        INVOICE: "/invoices",
+        RECEIPT: "/receipts",
+      };
+      const basePath = basePathMap[type] || "/quotations";
       router.push(basePath);
       router.refresh();
     } catch (error: any) {
@@ -431,6 +501,40 @@ export function DocumentForm({
                   <div className="flex items-center gap-2 mt-1.5 p-3 rounded-md border border-amber-300 bg-amber-50 text-amber-800 text-sm">
                     <AlertTriangle className="h-4 w-4 shrink-0" />
                     <span>ไม่มีใบเสนอราคาที่ยืนยันแล้ว กรุณายืนยันใบเสนอราคาก่อนสร้างใบแจ้งหนี้</span>
+                  </div>
+                )}
+                <Separator className="mt-4" />
+              </div>
+            )}
+
+            {/* Invoice Selector - required for new receipts */}
+            {type === "RECEIPT" && !isEditing && (
+              <div className="mb-4">
+                <Label>เลือกจากใบแจ้งหนี้ <span className="text-destructive">*</span></Label>
+                {invoices && invoices.length > 0 ? (
+                  <Select
+                    value={sourceInvoiceId}
+                    onValueChange={handleInvoiceSelect}
+                  >
+                    <SelectTrigger className="w-full mt-1.5">
+                      <SelectValue placeholder="เลือกใบแจ้งหนี้ที่ชำระแล้ว" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {invoices.map((inv: any) => {
+                        const customerName =
+                          (inv.customerSnapshot as any)?.customerName || "ไม่ระบุ";
+                        return (
+                          <SelectItem key={inv.id} value={inv.id}>
+                            {inv.documentNumber} - {customerName} - {formatBaht(inv.grandTotal)}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center gap-2 mt-1.5 p-3 rounded-md border border-amber-300 bg-amber-50 text-amber-800 text-sm">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    <span>ไม่มีใบแจ้งหนี้ที่ชำระแล้ว กรุณาเปลี่ยนสถานะใบแจ้งหนี้เป็น &quot;ชำระแล้ว&quot; ก่อนสร้างใบเสร็จรับเงิน</span>
                   </div>
                 )}
                 <Separator className="mt-4" />
@@ -648,9 +752,12 @@ export function DocumentForm({
             type="button"
             variant="outline"
             onClick={() => {
-              const basePath =
-                type === "QUOTATION" ? "/quotations" : "/invoices";
-              router.push(basePath);
+              const basePathMap: Record<string, string> = {
+                QUOTATION: "/quotations",
+                INVOICE: "/invoices",
+                RECEIPT: "/receipts",
+              };
+              router.push(basePathMap[type] || "/quotations");
             }}
             disabled={saving}
           >

@@ -71,6 +71,38 @@ export async function getConfirmedQuotations() {
   return serialize(data);
 }
 
+export async function getPaidInvoices() {
+  const data = await prisma.document.findMany({
+    where: {
+      type: "INVOICE",
+      status: "PAID",
+    },
+    select: {
+      id: true,
+      documentNumber: true,
+      documentDate: true,
+      grandTotal: true,
+      customerSnapshot: true,
+      companyId: true,
+      customerId: true,
+      vatEnabled: true,
+      vatRate: true,
+      discountType: true,
+      discountValue: true,
+      shippingCost: true,
+      footerNotes: true,
+      productionDaysMin: true,
+      productionDaysMax: true,
+      skipWeekends: true,
+      skipHolidays: true,
+      lineItems: { orderBy: { sequence: "asc" } },
+      paymentTerms: { orderBy: { sequence: "asc" } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return serialize(data);
+}
+
 export async function getDocumentById(id: string) {
   const data = await prisma.document.findUnique({
     where: { id },

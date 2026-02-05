@@ -8,7 +8,7 @@ interface DocumentPageTabsProps {
   activeDocuments: any[];
   cancelledDocuments: any[];
   basePath: string;
-  documentType: "QUOTATION" | "INVOICE";
+  documentType: "QUOTATION" | "INVOICE" | "RECEIPT";
 }
 
 export function DocumentPageTabs({

@@ -29,14 +29,22 @@ interface CompanySnapshot {
 interface PreviewHeaderProps {
   company: CompanySnapshot;
   documentType: string;
+  vatEnabled?: boolean;
 }
 
 export function PreviewHeader({
   company,
   documentType,
+  vatEnabled,
 }: PreviewHeaderProps) {
-  const typeLabel =
-    DOCUMENT_TYPE_LABELS[documentType] || documentType;
+  let typeLabel: string;
+  if (documentType === "RECEIPT") {
+    typeLabel = vatEnabled
+      ? "ใบเสร็จรับเงิน/ใบกำกับภาษี"
+      : "ใบเสร็จรับเงิน";
+  } else {
+    typeLabel = DOCUMENT_TYPE_LABELS[documentType] || documentType;
+  }
 
   return (
     <div className="mb-3">
@@ -66,6 +74,9 @@ export function PreviewHeader({
           <h2 className="text-lg sm:text-2xl font-bold text-primary">
             {typeLabel}
           </h2>
+          {documentType === "RECEIPT" && (
+            <p className="text-xs sm:text-sm text-primary/80">(ต้นฉบับ)</p>
+          )}
         </div>
       </div>
 

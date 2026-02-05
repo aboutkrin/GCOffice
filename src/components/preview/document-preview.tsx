@@ -60,7 +60,7 @@ interface PaymentTerm {
 
 export interface DocumentData {
   id: string;
-  type: "QUOTATION" | "INVOICE";
+  type: "QUOTATION" | "INVOICE" | "RECEIPT";
   documentNumber: string;
   status: "DRAFT" | "QUOTED" | "CONFIRMED" | "SAMPLE" | "BILLED" | "PAID" | "CANCELLED";
   documentDate: Date;
@@ -104,6 +104,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
         <PreviewHeader
           company={doc.companySnapshot}
           documentType={doc.type}
+          vatEnabled={doc.vatEnabled}
         />
 
         {/* Customer Info + Document Date/Number */}

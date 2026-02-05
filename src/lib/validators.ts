@@ -99,11 +99,12 @@ export const holidayRangeSchema = z.object({
 );
 
 export const documentSchema = z.object({
-  type: z.enum(["QUOTATION", "INVOICE"]),
+  type: z.enum(["QUOTATION", "INVOICE", "RECEIPT"]),
   documentDate: z.coerce.date(),
   companyId: z.string().min(1, "กรุณาเลือกบริษัท"),
   customerId: z.string().min(1, "กรุณาเลือกลูกค้า"),
   sourceQuotationId: z.string().optional(),
+  sourceInvoiceId: z.string().optional(),
   discountType: z.enum(["PERCENTAGE", "AMOUNT"]).optional().nullable(),
   discountValue: z.coerce.number().optional(),
   vatEnabled: z.boolean().default(true),
@@ -122,6 +123,9 @@ export const documentSchema = z.object({
 }).refine(
   (data) => data.type !== "INVOICE" || (data.sourceQuotationId && data.sourceQuotationId.length > 0),
   { message: "กรุณาเลือกใบเสนอราคา", path: ["sourceQuotationId"] }
+).refine(
+  (data) => data.type !== "RECEIPT" || (data.sourceInvoiceId && data.sourceInvoiceId.length > 0),
+  { message: "กรุณาเลือกใบแจ้งหนี้", path: ["sourceInvoiceId"] }
 ).refine(
   (data) => {
     if (data.productionDaysMin != null && data.productionDaysMax != null) {

@@ -79,6 +79,8 @@ export async function createDocument(data: unknown) {
       deliveryDateEnd: validated.deliveryDateEnd ? toUTCNoon(validated.deliveryDateEnd) : undefined,
       sourceQuotationId:
         validated.type === "INVOICE" ? validated.sourceQuotationId : undefined,
+      sourceInvoiceId:
+        validated.type === "RECEIPT" ? validated.sourceInvoiceId : undefined,
       createdById: user.id,
       lineItems: {
         create: validated.lineItems.map((item) => ({
@@ -111,6 +113,7 @@ export async function createDocument(data: unknown) {
 
   revalidatePath("/quotations");
   revalidatePath("/invoices");
+  revalidatePath("/receipts");
   return serialize(document);
 }
 
@@ -212,6 +215,7 @@ export async function updateDocument(id: string, data: unknown) {
 
   revalidatePath("/quotations");
   revalidatePath("/invoices");
+  revalidatePath("/receipts");
   return serialize(document);
 }
 
@@ -225,6 +229,7 @@ export async function updateDocumentStatus(
   });
   revalidatePath("/quotations");
   revalidatePath("/invoices");
+  revalidatePath("/receipts");
   return serialize(document);
 }
 
@@ -274,4 +279,5 @@ export async function deleteDocument(id: string) {
   });
   revalidatePath("/quotations");
   revalidatePath("/invoices");
+  revalidatePath("/receipts");
 }

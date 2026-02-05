@@ -7,6 +7,7 @@ export interface DashboardStats {
   // This month stats
   thisMonthQuotations: number;
   thisMonthInvoices: number;
+  thisMonthReceipts: number;
   thisMonthPendingDocuments: number;
   thisMonthConfirmedTotal: number;
   // Recent documents
@@ -43,6 +44,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const [
     thisMonthQuotations,
     thisMonthInvoices,
+    thisMonthReceipts,
     thisMonthPendingDocuments,
     thisMonthConfirmed,
     recentDocuments,
@@ -53,6 +55,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
     prisma.document.count({
       where: { type: DocumentType.INVOICE, ...excludeDraft, ...thisMonthFilter },
+    }),
+
+    prisma.document.count({
+      where: { type: DocumentType.RECEIPT, ...excludeDraft, ...thisMonthFilter },
     }),
 
     prisma.document.count({
@@ -90,6 +96,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return {
     thisMonthQuotations,
     thisMonthInvoices,
+    thisMonthReceipts,
     thisMonthPendingDocuments,
     thisMonthConfirmedTotal: thisMonthConfirmed._sum.grandTotal?.toNumber() ?? 0,
     recentDocuments: serialize(recentDocuments) as RecentDocument[],

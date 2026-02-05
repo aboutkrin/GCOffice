@@ -20,6 +20,7 @@ export const DOCUMENT_STATUS_COLORS: Record<string, string> = {
 
 export const QUOTATION_STATUS_OPTIONS = ["DRAFT", "QUOTED", "CONFIRMED", "SAMPLE", "CANCELLED"] as const;
 export const INVOICE_STATUS_OPTIONS = ["DRAFT", "BILLED", "PAID", "CANCELLED"] as const;
+export const RECEIPT_STATUS_OPTIONS = ["DRAFT", "PAID", "CANCELLED"] as const;
 
 export const CUSTOMER_TYPE_LABELS: Record<string, string> = {
   COMPANY: "นิติบุคคล",
@@ -39,6 +40,7 @@ export const LEAD_TYPE_LABELS: Record<string, string> = {
 export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   QUOTATION: "ใบเสนอราคา",
   INVOICE: "ใบแจ้งหนี้",
+  RECEIPT: "ใบเสร็จรับเงิน",
 };
 
 export const STATUS_LABELS: Record<string, string> = {

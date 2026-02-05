@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ShoppingCart,
   User,
+  ReceiptText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/actions/auth-actions";
@@ -61,6 +62,11 @@ const mainNavItems = [
     href: "/invoices",
     label: "ใบแจ้งหนี้",
     icon: Receipt,
+  },
+  {
+    href: "/receipts",
+    label: "ใบเสร็จรับเงิน",
+    icon: ReceiptText,
   },
   {
     href: "/products",

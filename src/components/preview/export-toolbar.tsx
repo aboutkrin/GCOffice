@@ -29,6 +29,7 @@ import {
   DOCUMENT_STATUS_COLORS,
   QUOTATION_STATUS_OPTIONS,
   INVOICE_STATUS_OPTIONS,
+  RECEIPT_STATUS_OPTIONS,
 } from "@/lib/constants";
 
 interface ExportToolbarProps {
@@ -36,7 +37,7 @@ interface ExportToolbarProps {
   filename: string;
   documentId: string;
   currentStatus: string;
-  documentType: "QUOTATION" | "INVOICE";
+  documentType: "QUOTATION" | "INVOICE" | "RECEIPT";
 }
 
 export function ExportToolbar({
@@ -46,7 +47,12 @@ export function ExportToolbar({
   currentStatus,
   documentType,
 }: ExportToolbarProps) {
-  const STATUS_OPTIONS = documentType === "QUOTATION" ? QUOTATION_STATUS_OPTIONS : INVOICE_STATUS_OPTIONS;
+  const statusOptionsMap = {
+    QUOTATION: QUOTATION_STATUS_OPTIONS,
+    INVOICE: INVOICE_STATUS_OPTIONS,
+    RECEIPT: RECEIPT_STATUS_OPTIONS,
+  };
+  const STATUS_OPTIONS = statusOptionsMap[documentType];
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isExporting, setIsExporting] = useState(false);

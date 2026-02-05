@@ -42,17 +42,23 @@ import {
   DOCUMENT_STATUS_COLORS,
   QUOTATION_STATUS_OPTIONS,
   INVOICE_STATUS_OPTIONS,
+  RECEIPT_STATUS_OPTIONS,
 } from "@/lib/constants";
 import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal, Loader2, FileDown, ImageIcon } from "lucide-react";
 
 interface DocumentTableProps {
   documents: any[];
-  basePath: string; // "/quotations" or "/invoices"
-  documentType: "QUOTATION" | "INVOICE";
+  basePath: string; // "/quotations", "/invoices", or "/receipts"
+  documentType: "QUOTATION" | "INVOICE" | "RECEIPT";
 }
 
 export function DocumentTable({ documents, basePath, documentType }: DocumentTableProps) {
-  const STATUS_OPTIONS = documentType === "QUOTATION" ? QUOTATION_STATUS_OPTIONS : INVOICE_STATUS_OPTIONS;
+  const statusOptionsMap = {
+    QUOTATION: QUOTATION_STATUS_OPTIONS,
+    INVOICE: INVOICE_STATUS_OPTIONS,
+    RECEIPT: RECEIPT_STATUS_OPTIONS,
+  };
+  const STATUS_OPTIONS = statusOptionsMap[documentType];
   const router = useRouter();
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);

@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   Calculator,
   Wallet,
+  ReceiptText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,11 @@ const mainNavItems = [
     href: "/invoices",
     label: "ใบแจ้งหนี้",
     icon: Receipt,
+  },
+  {
+    href: "/receipts",
+    label: "ใบเสร็จรับเงิน",
+    icon: ReceiptText,
   },
   {
     href: "/products",
