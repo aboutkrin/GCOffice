@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { deleteExpense } from "@/actions/expense-actions";
 import { formatBaht } from "@/lib/thai-currency";
 import { formatThaiDate } from "@/lib/thai-date";
+import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,6 +127,16 @@ export function ExpenseTable({
       header: "หมวดหมู่",
       cell: ({ row }) => (
         <Badge variant="secondary">{row.original.category?.name ?? "-"}</Badge>
+      ),
+      enableGlobalFilter: false,
+    },
+    {
+      accessorKey: "paymentMethod",
+      header: "วิธีการชำระ",
+      cell: ({ row }) => (
+        <Badge variant="outline">
+          {PAYMENT_METHOD_LABELS[row.original.paymentMethod] ?? "-"}
+        </Badge>
       ),
       enableGlobalFilter: false,
     },
@@ -289,7 +300,9 @@ export function ExpenseTable({
                   <TableHead
                     key={header.id}
                     className={
-                      header.id === "category.name" ? "hidden md:table-cell" : ""
+                      header.id === "category.name" || header.id === "paymentMethod"
+                        ? "hidden md:table-cell"
+                        : ""
                     }
                   >
                     {header.isPlaceholder
@@ -311,7 +324,7 @@ export function ExpenseTable({
                     <TableCell
                       key={cell.id}
                       className={
-                        cell.column.id === "category.name"
+                        cell.column.id === "category.name" || cell.column.id === "paymentMethod"
                           ? "hidden md:table-cell"
                           : ""
                       }

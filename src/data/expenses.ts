@@ -30,12 +30,21 @@ async function ensureExpenseTables() {
       `);
 
       await prisma.$executeRawUnsafe(`
+        DO $$ BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PaymentMethod') THEN
+            CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT_CARD', 'PROMPTPAY', 'CHECK', 'OTHER');
+          END IF;
+        END $$
+      `);
+
+      await prisma.$executeRawUnsafe(`
         CREATE TABLE IF NOT EXISTS "expenses" (
           "id" TEXT NOT NULL,
           "name" TEXT NOT NULL,
           "amount" DECIMAL(12,2) NOT NULL,
           "expense_date" DATE NOT NULL,
           "category_id" TEXT NOT NULL,
+          "payment_method" "PaymentMethod" NOT NULL DEFAULT 'TRANSFER',
           "notes" TEXT,
           "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
