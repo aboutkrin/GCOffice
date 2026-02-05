@@ -108,6 +108,8 @@ export async function getProductsForCost(params?: {
         id: true,
         sku: true,
         name: true,
+        imageUrl: true,
+        basePrice: true,
         costPrice: true,
         exchangeRate: true,
         weightPerBox: true,
