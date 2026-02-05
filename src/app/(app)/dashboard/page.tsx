@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layout/page-header";
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge";
-import { getDashboardStats, getMonthlySales } from "@/data/dashboard";
+import { getDashboardStats, getMonthlySales, getYearlyStats } from "@/data/dashboard";
 import { SalesChart } from "@/components/dashboard/sales-chart";
+import { YearlyStatsCards } from "@/components/dashboard/yearly-stats-cards";
 import { formatBaht } from "@/lib/thai-currency";
 import { formatThaiDate } from "@/lib/thai-date";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
@@ -21,9 +22,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const currentYear = new Date().getFullYear();
-  const [stats, monthlySales] = await Promise.all([
+  const [stats, monthlySales, yearlyStats] = await Promise.all([
     getDashboardStats(),
     getMonthlySales(currentYear),
+    getYearlyStats(currentYear),
   ]);
 
   const thisMonthCards = [
@@ -45,29 +47,6 @@ export default async function DashboardPage() {
     {
       title: "ยอดรวมเดือนนี้",
       value: formatBaht(stats.thisMonthConfirmedTotal),
-      icon: Banknote,
-    },
-  ];
-
-  const allTimeCards = [
-    {
-      title: "ใบเสนอราคาทั้งหมด",
-      value: stats.totalQuotations.toLocaleString(),
-      icon: FileText,
-    },
-    {
-      title: "ใบแจ้งหนี้ทั้งหมด",
-      value: stats.totalInvoices.toLocaleString(),
-      icon: Receipt,
-    },
-    {
-      title: "รอดำเนินการทั้งหมด",
-      value: stats.totalPendingDocuments.toLocaleString(),
-      icon: Clock,
-    },
-    {
-      title: "ยอดรวมทั้งหมด",
-      value: formatBaht(stats.totalConfirmedTotal),
       icon: Banknote,
     },
   ];
@@ -99,25 +78,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* All Time Stats */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">ทั้งหมด</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {allTimeCards.map((card) => (
-            <Card key={card.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {card.title}
-                </CardTitle>
-                <card.icon className="h-5 w-5 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{card.value}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      {/* Yearly Stats */}
+      <YearlyStatsCards initialData={yearlyStats} />
 
       {/* Monthly Sales Chart */}
       <div className="mt-8">

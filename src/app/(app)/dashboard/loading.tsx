@@ -22,12 +22,15 @@ export default function DashboardLoading() {
         </div>
       </div>
 
-      {/* All Time Stats cards skeleton */}
+      {/* Yearly Stats cards skeleton */}
       <div>
-        <Skeleton className="h-6 w-20 mb-4" />
+        <div className="flex items-center gap-3 mb-4">
+          <Skeleton className="h-6 w-16" />
+          <Skeleton className="h-9 w-[140px] rounded-md" />
+        </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={`allTime-${i}`} className="rounded-lg border bg-card p-6">
+            <div key={`yearly-${i}`} className="rounded-lg border bg-card p-6">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="mt-3 h-7 w-16" />
             </div>

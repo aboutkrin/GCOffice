@@ -9,11 +9,6 @@ export interface DashboardStats {
   thisMonthInvoices: number;
   thisMonthPendingDocuments: number;
   thisMonthConfirmedTotal: number;
-  // All time stats
-  totalQuotations: number;
-  totalInvoices: number;
-  totalPendingDocuments: number;
-  totalConfirmedTotal: number;
   // Recent documents
   recentDocuments: RecentDocument[];
 }
@@ -45,30 +40,20 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
 
   const [
-    // This month stats
     thisMonthQuotations,
     thisMonthInvoices,
     thisMonthPendingDocuments,
     thisMonthConfirmed,
-    // All time stats
-    totalQuotations,
-    totalInvoices,
-    totalPendingDocuments,
-    totalConfirmed,
-    // Recent documents
     recentDocuments,
   ] = await Promise.all([
-    // This month quotations
     prisma.document.count({
       where: { type: DocumentType.QUOTATION, ...thisMonthFilter },
     }),
 
-    // This month invoices
     prisma.document.count({
       where: { type: DocumentType.INVOICE, ...thisMonthFilter },
     }),
 
-    // This month pending documents
     prisma.document.count({
       where: {
         status: { in: pendingStatuses },
@@ -76,7 +61,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
     }),
 
-    // This month confirmed total
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
@@ -85,32 +69,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
     }),
 
-    // Total quotations
-    prisma.document.count({
-      where: { type: DocumentType.QUOTATION },
-    }),
-
-    // Total invoices
-    prisma.document.count({
-      where: { type: DocumentType.INVOICE },
-    }),
-
-    // Total pending documents
-    prisma.document.count({
-      where: {
-        status: { in: pendingStatuses },
-      },
-    }),
-
-    // Total confirmed
-    prisma.document.aggregate({
-      _sum: { grandTotal: true },
-      where: {
-        status: { in: confirmedStatuses },
-      },
-    }),
-
-    // Recent documents
     prisma.document.findMany({
       select: {
         id: true,
@@ -128,18 +86,75 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   ]);
 
   return {
-    // This month stats
     thisMonthQuotations,
     thisMonthInvoices,
     thisMonthPendingDocuments,
     thisMonthConfirmedTotal: thisMonthConfirmed._sum.grandTotal?.toNumber() ?? 0,
-    // All time stats
-    totalQuotations,
-    totalInvoices,
-    totalPendingDocuments,
-    totalConfirmedTotal: totalConfirmed._sum.grandTotal?.toNumber() ?? 0,
-    // Recent documents
     recentDocuments: serialize(recentDocuments) as RecentDocument[],
+  };
+}
+
+// Yearly stats
+
+export interface YearlyStats {
+  year: number;
+  yearBE: number;
+  quotations: number;
+  invoices: number;
+  pendingDocuments: number;
+  confirmedTotal: number;
+  availableYears: number[];
+}
+
+export async function getYearlyStats(year: number): Promise<YearlyStats> {
+  const startOfYear = new Date(year, 0, 1);
+  const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+
+  const yearFilter = {
+    documentDate: {
+      gte: startOfYear,
+      lte: endOfYear,
+    },
+  };
+
+  const pendingStatuses = [DocumentStatus.DRAFT, DocumentStatus.QUOTED, DocumentStatus.BILLED];
+  const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
+
+  const [quotations, invoices, pendingDocuments, confirmed, yearsData] = await Promise.all([
+    prisma.document.count({
+      where: { type: DocumentType.QUOTATION, ...yearFilter },
+    }),
+    prisma.document.count({
+      where: { type: DocumentType.INVOICE, ...yearFilter },
+    }),
+    prisma.document.count({
+      where: { status: { in: pendingStatuses }, ...yearFilter },
+    }),
+    prisma.document.aggregate({
+      _sum: { grandTotal: true },
+      where: { status: { in: confirmedStatuses }, ...yearFilter },
+    }),
+    prisma.$queryRaw<{ year: number }[]>`
+      SELECT DISTINCT EXTRACT(YEAR FROM document_date)::int AS year
+      FROM documents
+      ORDER BY year DESC
+    `,
+  ]);
+
+  const availableYears = yearsData.map((d) => d.year);
+  if (!availableYears.includes(year)) {
+    availableYears.unshift(year);
+    availableYears.sort((a, b) => b - a);
+  }
+
+  return {
+    year,
+    yearBE: year + 543,
+    quotations,
+    invoices,
+    pendingDocuments,
+    confirmedTotal: confirmed._sum.grandTotal?.toNumber() ?? 0,
+    availableYears,
   };
 }
 
