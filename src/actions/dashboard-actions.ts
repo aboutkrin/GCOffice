@@ -1,19 +1,11 @@
 "use server";
 
 import {
-  getMonthlySales,
   getYearlyStats,
   getMonthlyRevenueAndCost,
-  type MonthlySalesResult,
   type YearlyStats,
   type MonthlyRevenueExpenseResult,
 } from "@/data/dashboard";
-
-export async function fetchMonthlySalesAction(
-  year: number
-): Promise<MonthlySalesResult> {
-  return getMonthlySales(year);
-}
 
 export async function fetchYearlyStatsAction(
   year: number
