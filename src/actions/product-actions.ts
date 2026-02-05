@@ -51,6 +51,13 @@ export async function deleteProduct(id: string) {
   revalidatePath("/products");
 }
 
+export async function permanentDeleteProduct(id: string) {
+  await prisma.product.delete({ where: { id } });
+  revalidatePath("/products");
+  revalidatePath("/product-costs");
+  revalidatePath("/categories");
+}
+
 export async function createProductCategory(data: unknown) {
   const validated = productCategorySchema.parse(data);
   const category = await prisma.productCategory.create({
