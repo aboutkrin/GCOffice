@@ -292,6 +292,7 @@ export function ProductCostTable({
               <TableHead className="w-[100px] text-right">รวมต้นทุน</TableHead>
               <TableHead className="w-[100px] text-right">ราคาขาย</TableHead>
               <TableHead className="w-[100px] text-right">กำไร/กล่อง</TableHead>
+              <TableHead className="w-[80px] text-right">กำไร %</TableHead>
               <TableHead className="w-[60px]">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
@@ -400,6 +401,19 @@ export function ProductCostTable({
                     >
                       {profit !== null ? formatNumber(profit) : "-"}
                     </TableCell>
+                    <TableCell
+                      className={`text-right font-medium text-sm ${
+                        profit !== null && totalCost !== null && totalCost > 0
+                          ? profit >= 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                          : ""
+                      }`}
+                    >
+                      {profit !== null && totalCost !== null && totalCost > 0
+                        ? `${((profit / totalCost) * 100).toFixed(1)}%`
+                        : "-"}
+                    </TableCell>
                     <TableCell>
                       <Button
                         variant={changed ? "default" : "ghost"}
@@ -415,7 +429,7 @@ export function ProductCostTable({
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={13} className="h-24 text-center">
+                <TableCell colSpan={14} className="h-24 text-center">
                   ไม่พบข้อมูลสินค้า
                 </TableCell>
               </TableRow>
