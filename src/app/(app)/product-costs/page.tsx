@@ -1,4 +1,4 @@
-import { getProductsForCost } from "@/data/products";
+import { getProductsForCost, getProductCategories } from "@/data/products";
 import { ProductCostTable } from "@/components/product-costs/product-cost-table";
 
 export const dynamic = "force-dynamic";
@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 interface ProductCostsPageProps {
   searchParams: Promise<{
     search?: string;
+    category?: string;
     page?: string;
   }>;
 }
@@ -15,11 +16,15 @@ export default async function ProductCostsPage({ searchParams }: ProductCostsPag
 
   const page = Math.max(1, Number(params.page) || 1);
 
-  const { products, total } = await getProductsForCost({
-    search: params.search,
-    page,
-    perPage: 20,
-  });
+  const [{ products, total }, categories] = await Promise.all([
+    getProductsForCost({
+      search: params.search,
+      categoryId: params.category,
+      page,
+      perPage: 20,
+    }),
+    getProductCategories(),
+  ]);
 
   const totalPages = Math.ceil(total / 20);
 
@@ -38,6 +43,8 @@ export default async function ProductCostsPage({ searchParams }: ProductCostsPag
         page={page}
         totalPages={totalPages}
         search={params.search ?? ""}
+        categories={categories}
+        selectedCategoryId={params.category ?? ""}
       />
     </div>
   );
