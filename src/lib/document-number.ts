@@ -6,7 +6,12 @@ export async function generateDocumentNumber(type: DocumentType): Promise<string
   const buddhistYear = (now.getFullYear() + 543).toString().slice(-2);
   const month = (now.getMonth() + 1).toString().padStart(2, "0");
   const yearMonth = `${buddhistYear}${month}`;
-  const prefix = type === "QUOTATION" ? "QT" : "INV";
+  const prefixMap: Record<string, string> = {
+    QUOTATION: "QT",
+    INVOICE: "INV",
+    RECEIPT: "RCP",
+  };
+  const prefix = prefixMap[type] || type;
 
   const counter = await prisma.documentCounter.upsert({
     where: {

@@ -195,6 +195,10 @@ model Document {
   sourceQuotation   Document?  @relation("InvoiceFromQuotation", fields: [sourceQuotationId], references: [id])
   invoices          Document[] @relation("InvoiceFromQuotation")
 
+  sourceInvoiceId String?    @map("source_invoice_id")
+  sourceInvoice   Document?  @relation("ReceiptFromInvoice", fields: [sourceInvoiceId], references: [id])
+  receipts        Document[] @relation("ReceiptFromInvoice")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -361,6 +365,7 @@ enum LeadType {
 enum DocumentType {
   QUOTATION
   INVOICE
+  RECEIPT
 }
 
 enum DocumentStatus {
