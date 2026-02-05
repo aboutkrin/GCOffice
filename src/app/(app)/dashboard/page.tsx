@@ -16,7 +16,7 @@ import { SalesChart } from "@/components/dashboard/sales-chart";
 import { YearlyStatsCards } from "@/components/dashboard/yearly-stats-cards";
 import { RevenueExpenseSection } from "@/components/dashboard/revenue-expense-section";
 import { formatBaht } from "@/lib/thai-currency";
-import { formatThaiDate } from "@/lib/thai-date";
+import { formatThaiDate, THAI_MONTHS } from "@/lib/thai-date";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
 
 export const dynamic = 'force-dynamic';
@@ -62,7 +62,10 @@ export default async function DashboardPage() {
 
       {/* This Month Stats */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-4">เดือนนี้</h2>
+        <h2 className="text-lg font-semibold mb-4">
+          เดือนนี้
+          <span className="text-muted-foreground font-normal"> {THAI_MONTHS[new Date().getMonth()]}</span>
+        </h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {thisMonthCards.map((card) => (
             <Card key={card.title}>
