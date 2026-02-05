@@ -28,7 +28,7 @@ function stripHtml(html: string): string {
 
 export function mapWooCommerceProduct(wc: WooCommerceProduct): MappedProduct {
   const description = wc.short_description || wc.description;
-  const price = parseFloat(wc.regular_price || wc.price || "0");
+  const price = parseFloat(wc.sale_price || wc.price || wc.regular_price || "0");
   const width = wc.dimensions?.width ? parseFloat(wc.dimensions.width) : null;
   const height = wc.dimensions?.height ? parseFloat(wc.dimensions.height) : null;
 
