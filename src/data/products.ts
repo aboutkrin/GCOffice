@@ -82,11 +82,23 @@ export async function searchProducts(query: string, categoryId?: string) {
   return serialize(data);
 }
 
+export interface ProductForCost {
+  id: string;
+  sku: string;
+  name: string;
+  imageUrl: string | null;
+  basePrice: number;
+  costPrice: number | null;
+  exchangeRate: number | null;
+  weightPerBox: number | null;
+  shippingCostPerBox: number | null;
+}
+
 export async function getProductsForCost(params?: {
   search?: string;
   page?: number;
   perPage?: number;
-}) {
+}): Promise<{ products: ProductForCost[]; total: number }> {
   const where: any = {
     status: "ACTIVE",
   };
@@ -108,6 +120,8 @@ export async function getProductsForCost(params?: {
         id: true,
         sku: true,
         name: true,
+        imageUrl: true,
+        basePrice: true,
         costPrice: true,
         exchangeRate: true,
         weightPerBox: true,
@@ -120,5 +134,5 @@ export async function getProductsForCost(params?: {
     prisma.product.count({ where }),
   ]);
 
-  return { products: serialize(data), total };
+  return { products: serialize(data) as unknown as ProductForCost[], total };
 }

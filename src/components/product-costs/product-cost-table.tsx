@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Search, ChevronLeft, ChevronRight, X, Save } from "lucide-react";
+import Image from "next/image";
+import { Search, ChevronLeft, ChevronRight, X, Save, RefreshCw, Package } from "lucide-react";
 import { toast } from "sonner";
 
 import { formatNumber } from "@/lib/thai-currency";
 import { updateProductCost } from "@/actions/product-actions";
+import { type ProductForCost } from "@/data/products";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,18 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-interface ProductForCost {
-  id: string;
-  sku: string;
-  name: string;
-  costPrice: number | null;
-  exchangeRate: number | null;
-  weightPerBox: number | null;
-  shippingCostPerBox: number | null;
-}
-
 interface ProductCostTableProps {
-  products: any[];
+  products: ProductForCost[];
   total: number;
   page: number;
   totalPages: number;
@@ -57,6 +49,54 @@ export function ProductCostTable({
   const [searchValue, setSearchValue] = useState(search);
   const [isPending, startTransition] = useTransition();
   const [editingRows, setEditingRows] = useState<Record<string, EditingRow>>({});
+  const [currentExchangeRate, setCurrentExchangeRate] = useState<number | null>(null);
+  const [isLoadingRate, setIsLoadingRate] = useState(false);
+
+  // Fetch exchange rate on mount
+  useEffect(() => {
+    fetchExchangeRate();
+  }, []);
+
+  const fetchExchangeRate = async () => {
+    setIsLoadingRate(true);
+    try {
+      const response = await fetch("/api/exchange-rate");
+      const data = await response.json();
+      if (data.rate) {
+        setCurrentExchangeRate(data.rate);
+        if (data.fallback) {
+          toast.info("ใช้เรทสำรอง เนื่องจากไม่สามารถดึงเรทปัจจุบันได้");
+        }
+      }
+    } catch {
+      toast.error("ไม่สามารถดึงอัตราแลกเปลี่ยนได้");
+    } finally {
+      setIsLoadingRate(false);
+    }
+  };
+
+  const applyCurrentRateToAll = () => {
+    if (!currentExchangeRate) return;
+
+    const newEditingRows: Record<string, EditingRow> = {};
+    for (const product of products) {
+      const existing = editingRows[product.id] || getEditingRow(product);
+      // Only apply to rows that don't have a rate set yet
+      if (!existing.exchangeRate || existing.exchangeRate === "0" || existing.exchangeRate === "") {
+        newEditingRows[product.id] = {
+          ...existing,
+          exchangeRate: currentExchangeRate.toFixed(4),
+        };
+      }
+    }
+
+    if (Object.keys(newEditingRows).length > 0) {
+      setEditingRows((prev) => ({ ...prev, ...newEditingRows }));
+      toast.success("ใส่เรทปัจจุบันให้สินค้าที่ยังไม่มีเรทแล้ว");
+    } else {
+      toast.info("ทุกสินค้ามีเรทอยู่แล้ว");
+    }
+  };
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -115,6 +155,37 @@ export function ProductCostTable({
     return cost * rate;
   };
 
+  const calculateShippingCost = (shippingRate: string, weight: string): number | null => {
+    const rate = parseFloat(shippingRate);
+    const w = parseFloat(weight);
+    if (isNaN(rate) || isNaN(w)) return null;
+    return rate * w;
+  };
+
+  const calculateTotalCost = (
+    costPrice: string,
+    exchangeRate: string,
+    shippingRate: string,
+    weight: string
+  ): number | null => {
+    const thaiPrice = calculateThaiPrice(costPrice, exchangeRate);
+    const shippingCost = calculateShippingCost(shippingRate, weight);
+    if (thaiPrice === null) return null;
+    return thaiPrice + (shippingCost ?? 0);
+  };
+
+  const calculateProfit = (
+    basePrice: number,
+    costPrice: string,
+    exchangeRate: string,
+    shippingRate: string,
+    weight: string
+  ): number | null => {
+    const totalCost = calculateTotalCost(costPrice, exchangeRate, shippingRate, weight);
+    if (totalCost === null) return null;
+    return basePrice - totalCost;
+  };
+
   const hasChanges = (product: ProductForCost): boolean => {
     const editing = editingRows[product.id];
     if (!editing) return false;
@@ -158,23 +229,50 @@ export function ProductCostTable({
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            className="pl-9"
-          />
-        </form>
-        {search && (
-          <Button variant="ghost" size="sm" onClick={clearFilters}>
-            <X className="size-4" />
-            ล้างการค้นหา
+      {/* Search and Exchange Rate */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              className="pl-9"
+            />
+          </form>
+          {search && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X className="size-4" />
+              ล้างการค้นหา
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-muted-foreground">
+            เรทปัจจุบัน:{" "}
+            <span className="font-medium text-foreground">
+              {currentExchangeRate ? `${currentExchangeRate.toFixed(4)} ฿/¥` : "-"}
+            </span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchExchangeRate}
+            disabled={isLoadingRate}
+          >
+            <RefreshCw className={`size-4 ${isLoadingRate ? "animate-spin" : ""}`} />
           </Button>
-        )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={applyCurrentRateToAll}
+            disabled={!currentExchangeRate}
+          >
+            ใส่เรทให้ทุกสินค้า
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
@@ -182,14 +280,19 @@ export function ProductCostTable({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[60px]">รูป</TableHead>
               <TableHead className="w-[100px]">รหัส</TableHead>
-              <TableHead className="min-w-[200px]">ชื่อสินค้า</TableHead>
-              <TableHead className="w-[120px] text-right">ต้นทุน (CNY)</TableHead>
-              <TableHead className="w-[120px] text-right">เรท (฿/¥)</TableHead>
-              <TableHead className="w-[120px] text-right">ต้นทุน (THB)</TableHead>
-              <TableHead className="w-[100px] text-right">นน./กล่อง</TableHead>
-              <TableHead className="w-[120px] text-right">ค่าส่ง/กล่อง</TableHead>
-              <TableHead className="w-[80px]">จัดการ</TableHead>
+              <TableHead className="min-w-[180px]">ชื่อสินค้า</TableHead>
+              <TableHead className="w-[100px] text-right">ต้นทุน (CNY)</TableHead>
+              <TableHead className="w-[100px] text-right">เรท (฿/¥)</TableHead>
+              <TableHead className="w-[100px] text-right">ต้นทุน (THB)</TableHead>
+              <TableHead className="w-[80px] text-right">นน./กล่อง</TableHead>
+              <TableHead className="w-[100px] text-right">เรทค่าส่ง/กก.</TableHead>
+              <TableHead className="w-[100px] text-right">ค่าส่ง/กล่อง</TableHead>
+              <TableHead className="w-[100px] text-right">รวมต้นทุน</TableHead>
+              <TableHead className="w-[100px] text-right">ราคาขาย</TableHead>
+              <TableHead className="w-[100px] text-right">กำไร/กล่อง</TableHead>
+              <TableHead className="w-[60px]">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -197,12 +300,43 @@ export function ProductCostTable({
               products.map((product) => {
                 const editing = getEditingRow(product);
                 const thaiPrice = calculateThaiPrice(editing.costPrice, editing.exchangeRate);
+                const shippingCost = calculateShippingCost(editing.shippingCostPerBox, editing.weightPerBox);
+                const totalCost = calculateTotalCost(
+                  editing.costPrice,
+                  editing.exchangeRate,
+                  editing.shippingCostPerBox,
+                  editing.weightPerBox
+                );
+                const profit = calculateProfit(
+                  product.basePrice,
+                  editing.costPrice,
+                  editing.exchangeRate,
+                  editing.shippingCostPerBox,
+                  editing.weightPerBox
+                );
                 const changed = hasChanges(product);
 
                 return (
                   <TableRow key={product.id}>
+                    <TableCell>
+                      {product.imageUrl ? (
+                        <div className="relative size-10 rounded overflow-hidden bg-muted">
+                          <Image
+                            src={product.imageUrl}
+                            alt={product.name}
+                            fill
+                            className="object-cover"
+                            sizes="40px"
+                          />
+                        </div>
+                      ) : (
+                        <div className="size-10 rounded bg-muted flex items-center justify-center">
+                          <Package className="size-5 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell className="font-mono text-sm">{product.sku}</TableCell>
-                    <TableCell>{product.name}</TableCell>
+                    <TableCell className="text-sm">{product.name}</TableCell>
                     <TableCell>
                       <Input
                         type="number"
@@ -210,7 +344,7 @@ export function ProductCostTable({
                         placeholder="0.00"
                         value={editing.costPrice}
                         onChange={(e) => updateEditingRow(product.id, "costPrice", e.target.value)}
-                        className="w-full text-right h-8"
+                        className="w-full text-right h-8 text-sm"
                       />
                     </TableCell>
                     <TableCell>
@@ -220,10 +354,10 @@ export function ProductCostTable({
                         placeholder="0.0000"
                         value={editing.exchangeRate}
                         onChange={(e) => updateEditingRow(product.id, "exchangeRate", e.target.value)}
-                        className="w-full text-right h-8"
+                        className="w-full text-right h-8 text-sm"
                       />
                     </TableCell>
-                    <TableCell className="text-right font-medium">
+                    <TableCell className="text-right font-medium text-sm">
                       {thaiPrice !== null ? formatNumber(thaiPrice) : "-"}
                     </TableCell>
                     <TableCell>
@@ -233,7 +367,7 @@ export function ProductCostTable({
                         placeholder="0.00"
                         value={editing.weightPerBox}
                         onChange={(e) => updateEditingRow(product.id, "weightPerBox", e.target.value)}
-                        className="w-full text-right h-8"
+                        className="w-full text-right h-8 text-sm"
                       />
                     </TableCell>
                     <TableCell>
@@ -243,8 +377,28 @@ export function ProductCostTable({
                         placeholder="0.00"
                         value={editing.shippingCostPerBox}
                         onChange={(e) => updateEditingRow(product.id, "shippingCostPerBox", e.target.value)}
-                        className="w-full text-right h-8"
+                        className="w-full text-right h-8 text-sm"
                       />
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-sm">
+                      {shippingCost !== null ? formatNumber(shippingCost) : "-"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-sm">
+                      {totalCost !== null ? formatNumber(totalCost) : "-"}
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-sm text-blue-600">
+                      {formatNumber(product.basePrice)}
+                    </TableCell>
+                    <TableCell
+                      className={`text-right font-medium text-sm ${
+                        profit !== null
+                          ? profit >= 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                          : ""
+                      }`}
+                    >
+                      {profit !== null ? formatNumber(profit) : "-"}
                     </TableCell>
                     <TableCell>
                       <Button
@@ -261,7 +415,7 @@ export function ProductCostTable({
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={13} className="h-24 text-center">
                   ไม่พบข้อมูลสินค้า
                 </TableCell>
               </TableRow>
