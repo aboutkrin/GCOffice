@@ -171,7 +171,6 @@ export async function getExpenseCategories() {
   try {
     return await prisma.expenseCategory.findMany({
       where: { status: "ACTIVE" },
-      include: { _count: { select: { expenses: true } } },
       orderBy: { sortOrder: "asc" },
     });
   } catch {

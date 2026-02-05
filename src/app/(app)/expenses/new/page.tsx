@@ -5,6 +5,8 @@ import { getExpenseCategories } from "@/data/expenses";
 import { Button } from "@/components/ui/button";
 import { ExpenseForm } from "@/components/expenses/expense-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewExpensePage() {
   const categories = await getExpenseCategories();
 
