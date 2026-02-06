@@ -18,7 +18,7 @@ export const DOCUMENT_STATUS_COLORS: Record<string, string> = {
   CANCELLED: "bg-red-100 text-red-800",
 };
 
-export const QUOTATION_STATUS_OPTIONS = ["DRAFT", "QUOTED", "CONFIRMED", "SAMPLE", "CANCELLED"] as const;
+export const QUOTATION_STATUS_OPTIONS = ["DRAFT", "QUOTED", "CONFIRMED", "CANCELLED"] as const;
 export const INVOICE_STATUS_OPTIONS = ["DRAFT", "BILLED", "PAID", "CANCELLED"] as const;
 export const RECEIPT_STATUS_OPTIONS = ["DRAFT", "PAID", "CANCELLED"] as const;
 
