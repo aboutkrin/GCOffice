@@ -15,13 +15,13 @@ import { getDashboardStats, getYearlyStats, getMonthlyRevenueAndCost } from "@/d
 import { YearlyStatsCards } from "@/components/dashboard/yearly-stats-cards";
 import { RevenueExpenseSection } from "@/components/dashboard/revenue-expense-section";
 import { formatBaht } from "@/lib/thai-currency";
-import { formatThaiDate } from "@/lib/thai-date";
+import { formatThaiDate, getThaiNow } from "@/lib/thai-date";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const currentYear = new Date().getFullYear();
+  const currentYear = getThaiNow().year;
   const [stats, yearlyStats, revenueExpense] = await Promise.all([
     getDashboardStats(),
     getYearlyStats(currentYear),

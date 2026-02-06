@@ -40,6 +40,23 @@ export function toBuddhistYear(date: Date): number {
 }
 
 /**
+ * Get the current year and month (1-12) in Thai timezone (Asia/Bangkok, UTC+7).
+ * Works correctly on both server (UTC) and client (any timezone).
+ */
+export function getThaiNow(): { year: number; month: number } {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "numeric",
+  });
+  const parts = formatter.formatToParts(new Date());
+  return {
+    year: parseInt(parts.find((p) => p.type === "year")!.value, 10),
+    month: parseInt(parts.find((p) => p.type === "month")!.value, 10),
+  };
+}
+
+/**
  * Normalize a local-timezone Date to UTC noon, preserving the calendar date.
  * Prevents timezone offsets (e.g. Bangkok UTC+7) from shifting the date
  * when stored in PostgreSQL DATE columns or displayed with UTC methods.

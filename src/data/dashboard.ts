@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { DocumentType, DocumentStatus } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
+import { getThaiNow } from "@/lib/thai-date";
 
 export interface DashboardStats {
   // This month stats
@@ -25,9 +26,9 @@ export interface RecentDocument {
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+  const thaiNow = getThaiNow();
+  const startOfMonth = new Date(Date.UTC(thaiNow.year, thaiNow.month - 1, 1));
+  const endOfMonth = new Date(Date.UTC(thaiNow.year, thaiNow.month, 0, 23, 59, 59, 999));
 
   const thisMonthFilter = {
     documentDate: {

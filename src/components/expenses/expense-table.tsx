@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 import { deleteExpense } from "@/actions/expense-actions";
 import { formatBaht } from "@/lib/thai-currency";
-import { formatThaiDate } from "@/lib/thai-date";
+import { formatThaiDate, getThaiNow } from "@/lib/thai-date";
 import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
@@ -93,7 +93,10 @@ export function ExpenseTable({
 
   function updateFilters(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
-    if (value && value !== "all") {
+    if (key === "month") {
+      // Always keep month param so "all" is distinguishable from "no param" (default to current Thai month)
+      params.set(key, value);
+    } else if (value && value !== "all") {
       params.set(key, value);
     } else {
       params.delete(key);
@@ -262,7 +265,7 @@ export function ExpenseTable({
           </SelectTrigger>
           <SelectContent>
             {Array.from({ length: 5 }, (_, i) => {
-              const y = new Date().getFullYear() - 2 + i;
+              const y = getThaiNow().year - 2 + i;
               return (
                 <SelectItem key={y} value={String(y)}>
                   พ.ศ. {y + 543}
