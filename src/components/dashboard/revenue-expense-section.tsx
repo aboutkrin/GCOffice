@@ -164,17 +164,29 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
 
       {/* Monthly Profit Bar Chart - takes 2/5 width */}
       <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold">
-            {isCurrentYear ? "กำไรเดือนนี้" : `กำไรรวม พ.ศ. ${data.yearBE}`}
-          </CardTitle>
-          <p
-            className={`text-2xl font-bold ${
-              isPositive ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {formatBaht(thisMonthProfit)}
-          </p>
+        <CardHeader className="flex flex-row items-start justify-between">
+          <div>
+            <CardTitle className="text-base font-semibold">
+              {isCurrentYear ? "กำไรเดือนนี้" : `กำไรรวม พ.ศ. ${data.yearBE}`}
+            </CardTitle>
+            <p
+              className={`text-2xl font-bold ${
+                isPositive ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {formatBaht(thisMonthProfit)}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-sm text-muted-foreground">กำไรรวมทุกเดือน</span>
+            <p
+              className={`text-lg font-bold ${
+                data.totalProfit >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {formatBaht(data.totalProfit)}
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
           <ChartContainer config={profitChartConfig} className="aspect-auto h-[300px] w-full">
