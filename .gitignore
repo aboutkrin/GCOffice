@@ -48,3 +48,4 @@ public/swe-worker*
 
 # Windows reserved device names
 nul
+.env*.local
