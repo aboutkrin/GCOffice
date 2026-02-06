@@ -446,7 +446,9 @@ export function DocumentForm({
         RECEIPT: "/receipts",
       };
       const basePath = basePathMap[type] || "/quotations";
-      router.push(basePath);
+      const docDate = formData.documentDate;
+      const monthParam = `?year=${docDate.getFullYear()}&month=${docDate.getMonth() + 1}`;
+      router.push(basePath + monthParam);
       router.refresh();
     } catch (error: any) {
       console.error("บันทึกเอกสารไม่สำเร็จ:", error);
@@ -757,7 +759,12 @@ export function DocumentForm({
                 INVOICE: "/invoices",
                 RECEIPT: "/receipts",
               };
-              router.push(basePathMap[type] || "/quotations");
+              const basePath = basePathMap[type] || "/quotations";
+              const docDate = form.getValues("documentDate");
+              const monthParam = docDate
+                ? `?year=${docDate.getFullYear()}&month=${docDate.getMonth() + 1}`
+                : "";
+              router.push(basePath + monthParam);
             }}
             disabled={saving}
           >
