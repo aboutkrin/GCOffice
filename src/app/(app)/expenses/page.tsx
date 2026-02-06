@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { getExpenses, getExpenseCategories } from "@/data/expenses";
+import { getThaiNow } from "@/lib/thai-date";
 import { Button } from "@/components/ui/button";
 import { ExpenseTable } from "@/components/expenses/expense-table";
 
@@ -18,10 +19,15 @@ interface ExpensesPageProps {
 
 export default async function ExpensesPage({ searchParams }: ExpensesPageProps) {
   const params = await searchParams;
+  const thaiNow = getThaiNow();
   const currentYear = params.year
     ? parseInt(params.year, 10)
-    : new Date().getFullYear();
-  const currentMonth = params.month ? parseInt(params.month, 10) : undefined;
+    : thaiNow.year;
+  const currentMonth = params.month === "all"
+    ? undefined
+    : params.month
+      ? parseInt(params.month, 10)
+      : thaiNow.month;
 
   const [expenses, categories] = await Promise.all([
     getExpenses({
