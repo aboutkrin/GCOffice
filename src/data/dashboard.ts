@@ -7,7 +7,6 @@ export interface DashboardStats {
   // This month stats
   thisMonthQuotations: number;
   thisMonthInvoices: number;
-  thisMonthReceipts: number;
   thisMonthPendingDocuments: number;
   thisMonthConfirmedTotal: number;
   // Recent documents
@@ -54,7 +53,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const [
     thisMonthQuotations,
     thisMonthInvoices,
-    thisMonthReceipts,
     thisMonthPendingDocuments,
     thisMonthConfirmed,
     recentDocuments,
@@ -64,11 +62,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
 
     safeCount({
-      where: { type: DocumentType.INVOICE, ...excludeDraft, ...thisMonthFilter },
-    }),
-
-    safeCount({
-      where: { type: DocumentType.RECEIPT, ...excludeDraft, ...thisMonthFilter },
+      where: { type: DocumentType.INVOICE, status: DocumentStatus.PAID, ...thisMonthFilter },
     }),
 
     safeCount({
@@ -106,7 +100,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   return {
     thisMonthQuotations,
     thisMonthInvoices,
-    thisMonthReceipts,
     thisMonthPendingDocuments,
     thisMonthConfirmedTotal: thisMonthConfirmed?._sum.grandTotal?.toNumber() ?? 0,
     recentDocuments: serialize(recentDocuments) as RecentDocument[],
@@ -153,7 +146,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
       where: { type: DocumentType.QUOTATION, ...excludeDraft, ...yearFilter },
     }),
     safeCount({
-      where: { type: DocumentType.INVOICE, ...excludeDraft, ...yearFilter },
+      where: { type: DocumentType.INVOICE, status: DocumentStatus.PAID, ...yearFilter },
     }),
     safeCount({
       where: { status: { in: pendingStatuses }, ...yearFilter },

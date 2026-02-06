@@ -37,14 +37,14 @@ export function YearlyStatsCards({ initialData }: YearlyStatsCardsProps) {
       icon: FileText,
     },
     {
-      title: "ใบแจ้งหนี้",
-      value: data.invoices.toLocaleString(),
-      icon: Receipt,
-    },
-    {
       title: "รอดำเนินการ",
       value: data.pendingDocuments.toLocaleString(),
       icon: Clock,
+    },
+    {
+      title: "ใบแจ้งหนี้",
+      value: data.invoices.toLocaleString(),
+      icon: Receipt,
     },
     {
       title: "ยอดรวม",
