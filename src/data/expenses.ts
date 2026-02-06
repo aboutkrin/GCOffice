@@ -89,17 +89,17 @@ async function ensureExpenseTables() {
       `);
       await prisma.$executeRawUnsafe(`
         INSERT INTO "expense_categories" ("id", "name", "sort_order", "updated_at")
-        SELECT 'exp_cat_fb_ads', 'ค่ายิงแอด Facebook', 2, NOW()
+        SELECT 'exp_cat_fb_ads', 'Ads Facebook', 2, NOW()
         WHERE NOT EXISTS (SELECT 1 FROM "expense_categories" WHERE "id" = 'exp_cat_fb_ads')
       `);
       await prisma.$executeRawUnsafe(`
         INSERT INTO "expense_categories" ("id", "name", "sort_order", "updated_at")
-        SELECT 'exp_cat_ig_ads', 'ค่ายิงแอด Instagram', 3, NOW()
+        SELECT 'exp_cat_ig_ads', 'Ads Instagram', 3, NOW()
         WHERE NOT EXISTS (SELECT 1 FROM "expense_categories" WHERE "id" = 'exp_cat_ig_ads')
       `);
       await prisma.$executeRawUnsafe(`
         INSERT INTO "expense_categories" ("id", "name", "sort_order", "updated_at")
-        SELECT 'exp_cat_tiktok_ads', 'ค่ายิงแอด TikTok', 4, NOW()
+        SELECT 'exp_cat_tiktok_ads', 'Ads TikTok', 4, NOW()
         WHERE NOT EXISTS (SELECT 1 FROM "expense_categories" WHERE "id" = 'exp_cat_tiktok_ads')
       `);
       await prisma.$executeRawUnsafe(`
@@ -111,11 +111,6 @@ async function ensureExpenseTables() {
         INSERT INTO "expense_categories" ("id", "name", "sort_order", "updated_at")
         SELECT 'exp_cat_shipping', 'ค่าขนส่ง', 6, NOW()
         WHERE NOT EXISTS (SELECT 1 FROM "expense_categories" WHERE "id" = 'exp_cat_shipping')
-      `);
-      await prisma.$executeRawUnsafe(`
-        INSERT INTO "expense_categories" ("id", "name", "sort_order", "updated_at")
-        SELECT 'exp_cat_packaging', 'ค่าบรรจุภัณฑ์', 7, NOW()
-        WHERE NOT EXISTS (SELECT 1 FROM "expense_categories" WHERE "id" = 'exp_cat_packaging')
       `);
       await prisma.$executeRawUnsafe(`
         INSERT INTO "expense_categories" ("id", "name", "sort_order", "updated_at")

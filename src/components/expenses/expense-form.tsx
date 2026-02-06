@@ -132,7 +132,7 @@ export function ExpenseForm({ initialData, categories }: ExpenseFormProps) {
                   <FormLabel>รายการค่าใช้จ่าย</FormLabel>
                   <FormControl>
                     <Input
-                      placeholder="เช่น ค่ายิงแอด Facebook เดือน ม.ค."
+                      placeholder="เช่น Ads Facebook เดือน ม.ค."
                       {...field}
                     />
                   </FormControl>
