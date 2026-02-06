@@ -8,11 +8,20 @@ import { getActiveHolidays } from "@/data/holidays";
 
 export const dynamic = 'force-dynamic';
 
-export default async function NewInvoicePage() {
+export default async function NewInvoicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; month?: string }>;
+}) {
+  const params = await searchParams;
+  const now = new Date();
+  const year = params.year ? parseInt(params.year) : now.getFullYear();
+  const month = params.month ? parseInt(params.month) : now.getMonth() + 1;
+
   const [companies, customers, quotations, paymentTermTemplates, holidays] = await Promise.all([
     getCompanies(),
     getCustomers({ status: "ACTIVE" }),
-    getConfirmedQuotations(),
+    getConfirmedQuotations({ year, month }),
     getActivePaymentTermTemplates(),
     getActiveHolidays(),
   ]);
