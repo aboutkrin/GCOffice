@@ -19,30 +19,42 @@ export async function getCustomers(params?: {
     ];
   }
 
-  const data = await prisma.customer.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.customer.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+    });
+    return serialize(data);
+  } catch {
+    return [];
+  }
 }
 
 export async function getCustomerById(id: string) {
-  const data = await prisma.customer.findUnique({ where: { id } });
-  return serialize(data);
+  try {
+    const data = await prisma.customer.findUnique({ where: { id } });
+    return serialize(data);
+  } catch {
+    return null;
+  }
 }
 
 export async function searchCustomers(query: string) {
-  const data = await prisma.customer.findMany({
-    where: {
-      status: "ACTIVE",
-      OR: [
-        { code: { contains: query, mode: "insensitive" } },
-        { customerName: { contains: query, mode: "insensitive" } },
-        { companyName: { contains: query, mode: "insensitive" } },
-      ],
-    },
-    take: 20,
-    orderBy: { customerName: "asc" },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.customer.findMany({
+      where: {
+        status: "ACTIVE",
+        OR: [
+          { code: { contains: query, mode: "insensitive" } },
+          { customerName: { contains: query, mode: "insensitive" } },
+          { companyName: { contains: query, mode: "insensitive" } },
+        ],
+      },
+      take: 20,
+      orderBy: { customerName: "asc" },
+    });
+    return serialize(data);
+  } catch {
+    return [];
+  }
 }
