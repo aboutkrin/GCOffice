@@ -7,7 +7,6 @@ const VALID_STATUSES: string[] = [
   DocumentStatus.DRAFT,
   DocumentStatus.QUOTED,
   DocumentStatus.CONFIRMED,
-  DocumentStatus.SAMPLE,
   DocumentStatus.BILLED,
   DocumentStatus.PAID,
   DocumentStatus.CANCELLED,
