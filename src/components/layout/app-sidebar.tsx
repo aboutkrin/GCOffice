@@ -44,6 +44,11 @@ const mainNavItems = [
     icon: ReceiptText,
   },
   {
+    href: "/customers",
+    label: "ลูกค้า",
+    icon: Users,
+  },
+  {
     href: "/products",
     label: "สินค้า",
     icon: Package,
@@ -52,11 +57,6 @@ const mainNavItems = [
     href: "/product-costs",
     label: "ต้นทุนสินค้า",
     icon: Calculator,
-  },
-  {
-    href: "/customers",
-    label: "ลูกค้า",
-    icon: Users,
   },
   {
     href: "/expenses",
