@@ -54,13 +54,19 @@ export async function getDocuments(params?: {
   }
 }
 
-export async function getConfirmedQuotations() {
+export async function getConfirmedQuotations(params?: { year?: number; month?: number }) {
   try {
+    const where: any = {
+      type: "QUOTATION",
+      status: "CONFIRMED",
+    };
+    if (params?.year && params?.month) {
+      const startDate = new Date(Date.UTC(params.year, params.month - 1, 1));
+      const endDate = new Date(Date.UTC(params.year, params.month, 1));
+      where.documentDate = { gte: startDate, lt: endDate };
+    }
     const data = await prisma.document.findMany({
-      where: {
-        type: "QUOTATION",
-        status: "CONFIRMED",
-      },
+      where,
       select: {
         id: true,
         documentNumber: true,
@@ -90,13 +96,19 @@ export async function getConfirmedQuotations() {
   }
 }
 
-export async function getPaidInvoices() {
+export async function getPaidInvoices(params?: { year?: number; month?: number }) {
   try {
+    const where: any = {
+      type: "INVOICE",
+      status: "PAID",
+    };
+    if (params?.year && params?.month) {
+      const startDate = new Date(Date.UTC(params.year, params.month - 1, 1));
+      const endDate = new Date(Date.UTC(params.year, params.month, 1));
+      where.documentDate = { gte: startDate, lt: endDate };
+    }
     const data = await prisma.document.findMany({
-      where: {
-        type: "INVOICE",
-        status: "PAID",
-      },
+      where,
       select: {
         id: true,
         documentNumber: true,

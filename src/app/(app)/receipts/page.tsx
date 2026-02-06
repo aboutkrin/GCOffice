@@ -30,7 +30,7 @@ export default async function ReceiptsPage({
         title="ใบเสร็จรับเงิน"
         description="จัดการใบเสร็จรับเงินทั้งหมด"
       >
-        <Link href="/receipts/new">
+        <Link href={`/receipts/new?year=${year}&month=${month}`}>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
             สร้างใบเสร็จรับเงิน

@@ -30,7 +30,7 @@ export default async function InvoicesPage({
         title="ใบแจ้งหนี้"
         description="จัดการใบแจ้งหนี้ทั้งหมด"
       >
-        <Link href="/invoices/new">
+        <Link href={`/invoices/new?year=${year}&month=${month}`}>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
             สร้างใบแจ้งหนี้

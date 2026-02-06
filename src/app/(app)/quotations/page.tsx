@@ -30,7 +30,7 @@ export default async function QuotationsPage({
         title="ใบเสนอราคา"
         description="จัดการใบเสนอราคาทั้งหมด"
       >
-        <Link href="/quotations/new">
+        <Link href={`/quotations/new?year=${year}&month=${month}`}>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
             สร้างใบเสนอราคา
