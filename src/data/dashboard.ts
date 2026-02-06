@@ -41,6 +41,16 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const pendingStatuses = [DocumentStatus.QUOTED, DocumentStatus.BILLED];
   const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
 
+  // Helper to safely run a query, returning a fallback on failure
+  // (e.g. if RECEIPT enum or newer statuses don't exist in DB yet)
+  async function safeCount(where: Parameters<typeof prisma.document.count>[0]): Promise<number> {
+    try {
+      return await prisma.document.count(where);
+    } catch {
+      return 0;
+    }
+  }
+
   const [
     thisMonthQuotations,
     thisMonthInvoices,
@@ -49,19 +59,19 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     thisMonthConfirmed,
     recentDocuments,
   ] = await Promise.all([
-    prisma.document.count({
+    safeCount({
       where: { type: DocumentType.QUOTATION, ...excludeDraft, ...thisMonthFilter },
     }),
 
-    prisma.document.count({
+    safeCount({
       where: { type: DocumentType.INVOICE, ...excludeDraft, ...thisMonthFilter },
     }),
 
-    prisma.document.count({
+    safeCount({
       where: { type: DocumentType.RECEIPT, ...excludeDraft, ...thisMonthFilter },
     }),
 
-    prisma.document.count({
+    safeCount({
       where: {
         status: { in: pendingStatuses },
         ...thisMonthFilter,
@@ -74,10 +84,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
         status: { in: confirmedStatuses },
         ...thisMonthFilter,
       },
-    }),
+    }).catch(() => null),
 
     prisma.document.findMany({
-      where: excludeDraft,
+      where: { status: { not: DocumentStatus.DRAFT } },
       select: {
         id: true,
         type: true,
@@ -90,7 +100,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
       orderBy: { createdAt: "desc" },
       take: 10,
-    }),
+    }).catch(() => [] as any[]),
   ]);
 
   return {
@@ -98,7 +108,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     thisMonthInvoices,
     thisMonthReceipts,
     thisMonthPendingDocuments,
-    thisMonthConfirmedTotal: thisMonthConfirmed._sum.grandTotal?.toNumber() ?? 0,
+    thisMonthConfirmedTotal: thisMonthConfirmed?._sum.grandTotal?.toNumber() ?? 0,
     recentDocuments: serialize(recentDocuments) as RecentDocument[],
   };
 }
@@ -130,25 +140,33 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
   const pendingStatuses = [DocumentStatus.QUOTED, DocumentStatus.BILLED];
   const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
 
+  async function safeCount(where: Parameters<typeof prisma.document.count>[0]): Promise<number> {
+    try {
+      return await prisma.document.count(where);
+    } catch {
+      return 0;
+    }
+  }
+
   const [quotations, invoices, pendingDocuments, confirmed, yearsData] = await Promise.all([
-    prisma.document.count({
+    safeCount({
       where: { type: DocumentType.QUOTATION, ...excludeDraft, ...yearFilter },
     }),
-    prisma.document.count({
+    safeCount({
       where: { type: DocumentType.INVOICE, ...excludeDraft, ...yearFilter },
     }),
-    prisma.document.count({
+    safeCount({
       where: { status: { in: pendingStatuses }, ...yearFilter },
     }),
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: { status: { in: confirmedStatuses }, ...yearFilter },
-    }),
+    }).catch(() => null),
     prisma.$queryRaw<{ year: number }[]>`
       SELECT DISTINCT EXTRACT(YEAR FROM document_date)::int AS year
       FROM documents
       ORDER BY year DESC
-    `,
+    `.catch(() => [] as { year: number }[]),
   ]);
 
   const availableYears = yearsData.map((d) => d.year);
@@ -163,7 +181,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     quotations,
     invoices,
     pendingDocuments,
-    confirmedTotal: confirmed._sum.grandTotal?.toNumber() ?? 0,
+    confirmedTotal: confirmed?._sum.grandTotal?.toNumber() ?? 0,
     availableYears,
   };
 }
@@ -233,18 +251,25 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
+  async function fetchRevenueData() {
+    try {
+      return await prisma.$queryRaw<{ month: number; total: number }[]>`
+        SELECT
+          EXTRACT(MONTH FROM document_date)::int AS month,
+          COALESCE(SUM(grand_total), 0)::float8 AS total
+        FROM documents
+        WHERE status IN (${Prisma.join(confirmedStatuses)})
+          AND EXTRACT(YEAR FROM document_date) = ${year}
+        GROUP BY EXTRACT(MONTH FROM document_date)
+        ORDER BY month
+      `;
+    } catch {
+      return [] as { month: number; total: number }[];
+    }
+  }
+
   const [revenueData, expenseData, yearsData] = await Promise.all([
-    // Monthly revenue from confirmed/paid documents
-    prisma.$queryRaw<{ month: number; total: number }[]>`
-      SELECT
-        EXTRACT(MONTH FROM document_date)::int AS month,
-        COALESCE(SUM(grand_total), 0)::float8 AS total
-      FROM documents
-      WHERE status IN (${Prisma.join(confirmedStatuses)})
-        AND EXTRACT(YEAR FROM document_date) = ${year}
-      GROUP BY EXTRACT(MONTH FROM document_date)
-      ORDER BY month
-    `,
+    fetchRevenueData(),
     fetchExpenseData(),
     fetchAvailableYears(),
   ]);

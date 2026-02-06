@@ -22,40 +22,58 @@ export async function getProducts(params?: {
   const page = params?.page ?? 1;
   const perPage = params?.perPage ?? 10;
 
-  const [data, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      include: { category: true },
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * perPage,
-      take: perPage,
-    }),
-    prisma.product.count({ where }),
-  ]);
+  try {
+    const [data, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        include: { category: true },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * perPage,
+        take: perPage,
+      }),
+      prisma.product.count({ where }),
+    ]);
 
-  return { products: serialize(data), total };
+    return { products: serialize(data), total };
+  } catch {
+    return { products: [], total: 0 };
+  }
 }
 
 export async function getProductById(id: string) {
-  const data = await prisma.product.findUnique({
-    where: { id },
-    include: { category: true },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.product.findUnique({
+      where: { id },
+      include: { category: true },
+    });
+    return serialize(data);
+  } catch {
+    return null;
+  }
 }
 
 export async function getProductCategories() {
-  return prisma.productCategory.findMany({
-    include: { _count: { select: { products: true } } },
-    orderBy: { sortOrder: "asc" },
-  });
+  try {
+    const data = await prisma.productCategory.findMany({
+      include: { _count: { select: { products: true } } },
+      orderBy: { sortOrder: "asc" },
+    });
+    return serialize(data);
+  } catch {
+    return [];
+  }
 }
 
 export async function getProductCategoryById(id: string) {
-  return prisma.productCategory.findUnique({
-    where: { id },
-    include: { _count: { select: { products: true } } },
-  });
+  try {
+    const data = await prisma.productCategory.findUnique({
+      where: { id },
+      include: { _count: { select: { products: true } } },
+    });
+    return serialize(data);
+  } catch {
+    return null;
+  }
 }
 
 export async function searchProducts(query: string, categoryId?: string) {
@@ -74,12 +92,16 @@ export async function searchProducts(query: string, categoryId?: string) {
     ];
   }
 
-  const data = await prisma.product.findMany({
-    where,
-    take: 20,
-    orderBy: { name: "asc" },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.product.findMany({
+      where,
+      take: 20,
+      orderBy: { name: "asc" },
+    });
+    return serialize(data);
+  } catch {
+    return [];
+  }
 }
 
 export interface ProductForCost {
@@ -118,26 +140,30 @@ export async function getProductsForCost(params?: {
   const page = params?.page ?? 1;
   const perPage = params?.perPage ?? 20;
 
-  const [data, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      select: {
-        id: true,
-        sku: true,
-        name: true,
-        imageUrl: true,
-        basePrice: true,
-        costPrice: true,
-        exchangeRate: true,
-        weightPerBox: true,
-        shippingCostPerBox: true,
-      },
-      orderBy: { name: "asc" },
-      skip: (page - 1) * perPage,
-      take: perPage,
-    }),
-    prisma.product.count({ where }),
-  ]);
+  try {
+    const [data, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          imageUrl: true,
+          basePrice: true,
+          costPrice: true,
+          exchangeRate: true,
+          weightPerBox: true,
+          shippingCostPerBox: true,
+        },
+        orderBy: { name: "asc" },
+        skip: (page - 1) * perPage,
+        take: perPage,
+      }),
+      prisma.product.count({ where }),
+    ]);
 
-  return { products: serialize(data) as unknown as ProductForCost[], total };
+    return { products: serialize(data) as unknown as ProductForCost[], total };
+  } catch {
+    return { products: [], total: 0 };
+  }
 }

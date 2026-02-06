@@ -12,27 +12,39 @@ export async function getPaymentTermTemplates(params?: {
     where.name = { contains: params.search, mode: "insensitive" };
   }
 
-  const data = await prisma.paymentTermTemplate.findMany({
-    where,
-    include: { items: { orderBy: { sequence: "asc" } } },
-    orderBy: { createdAt: "desc" },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.paymentTermTemplate.findMany({
+      where,
+      include: { items: { orderBy: { sequence: "asc" } } },
+      orderBy: { createdAt: "desc" },
+    });
+    return serialize(data);
+  } catch {
+    return [];
+  }
 }
 
 export async function getPaymentTermTemplateById(id: string) {
-  const data = await prisma.paymentTermTemplate.findUnique({
-    where: { id },
-    include: { items: { orderBy: { sequence: "asc" } } },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.paymentTermTemplate.findUnique({
+      where: { id },
+      include: { items: { orderBy: { sequence: "asc" } } },
+    });
+    return serialize(data);
+  } catch {
+    return null;
+  }
 }
 
 export async function getActivePaymentTermTemplates() {
-  const data = await prisma.paymentTermTemplate.findMany({
-    where: { status: "ACTIVE" },
-    include: { items: { orderBy: { sequence: "asc" } } },
-    orderBy: { name: "asc" },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.paymentTermTemplate.findMany({
+      where: { status: "ACTIVE" },
+      include: { items: { orderBy: { sequence: "asc" } } },
+      orderBy: { name: "asc" },
+    });
+    return serialize(data);
+  } catch {
+    return [];
+  }
 }

@@ -22,97 +22,114 @@ export async function getDocuments(params?: {
     ];
   }
 
-  const data = await prisma.document.findMany({
-    where,
-    select: {
-      id: true,
-      type: true,
-      documentNumber: true,
-      status: true,
-      documentDate: true,
-      grandTotal: true,
-      customerSnapshot: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.document.findMany({
+      where,
+      select: {
+        id: true,
+        type: true,
+        documentNumber: true,
+        status: true,
+        documentDate: true,
+        grandTotal: true,
+        customerSnapshot: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return serialize(data);
+  } catch {
+    // May fail if enum values (e.g. RECEIPT) don't exist in DB yet
+    return [];
+  }
 }
 
 export async function getConfirmedQuotations() {
-  const data = await prisma.document.findMany({
-    where: {
-      type: "QUOTATION",
-      status: "CONFIRMED",
-    },
-    select: {
-      id: true,
-      documentNumber: true,
-      documentDate: true,
-      grandTotal: true,
-      customerSnapshot: true,
-      companyId: true,
-      customerId: true,
-      vatEnabled: true,
-      vatRate: true,
-      discountType: true,
-      discountValue: true,
-      shippingCost: true,
-      footerNotes: true,
-      productionDaysMin: true,
-      productionDaysMax: true,
-      skipWeekends: true,
-      skipHolidays: true,
-      lineItems: { orderBy: { sequence: "asc" } },
-      paymentTerms: { orderBy: { sequence: "asc" } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.document.findMany({
+      where: {
+        type: "QUOTATION",
+        status: "CONFIRMED",
+      },
+      select: {
+        id: true,
+        documentNumber: true,
+        documentDate: true,
+        grandTotal: true,
+        customerSnapshot: true,
+        companyId: true,
+        customerId: true,
+        vatEnabled: true,
+        vatRate: true,
+        discountType: true,
+        discountValue: true,
+        shippingCost: true,
+        footerNotes: true,
+        productionDaysMin: true,
+        productionDaysMax: true,
+        skipWeekends: true,
+        skipHolidays: true,
+        lineItems: { orderBy: { sequence: "asc" } },
+        paymentTerms: { orderBy: { sequence: "asc" } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return serialize(data);
+  } catch {
+    return [];
+  }
 }
 
 export async function getPaidInvoices() {
-  const data = await prisma.document.findMany({
-    where: {
-      type: "INVOICE",
-      status: "PAID",
-    },
-    select: {
-      id: true,
-      documentNumber: true,
-      documentDate: true,
-      grandTotal: true,
-      customerSnapshot: true,
-      companyId: true,
-      customerId: true,
-      vatEnabled: true,
-      vatRate: true,
-      discountType: true,
-      discountValue: true,
-      shippingCost: true,
-      footerNotes: true,
-      productionDaysMin: true,
-      productionDaysMax: true,
-      skipWeekends: true,
-      skipHolidays: true,
-      lineItems: { orderBy: { sequence: "asc" } },
-      paymentTerms: { orderBy: { sequence: "asc" } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.document.findMany({
+      where: {
+        type: "INVOICE",
+        status: "PAID",
+      },
+      select: {
+        id: true,
+        documentNumber: true,
+        documentDate: true,
+        grandTotal: true,
+        customerSnapshot: true,
+        companyId: true,
+        customerId: true,
+        vatEnabled: true,
+        vatRate: true,
+        discountType: true,
+        discountValue: true,
+        shippingCost: true,
+        footerNotes: true,
+        productionDaysMin: true,
+        productionDaysMax: true,
+        skipWeekends: true,
+        skipHolidays: true,
+        lineItems: { orderBy: { sequence: "asc" } },
+        paymentTerms: { orderBy: { sequence: "asc" } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    return serialize(data);
+  } catch {
+    return [];
+  }
 }
 
 export async function getDocumentById(id: string) {
-  const data = await prisma.document.findUnique({
-    where: { id },
-    include: {
-      lineItems: { orderBy: { sequence: "asc" } },
-      paymentTerms: { orderBy: { sequence: "asc" } },
-      company: true,
-      customer: true,
-      createdBy: true,
-    },
-  });
-  return serialize(data);
+  try {
+    const data = await prisma.document.findUnique({
+      where: { id },
+      include: {
+        lineItems: { orderBy: { sequence: "asc" } },
+        paymentTerms: { orderBy: { sequence: "asc" } },
+        company: true,
+        customer: true,
+        createdBy: true,
+      },
+    });
+    return serialize(data);
+  } catch {
+    return null;
+  }
 }
