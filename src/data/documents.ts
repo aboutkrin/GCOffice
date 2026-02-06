@@ -6,6 +6,8 @@ export async function getDocuments(params?: {
   type?: DocumentType;
   status?: DocumentStatus;
   search?: string;
+  year?: number;
+  month?: number;
 }) {
   const where: any = {};
   if (params?.type) where.type = params.type;
@@ -20,6 +22,14 @@ export async function getDocuments(params?: {
         },
       },
     ];
+  }
+  if (params?.year && params?.month) {
+    const startDate = new Date(Date.UTC(params.year, params.month - 1, 1));
+    const endDate = new Date(Date.UTC(params.year, params.month, 1));
+    where.documentDate = {
+      gte: startDate,
+      lt: endDate,
+    };
   }
 
   try {
