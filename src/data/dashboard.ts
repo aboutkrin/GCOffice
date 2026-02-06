@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma";
 import { DocumentType, DocumentStatus } from "@/generated/prisma/client";
-import { Prisma } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { getThaiNow } from "@/lib/thai-date";
 
@@ -39,7 +38,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   const excludeDraft = { status: { not: DocumentStatus.DRAFT } };
   const pendingStatuses = [DocumentStatus.QUOTED, DocumentStatus.BILLED];
-  const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
+  const paidStatus = DocumentStatus.PAID;
 
   // Helper to safely run a query, returning a fallback on failure
   // (e.g. if RECEIPT enum or newer statuses don't exist in DB yet)
@@ -76,7 +75,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
-        status: { in: confirmedStatuses },
+        status: paidStatus,
         ...thisMonthFilter,
       },
     }).catch(() => null),
@@ -132,7 +131,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
 
   const excludeDraft = { status: { not: DocumentStatus.DRAFT } };
   const pendingStatuses = [DocumentStatus.QUOTED, DocumentStatus.BILLED];
-  const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
+  const paidStatus = DocumentStatus.PAID;
 
   async function safeCount(where: Parameters<typeof prisma.document.count>[0]): Promise<number> {
     try {
@@ -154,7 +153,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     }),
     prisma.document.aggregate({
       _sum: { grandTotal: true },
-      where: { status: { in: confirmedStatuses }, ...yearFilter },
+      where: { status: paidStatus, ...yearFilter },
     }).catch(() => null),
     prisma.$queryRaw<{ year: number }[]>`
       SELECT DISTINCT EXTRACT(YEAR FROM document_date)::int AS year
@@ -206,7 +205,7 @@ export interface MonthlyRevenueExpenseResult {
 }
 
 export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRevenueExpenseResult> {
-  const confirmedStatuses = [DocumentStatus.CONFIRMED, DocumentStatus.PAID];
+  const paidStatus = DocumentStatus.PAID;
 
   async function fetchExpenseData() {
     try {
@@ -252,7 +251,7 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
           EXTRACT(MONTH FROM document_date)::int AS month,
           COALESCE(SUM(grand_total), 0)::float8 AS total
         FROM documents
-        WHERE status IN (${Prisma.join(confirmedStatuses)})
+        WHERE status = ${paidStatus}
           AND EXTRACT(YEAR FROM document_date) = ${year}
         GROUP BY EXTRACT(MONTH FROM document_date)
         ORDER BY month
