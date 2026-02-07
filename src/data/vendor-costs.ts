@@ -23,6 +23,7 @@ export async function ensureVendorCostTables() {
           "other_cost" DECIMAL(12,2) NOT NULL DEFAULT 0,
           "total_cost" DECIMAL(12,2) NOT NULL DEFAULT 0,
           "payment_method" "PaymentMethod" NOT NULL DEFAULT 'TRANSFER',
+          "shipping_payment_method" "PaymentMethod" NOT NULL DEFAULT 'TRANSFER',
           "notes" TEXT,
           "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
           "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

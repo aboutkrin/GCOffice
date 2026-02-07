@@ -152,9 +152,14 @@ export function VendorCostTable({
       accessorKey: "paymentMethod",
       header: "วิธีชำระ",
       cell: ({ row }) => (
-        <Badge variant="outline">
-          {PAYMENT_METHOD_LABELS[row.original.paymentMethod] ?? "-"}
-        </Badge>
+        <div className="space-y-1">
+          <Badge variant="outline" className="text-xs">
+            สินค้า: {PAYMENT_METHOD_LABELS[row.original.paymentMethod] ?? "-"}
+          </Badge>
+          <Badge variant="outline" className="text-xs">
+            ค่าส่ง: {PAYMENT_METHOD_LABELS[row.original.shippingPaymentMethod] ?? "-"}
+          </Badge>
+        </div>
       ),
       enableGlobalFilter: false,
     },

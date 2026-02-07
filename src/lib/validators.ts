@@ -214,7 +214,10 @@ export const vendorCostSchema = z.object({
   shippingCost: z.coerce.number().min(0, "ค่าส่งต้องไม่ติดลบ").default(0),
   otherCost: z.coerce.number().min(0, "ค่าใช้จ่ายอื่นต้องไม่ติดลบ").default(0),
   paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"], {
-    error: "กรุณาเลือกวิธีการชำระ",
+    error: "กรุณาเลือกวิธีการชำระสินค้า",
+  }).default("TRANSFER"),
+  shippingPaymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"], {
+    error: "กรุณาเลือกวิธีการชำระค่าส่ง",
   }).default("TRANSFER"),
   notes: z.string().optional(),
   items: z.array(vendorCostItemSchema).min(1, "กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ"),

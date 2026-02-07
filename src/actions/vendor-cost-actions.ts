@@ -25,6 +25,7 @@ export async function createVendorCost(data: unknown) {
         otherCost: validated.otherCost,
         totalCost,
         paymentMethod: validated.paymentMethod,
+        shippingPaymentMethod: validated.shippingPaymentMethod,
         notes: validated.notes || null,
         items: {
           create: validated.items.map((item) => ({
@@ -76,6 +77,7 @@ export async function updateVendorCost(id: string, data: unknown) {
           otherCost: validated.otherCost,
           totalCost,
           paymentMethod: validated.paymentMethod,
+          shippingPaymentMethod: validated.shippingPaymentMethod,
           notes: validated.notes || null,
           items: {
             create: validated.items.map((item) => ({
