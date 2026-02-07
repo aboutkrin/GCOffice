@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FileText, Receipt, Clock, Banknote } from "lucide-react";
+import { FileText, Receipt, Clock, Banknote, CircleDollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -42,6 +42,11 @@ export function YearlyStatsCards({ initialData }: YearlyStatsCardsProps) {
       icon: Clock,
     },
     {
+      title: "รอเรียกเก็บ",
+      value: data.pendingCollection.toLocaleString(),
+      icon: CircleDollarSign,
+    },
+    {
       title: "ใบแจ้งหนี้",
       value: data.invoices.toLocaleString(),
       icon: Receipt,
@@ -74,7 +79,7 @@ export function YearlyStatsCards({ initialData }: YearlyStatsCardsProps) {
           </SelectContent>
         </Select>
       </div>
-      <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-4 ${isPending ? "opacity-50" : ""}`}>
+      <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-5 ${isPending ? "opacity-50" : ""}`}>
         {cards.map((card) => (
           <Card key={card.title}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">

@@ -12,8 +12,8 @@ export default function DashboardLoading() {
       {/* This Month Stats cards skeleton */}
       <div className="mb-6">
         <Skeleton className="h-6 w-24 mb-4" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={`thisMonth-${i}`} className="rounded-lg border bg-card p-6">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="mt-3 h-7 w-16" />
@@ -28,8 +28,8 @@ export default function DashboardLoading() {
           <Skeleton className="h-6 w-16" />
           <Skeleton className="h-9 w-[140px] rounded-md" />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
             <div key={`yearly-${i}`} className="rounded-lg border bg-card p-6">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="mt-3 h-7 w-16" />

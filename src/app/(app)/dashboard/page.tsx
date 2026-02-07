@@ -1,4 +1,4 @@
-import { FileText, Receipt, Clock, Banknote } from "lucide-react";
+import { FileText, Receipt, Clock, Banknote, CircleDollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -40,6 +40,11 @@ export default async function DashboardPage() {
       icon: Clock,
     },
     {
+      title: "รอเรียกเก็บเดือนนี้",
+      value: stats.thisMonthPendingCollection.toLocaleString(),
+      icon: CircleDollarSign,
+    },
+    {
       title: "ใบแจ้งหนี้เดือนนี้",
       value: stats.thisMonthInvoices.toLocaleString(),
       icon: Receipt,
@@ -61,7 +66,7 @@ export default async function DashboardPage() {
       {/* This Month Stats */}
       <div className="mb-6">
         <h2 className="text-lg font-semibold mb-4">เดือนนี้</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           {thisMonthCards.map((card) => (
             <Card key={card.title}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
