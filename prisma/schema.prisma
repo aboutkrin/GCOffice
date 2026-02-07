@@ -355,9 +355,12 @@ model VendorCost {
   shippingCost  Decimal       @default(0) @map("shipping_cost") @db.Decimal(12, 2)
   otherCost     Decimal       @default(0) @map("other_cost") @db.Decimal(12, 2)
   totalCost     Decimal       @default(0) @map("total_cost") @db.Decimal(12, 2)
-  paymentMethod         PaymentMethod @default(TRANSFER) @map("payment_method")
-  shippingPaymentMethod PaymentMethod @default(TRANSFER) @map("shipping_payment_method")
-  notes                 String?       @db.Text
+  shippingProvider            String    @default("UNEED_CARGO") @map("shipping_provider")
+  paymentMethod               PaymentMethod @default(TRANSFER) @map("payment_method")
+  paymentMethodNote           String?       @map("payment_method_note")
+  shippingPaymentMethod       PaymentMethod @default(TRANSFER) @map("shipping_payment_method")
+  shippingPaymentMethodNote   String?       @map("shipping_payment_method_note")
+  notes                       String?       @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

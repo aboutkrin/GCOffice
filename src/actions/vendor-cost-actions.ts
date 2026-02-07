@@ -12,7 +12,7 @@ export async function createVendorCost(data: unknown) {
     const validated = vendorCostSchema.parse(data);
 
     const itemsTotal = validated.items.reduce((sum, item) => sum + item.lineTotal, 0);
-    const totalCost = itemsTotal + validated.shippingCost + validated.otherCost;
+    const totalCost = itemsTotal + validated.shippingCost;
 
     const vendorCost = await prisma.vendorCost.create({
       data: {
@@ -22,10 +22,13 @@ export async function createVendorCost(data: unknown) {
         orderDate: validated.orderDate,
         exchangeRate: validated.exchangeRate ?? null,
         shippingCost: validated.shippingCost,
-        otherCost: validated.otherCost,
+        otherCost: 0,
         totalCost,
+        shippingProvider: validated.shippingProvider,
         paymentMethod: validated.paymentMethod,
+        paymentMethodNote: validated.paymentMethodNote || null,
         shippingPaymentMethod: validated.shippingPaymentMethod,
+        shippingPaymentMethodNote: validated.shippingPaymentMethodNote || null,
         notes: validated.notes || null,
         items: {
           create: validated.items.map((item) => ({
@@ -56,7 +59,7 @@ export async function updateVendorCost(id: string, data: unknown) {
     const validated = vendorCostSchema.parse(data);
 
     const itemsTotal = validated.items.reduce((sum, item) => sum + item.lineTotal, 0);
-    const totalCost = itemsTotal + validated.shippingCost + validated.otherCost;
+    const totalCost = itemsTotal + validated.shippingCost;
 
     const vendorCost = await prisma.$transaction(async (tx) => {
       // Delete existing items
@@ -74,10 +77,13 @@ export async function updateVendorCost(id: string, data: unknown) {
           orderDate: validated.orderDate,
           exchangeRate: validated.exchangeRate ?? null,
           shippingCost: validated.shippingCost,
-          otherCost: validated.otherCost,
+          otherCost: 0,
           totalCost,
+          shippingProvider: validated.shippingProvider,
           paymentMethod: validated.paymentMethod,
+          paymentMethodNote: validated.paymentMethodNote || null,
           shippingPaymentMethod: validated.shippingPaymentMethod,
+          shippingPaymentMethodNote: validated.shippingPaymentMethodNote || null,
           notes: validated.notes || null,
           items: {
             create: validated.items.map((item) => ({
