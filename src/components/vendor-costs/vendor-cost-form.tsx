@@ -56,6 +56,8 @@ interface CostItem {
   productSku: string;
   productImage?: string;
   quantity: number;
+  unitCostCny: number;
+  unitCostRate: number;
   unitCost: number;
   lineTotal: number;
 }
@@ -68,6 +70,10 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
+  const defaultRate = initialData?.exchangeRate
+    ? Number(initialData.exchangeRate)
+    : 0;
+
   const initialItems: CostItem[] = initialData?.items?.length
     ? initialData.items.map((item: any) => ({
         id: generateId(),
@@ -75,6 +81,8 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
         productName: item.productName,
         productSku: item.productSku ?? "",
         quantity: item.quantity,
+        unitCostCny: item.unitCostCny ? Number(item.unitCostCny) : 0,
+        unitCostRate: item.unitCostRate ? Number(item.unitCostRate) : defaultRate,
         unitCost: Number(item.unitCost),
         lineTotal: Number(item.lineTotal),
       }))
@@ -85,6 +93,8 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
           productName: "",
           productSku: "",
           quantity: 1,
+          unitCostCny: 0,
+          unitCostRate: defaultRate,
           unitCost: 0,
           lineTotal: 0,
         },
@@ -101,6 +111,8 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
         productName: "",
         productSku: "",
         quantity: 1,
+        unitCostCny: 0,
+        unitCostRate: prev[0]?.unitCostRate ?? 0,
         unitCost: 0,
         lineTotal: 0,
       },
@@ -121,7 +133,8 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
         prev.map((item) => {
           if (item.id !== id) return item;
           const updated = { ...item, ...updates };
-          updated.lineTotal = updated.quantity * updated.unitCost;
+          updated.unitCost = Math.round(updated.unitCostCny * updated.unitCostRate * 100) / 100;
+          updated.lineTotal = Math.round(updated.quantity * updated.unitCost * 100) / 100;
           return updated;
         })
       );
@@ -179,6 +192,8 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
               productSku: li.productSku ?? "",
               productImage: li.productImage ?? undefined,
               quantity: li.quantity,
+              unitCostCny: 0,
+              unitCostRate: 0,
               unitCost: Number(li.unitPrice),
               lineTotal: Number(li.lineTotal),
             })
@@ -197,9 +212,19 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
       productName: item.productName,
       productSku: item.productSku || undefined,
       quantity: item.quantity,
+      unitCostCny: item.unitCostCny || undefined,
+      unitCostRate: item.unitCostRate || undefined,
       unitCost: item.unitCost,
       lineTotal: item.lineTotal,
     })));
+  }, [items, form]);
+
+  // Sync exchange rate from first item's rate for storage
+  useEffect(() => {
+    const firstItemRate = items[0]?.unitCostRate;
+    if (firstItemRate && firstItemRate > 0) {
+      form.setValue("exchangeRate", firstItemRate);
+    }
   }, [items, form]);
 
   const shippingCost = Number(form.watch("shippingCost")) || 0;
@@ -216,6 +241,8 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
             productName: item.productName,
             productSku: item.productSku || undefined,
             quantity: item.quantity,
+            unitCostCny: item.unitCostCny || undefined,
+            unitCostRate: item.unitCostRate || undefined,
             unitCost: item.unitCost,
             lineTotal: item.lineTotal,
           })),
@@ -312,59 +339,32 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="orderDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>วันที่สั่งซื้อ</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="date"
-                        value={
-                          field.value
-                            ? formatDateForInput(field.value)
-                            : ""
-                        }
-                        onChange={(e) => {
-                          const date = e.target.value
-                            ? new Date(e.target.value + "T12:00:00")
-                            : null;
-                          field.onChange(date);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="exchangeRate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>อัตราแลกเปลี่ยน (CNY → THB)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.0001"
-                        placeholder="เช่น 5.05"
-                        {...field}
-                        value={field.value ?? ""}
-                        onChange={(e) =>
-                          field.onChange(
-                            e.target.value ? Number(e.target.value) : null
-                          )
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="orderDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>วันที่สั่งซื้อ</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      value={
+                        field.value
+                          ? formatDateForInput(field.value)
+                          : ""
+                      }
+                      onChange={(e) => {
+                        const date = e.target.value
+                          ? new Date(e.target.value + "T12:00:00")
+                          : null;
+                        field.onChange(date);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </CardContent>
         </Card>
 
@@ -381,104 +381,128 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="grid grid-cols-12 gap-2 items-end border-b pb-4 last:border-0 last:pb-0"
+                className="space-y-2 border-b pb-4 last:border-0 last:pb-0"
               >
-                <div className="col-span-12 md:col-span-4">
-                  <label className="text-sm font-medium">ชื่อสินค้า</label>
-                  <div className="flex items-center gap-2">
-                    {item.productImage && (
-                      <div className="relative shrink-0">
-                        <img
-                          src={item.productImage}
-                          alt={item.productName}
-                          className="h-9 w-9 rounded border object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateItem(item.id, { productImage: undefined })
-                          }
-                          className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-destructive text-white flex items-center justify-center"
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      </div>
-                    )}
+                {/* Row 1: Product info */}
+                <div className="grid grid-cols-12 gap-2 items-end">
+                  <div className="col-span-12 md:col-span-5">
+                    <label className="text-sm font-medium">ชื่อสินค้า</label>
+                    <div className="flex items-center gap-2">
+                      {item.productImage && (
+                        <div className="relative shrink-0">
+                          <img
+                            src={item.productImage}
+                            alt={item.productName}
+                            className="h-9 w-9 rounded border object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateItem(item.id, { productImage: undefined })
+                            }
+                            className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-destructive text-white flex items-center justify-center"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      )}
+                      <Input
+                        placeholder="ชื่อสินค้า"
+                        value={item.productName}
+                        onChange={(e) =>
+                          updateItem(item.id, { productName: e.target.value })
+                        }
+                      />
+                      <ProductPicker
+                        onSelect={(product) =>
+                          updateItem(item.id, {
+                            productName: product.name,
+                            productSku: product.sku,
+                            productImage: product.imageUrl,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="col-span-6 md:col-span-3">
+                    <label className="text-sm font-medium">SKU</label>
                     <Input
-                      placeholder="ชื่อสินค้า"
-                      value={item.productName}
+                      placeholder="รหัสสินค้า"
+                      value={item.productSku}
                       onChange={(e) =>
-                        updateItem(item.id, { productName: e.target.value })
+                        updateItem(item.id, { productSku: e.target.value })
                       }
                     />
-                    <ProductPicker
-                      onSelect={(product) =>
+                  </div>
+                  <div className="col-span-4 md:col-span-2">
+                    <label className="text-sm font-medium">จำนวน</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={item.quantity}
+                      onChange={(e) =>
                         updateItem(item.id, {
-                          productName: product.name,
-                          productSku: product.sku,
-                          productImage: product.imageUrl,
-                          unitCost: Number(product.basePrice),
+                          quantity: parseInt(e.target.value) || 1,
                         })
                       }
                     />
                   </div>
+                  <div className="col-span-2 md:col-span-2 flex justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeItem(item.id)}
+                      disabled={items.length <= 1}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="col-span-6 md:col-span-2">
-                  <label className="text-sm font-medium">SKU</label>
-                  <Input
-                    placeholder="รหัสสินค้า"
-                    value={item.productSku}
-                    onChange={(e) =>
-                      updateItem(item.id, { productSku: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="col-span-6 md:col-span-1">
-                  <label className="text-sm font-medium">จำนวน</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateItem(item.id, {
-                        quantity: parseInt(e.target.value) || 1,
-                      })
-                    }
-                  />
-                </div>
-                <div className="col-span-5 md:col-span-2">
-                  <label className="text-sm font-medium">ราคาต่อชิ้น (฿)</label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={item.unitCost || ""}
-                    onChange={(e) =>
-                      updateItem(item.id, {
-                        unitCost: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                  />
-                </div>
-                <div className="col-span-5 md:col-span-2">
-                  <label className="text-sm font-medium">ยอดรวม</label>
-                  <Input
-                    readOnly
-                    value={formatBaht(item.lineTotal)}
-                    className="bg-muted"
-                  />
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeItem(item.id)}
-                    disabled={items.length <= 1}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
+
+                {/* Row 2: Pricing - CNY / Rate / THB / Total */}
+                <div className="grid grid-cols-12 gap-2 items-end md:pl-0">
+                  <div className="col-span-6 md:col-span-3">
+                    <label className="text-sm font-medium text-muted-foreground">ราคาต่อชิ้น (CNY)</label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={item.unitCostCny || ""}
+                      onChange={(e) =>
+                        updateItem(item.id, {
+                          unitCostCny: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="col-span-6 md:col-span-2">
+                    <label className="text-sm font-medium text-muted-foreground">เรท (฿/¥)</label>
+                    <Input
+                      type="number"
+                      step="0.0001"
+                      placeholder="0.00"
+                      value={item.unitCostRate || ""}
+                      onChange={(e) =>
+                        updateItem(item.id, {
+                          unitCostRate: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="col-span-6 md:col-span-3">
+                    <label className="text-sm font-medium text-muted-foreground">ราคาต่อชิ้น (THB)</label>
+                    <div className="h-9 flex items-center px-3 rounded-md bg-muted text-sm font-medium">
+                      {formatBaht(item.unitCost)}
+                    </div>
+                  </div>
+                  <div className="col-span-6 md:col-span-4">
+                    <label className="text-sm font-medium text-muted-foreground">ยอดรวม</label>
+                    <div className="h-9 flex items-center px-3 rounded-md bg-muted text-sm font-medium">
+                      {formatBaht(item.lineTotal)}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -496,6 +520,54 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
                 กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ
               </p>
             )}
+
+            {/* Product payment method - moved here from costs card */}
+            <div className="border-t pt-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="paymentMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>วิธีการชำระสินค้า</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="เลือกวิธีการชำระสินค้า" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PAYMENT_METHOD_OPTIONS.map((method) => (
+                            <SelectItem key={method} value={method}>
+                              {PAYMENT_METHOD_LABELS[method]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="paymentMethodNote"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>รายละเอียดเพิ่มเติม</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="รายละเอียดการชำระสินค้า..."
+                          {...field}
+                          value={field.value ?? ""}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -588,52 +660,6 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
                     <FormControl>
                       <Input
                         placeholder="รายละเอียดการชำระค่าส่ง..."
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Row 3: วิธีการชำระสินค้า + รายละเอียด */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="paymentMethod"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>วิธีการชำระสินค้า</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="เลือกวิธีการชำระสินค้า" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {PAYMENT_METHOD_OPTIONS.map((method) => (
-                          <SelectItem key={method} value={method}>
-                            {PAYMENT_METHOD_LABELS[method]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="paymentMethodNote"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>รายละเอียดเพิ่มเติม</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="รายละเอียดการชำระสินค้า..."
                         {...field}
                         value={field.value ?? ""}
                       />
