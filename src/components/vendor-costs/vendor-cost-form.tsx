@@ -156,6 +156,7 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
         ? Number(initialData.otherCost)
         : 0,
       paymentMethod: initialData?.paymentMethod ?? "TRANSFER",
+      shippingPaymentMethod: initialData?.shippingPaymentMethod ?? "TRANSFER",
       notes: initialData?.notes ?? "",
       items: initialItems,
     },
@@ -403,7 +404,7 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
                           productName: product.name,
                           productSku: product.sku,
                           productImage: product.imageUrl,
-                          unitCost: item.unitCost || Number(product.basePrice),
+                          unitCost: Number(product.basePrice),
                         })
                       }
                     />
@@ -531,30 +532,57 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="paymentMethod"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>วิธีการชำระเงิน</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="เลือกวิธีการชำระ" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {PAYMENT_METHOD_OPTIONS.map((method) => (
-                        <SelectItem key={method} value={method}>
-                          {PAYMENT_METHOD_LABELS[method]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="paymentMethod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>วิธีการชำระสินค้า</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="เลือกวิธีการชำระสินค้า" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {PAYMENT_METHOD_OPTIONS.map((method) => (
+                          <SelectItem key={method} value={method}>
+                            {PAYMENT_METHOD_LABELS[method]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="shippingPaymentMethod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>วิธีการชำระค่าส่ง</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="เลือกวิธีการชำระค่าส่ง" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {PAYMENT_METHOD_OPTIONS.map((method) => (
+                          <SelectItem key={method} value={method}>
+                            {PAYMENT_METHOD_LABELS[method]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
