@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2, X } from "lucide-react";
 
 import {
   vendorCostSchema,
@@ -40,6 +40,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProductPicker } from "@/components/documents/product-picker";
 
 interface VendorCostFormProps {
   initialData?: any;
@@ -51,6 +52,7 @@ interface CostItem {
   sequence: number;
   productName: string;
   productSku: string;
+  productImage?: string;
   quantity: number;
   unitCost: number;
   lineTotal: number;
@@ -336,20 +338,50 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            {items.map((item, index) => (
+            {items.map((item) => (
               <div
                 key={item.id}
                 className="grid grid-cols-12 gap-2 items-end border-b pb-4 last:border-0 last:pb-0"
               >
                 <div className="col-span-12 md:col-span-4">
                   <label className="text-sm font-medium">ชื่อสินค้า</label>
-                  <Input
-                    placeholder="ชื่อสินค้า"
-                    value={item.productName}
-                    onChange={(e) =>
-                      updateItem(item.id, { productName: e.target.value })
-                    }
-                  />
+                  <div className="flex items-center gap-2">
+                    {item.productImage && (
+                      <div className="relative shrink-0">
+                        <img
+                          src={item.productImage}
+                          alt={item.productName}
+                          className="h-9 w-9 rounded border object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateItem(item.id, { productImage: undefined })
+                          }
+                          className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-destructive text-white flex items-center justify-center"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      </div>
+                    )}
+                    <Input
+                      placeholder="ชื่อสินค้า"
+                      value={item.productName}
+                      onChange={(e) =>
+                        updateItem(item.id, { productName: e.target.value })
+                      }
+                    />
+                    <ProductPicker
+                      onSelect={(product) =>
+                        updateItem(item.id, {
+                          productName: product.name,
+                          productSku: product.sku,
+                          productImage: product.imageUrl,
+                          unitCost: item.unitCost || Number(product.basePrice),
+                        })
+                      }
+                    />
+                  </div>
                 </div>
                 <div className="col-span-6 md:col-span-2">
                   <label className="text-sm font-medium">SKU</label>
