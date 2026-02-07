@@ -55,7 +55,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     thisMonthQuotations,
     thisMonthInvoices,
     thisMonthPendingDocuments,
-    thisMonthInvoiceTotal,
+    thisMonthPaidTotal,
+    thisMonthDepositedTotal,
     recentDocuments,
   ] = await Promise.all([
     safeCount({
@@ -73,13 +74,26 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
     }),
 
-    // Sum grandTotal for INVOICE documents with status PAID or DEPOSITED
+    // Sum grandTotal for PAID invoices
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
         type: DocumentType.INVOICE,
-        status: { in: revenueStatuses },
+        status: DocumentStatus.PAID,
         ...thisMonthFilter,
+      },
+    }).catch(() => null),
+
+    // Sum first payment term (sequence=1) calculatedAmount for DEPOSITED invoices
+    prisma.documentPaymentTerm.aggregate({
+      _sum: { calculatedAmount: true },
+      where: {
+        sequence: 1,
+        document: {
+          type: DocumentType.INVOICE,
+          status: DocumentStatus.DEPOSITED,
+          ...thisMonthFilter,
+        },
       },
     }).catch(() => null),
 
@@ -104,7 +118,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     thisMonthQuotations,
     thisMonthInvoices,
     thisMonthPendingDocuments,
-    thisMonthConfirmedTotal: thisMonthInvoiceTotal?._sum.grandTotal?.toNumber() ?? 0,
+    thisMonthConfirmedTotal:
+      (thisMonthPaidTotal?._sum.grandTotal?.toNumber() ?? 0) +
+      (thisMonthDepositedTotal?._sum.calculatedAmount?.toNumber() ?? 0),
     recentDocuments: serialize(recentDocuments) as RecentDocument[],
   };
 }
@@ -144,7 +160,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     }
   }
 
-  const [quotations, invoices, pendingDocuments, invoiceTotal, yearsData] = await Promise.all([
+  const [quotations, invoices, pendingDocuments, paidTotal, depositedTotal, yearsData] = await Promise.all([
     safeCount({
       where: { type: DocumentType.QUOTATION, ...excludeDraft, ...yearFilter },
     }),
@@ -154,13 +170,25 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     safeCount({
       where: { status: { in: pendingStatuses }, ...yearFilter },
     }),
-    // Sum grandTotal for INVOICE documents with status PAID or DEPOSITED
+    // Sum grandTotal for PAID invoices
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
         type: DocumentType.INVOICE,
-        status: { in: revenueStatuses },
+        status: DocumentStatus.PAID,
         ...yearFilter,
+      },
+    }).catch(() => null),
+    // Sum first payment term (sequence=1) calculatedAmount for DEPOSITED invoices
+    prisma.documentPaymentTerm.aggregate({
+      _sum: { calculatedAmount: true },
+      where: {
+        sequence: 1,
+        document: {
+          type: DocumentType.INVOICE,
+          status: DocumentStatus.DEPOSITED,
+          ...yearFilter,
+        },
       },
     }).catch(() => null),
     prisma.$queryRaw<{ year: number }[]>`
@@ -182,7 +210,9 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     quotations,
     invoices,
     pendingDocuments,
-    confirmedTotal: invoiceTotal?._sum.grandTotal?.toNumber() ?? 0,
+    confirmedTotal:
+      (paidTotal?._sum.grandTotal?.toNumber() ?? 0) +
+      (depositedTotal?._sum.calculatedAmount?.toNumber() ?? 0),
     availableYears,
   };
 }
@@ -250,18 +280,32 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
-  // Revenue from INVOICE documents with status PAID or DEPOSITED (full grandTotal)
+  // Revenue from INVOICE documents:
+  // - PAID: full grandTotal
+  // - DEPOSITED: only first payment term (sequence=1) calculatedAmount
   async function fetchInvoiceRevenueData() {
     try {
       return await prisma.$queryRaw<{ month: number; total: number }[]>`
-        SELECT
-          EXTRACT(MONTH FROM document_date)::int AS month,
-          COALESCE(SUM(grand_total), 0)::float8 AS total
-        FROM documents
-        WHERE type = 'INVOICE'
-          AND status IN ('PAID', 'DEPOSITED')
-          AND EXTRACT(YEAR FROM document_date) = ${year}
-        GROUP BY EXTRACT(MONTH FROM document_date)
+        SELECT month, COALESCE(SUM(total), 0)::float8 AS total
+        FROM (
+          SELECT
+            EXTRACT(MONTH FROM document_date)::int AS month,
+            grand_total AS total
+          FROM documents
+          WHERE type = 'INVOICE'
+            AND status = 'PAID'
+            AND EXTRACT(YEAR FROM document_date) = ${year}
+          UNION ALL
+          SELECT
+            EXTRACT(MONTH FROM d.document_date)::int AS month,
+            dpt.calculated_amount AS total
+          FROM documents d
+          INNER JOIN document_payment_terms dpt ON dpt.document_id = d.id AND dpt.sequence = 1
+          WHERE d.type = 'INVOICE'
+            AND d.status = 'DEPOSITED'
+            AND EXTRACT(YEAR FROM d.document_date) = ${year}
+        ) sub
+        GROUP BY month
         ORDER BY month
       `;
     } catch {
