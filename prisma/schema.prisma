@@ -377,12 +377,14 @@ model VendorCostItem {
   vendorCostId String     @map("vendor_cost_id")
   vendorCost   VendorCost @relation(fields: [vendorCostId], references: [id], onDelete: Cascade)
 
-  sequence    Int
-  productName String  @map("product_name")
-  productSku  String? @map("product_sku")
-  quantity    Int
-  unitCost    Decimal @map("unit_cost") @db.Decimal(12, 2)
-  lineTotal   Decimal @map("line_total") @db.Decimal(12, 2)
+  sequence      Int
+  productName   String  @map("product_name")
+  productSku    String? @map("product_sku")
+  quantity      Int
+  unitCostCny   Decimal? @map("unit_cost_cny") @db.Decimal(12, 2)
+  unitCostRate  Decimal? @map("unit_cost_rate") @db.Decimal(10, 4)
+  unitCost      Decimal  @map("unit_cost") @db.Decimal(12, 2)
+  lineTotal     Decimal  @map("line_total") @db.Decimal(12, 2)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

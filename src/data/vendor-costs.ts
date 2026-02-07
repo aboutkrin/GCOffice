@@ -54,6 +54,8 @@ export async function ensureVendorCostTables() {
           "product_name" TEXT NOT NULL,
           "product_sku" TEXT,
           "quantity" INTEGER NOT NULL,
+          "unit_cost_cny" DECIMAL(12,2),
+          "unit_cost_rate" DECIMAL(10,4),
           "unit_cost" DECIMAL(12,2) NOT NULL,
           "line_total" DECIMAL(12,2) NOT NULL,
           "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -61,6 +63,14 @@ export async function ensureVendorCostTables() {
           CONSTRAINT "vendor_cost_items_pkey" PRIMARY KEY ("id")
         )
       `);
+
+      // Add new columns to existing tables if they don't exist
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "vendor_cost_items" ADD COLUMN IF NOT EXISTS "unit_cost_cny" DECIMAL(12,2)
+      `).catch(() => {});
+      await prisma.$executeRawUnsafe(`
+        ALTER TABLE "vendor_cost_items" ADD COLUMN IF NOT EXISTS "unit_cost_rate" DECIMAL(10,4)
+      `).catch(() => {});
 
       await prisma.$executeRawUnsafe(`
         CREATE INDEX IF NOT EXISTS "vendor_cost_items_vendor_cost_id_idx" ON "vendor_cost_items"("vendor_cost_id")

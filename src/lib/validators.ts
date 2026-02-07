@@ -201,6 +201,8 @@ export const vendorCostItemSchema = z.object({
   productName: z.string().min(1, "กรุณาระบุชื่อสินค้า"),
   productSku: z.string().optional(),
   quantity: z.coerce.number().int().min(1, "จำนวนต้องมากกว่า 0"),
+  unitCostCny: z.coerce.number().min(0, "ราคาต้องไม่ติดลบ").optional().nullable(),
+  unitCostRate: z.coerce.number().min(0, "เรทต้องไม่ติดลบ").optional().nullable(),
   unitCost: z.coerce.number().min(0, "ราคาต้องไม่ติดลบ"),
   lineTotal: z.coerce.number(),
 });
