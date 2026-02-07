@@ -166,7 +166,7 @@ export async function getInvoicesForSelect() {
     const documents = await prisma.document.findMany({
       where: {
         type: "INVOICE",
-        status: { not: "CANCELLED" },
+        status: { in: ["DEPOSITED", "PAID"] },
       },
       select: {
         id: true,
