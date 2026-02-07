@@ -60,12 +60,14 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
       phone: initialData?.phone ?? "",
       email: initialData?.email ?? "",
       leadType: initialData?.leadType ?? undefined,
+      leadName: initialData?.leadName ?? "",
       notes: initialData?.notes ?? "",
       status: initialData?.status ?? "ACTIVE",
     },
   });
 
   const customerType = form.watch("type");
+  const leadType = form.watch("leadType");
 
   function onSubmit(values: CustomerFormData) {
     startTransition(async () => {
@@ -258,6 +260,28 @@ export function CustomerForm({ initialData }: CustomerFormProps) {
                 </FormItem>
               )}
             />
+
+            {leadType && (
+              <FormField
+                control={form.control}
+                name="leadName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      ชื่อในแอปพลิเคชัน ({LEAD_TYPE_OPTIONS.find((o) => o.value === leadType)?.label ?? leadType})
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={`ชื่อของลูกค้าใน ${LEAD_TYPE_OPTIONS.find((o) => o.value === leadType)?.label ?? leadType}`}
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

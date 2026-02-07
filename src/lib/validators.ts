@@ -36,6 +36,7 @@ export const customerSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง").optional().or(z.literal("")),
   leadType: z.enum(["FACEBOOK", "INSTAGRAM", "LINE_OA", "TIKTOK", "WEBSITE", "REFERRAL", "OTHER"]).optional(),
+  leadName: z.string().optional(),
   notes: z.string().optional(),
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
 });
