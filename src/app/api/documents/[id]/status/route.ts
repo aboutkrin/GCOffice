@@ -9,6 +9,7 @@ const VALID_STATUSES: string[] = [
   DocumentStatus.CONFIRMED,
   DocumentStatus.BILLED,
   DocumentStatus.PAID,
+  DocumentStatus.DEPOSITED,
   DocumentStatus.CANCELLED,
 ];
 
