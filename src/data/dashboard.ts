@@ -279,6 +279,22 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
+  async function fetchVendorCostData() {
+    try {
+      return await prisma.$queryRaw<{ month: number; total: number }[]>`
+        SELECT
+          EXTRACT(MONTH FROM order_date)::int AS month,
+          COALESCE(SUM(total_cost), 0)::float8 AS total
+        FROM vendor_costs
+        WHERE EXTRACT(YEAR FROM order_date) = ${year}
+        GROUP BY EXTRACT(MONTH FROM order_date)
+        ORDER BY month
+      `;
+    } catch {
+      return [] as { month: number; total: number }[];
+    }
+  }
+
   async function fetchAvailableYears() {
     try {
       const docYears = await prisma.$queryRaw<{ year: number }[]>`
@@ -292,7 +308,19 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
       } catch {
         // expenses table may not exist
       }
-      const allYears = [...new Set([...docYears.map(d => d.year), ...expYears.map(d => d.year)])];
+      let vcYears: { year: number }[] = [];
+      try {
+        vcYears = await prisma.$queryRaw<{ year: number }[]>`
+          SELECT DISTINCT EXTRACT(YEAR FROM order_date)::int AS year FROM vendor_costs
+        `;
+      } catch {
+        // vendor_costs table may not exist
+      }
+      const allYears = [...new Set([
+        ...docYears.map(d => d.year),
+        ...expYears.map(d => d.year),
+        ...vcYears.map(d => d.year),
+      ])];
       allYears.sort((a, b) => b - a);
       return allYears.map(y => ({ year: y }));
     } catch {
@@ -333,19 +361,22 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
-  const [revenueData, expenseData, yearsData] = await Promise.all([
+  const [revenueData, expenseData, vendorCostData, yearsData] = await Promise.all([
     fetchInvoiceRevenueData(),
     fetchExpenseData(),
+    fetchVendorCostData(),
     fetchAvailableYears(),
   ]);
 
   // Build full 12-month array
+  // Expense = monthly operating expenses + vendor costs (purchase order costs)
   const monthlyData: MonthlyRevenueExpenseData[] = Array.from({ length: 12 }, (_, i) => {
     const monthNum = i + 1;
     const rev = revenueData.find((d) => d.month === monthNum);
     const exp = expenseData.find((d) => d.month === monthNum);
+    const vc = vendorCostData.find((d) => d.month === monthNum);
     const revenue = rev?.total ?? 0;
-    const expense = exp ? exp.total : 0;
+    const expense = (exp?.total ?? 0) + (vc?.total ?? 0);
     return {
       month: monthNum,
       monthLabel: THAI_MONTHS_SHORT[i],
