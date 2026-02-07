@@ -129,6 +129,7 @@ model Customer {
   phone         String?
   email         String?
   leadType      LeadType?    @map("lead_type")
+  leadName      String?      @map("lead_name")
   notes         String?      @db.Text
 
   status    Status   @default(ACTIVE)
