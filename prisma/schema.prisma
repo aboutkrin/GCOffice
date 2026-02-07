@@ -205,6 +205,7 @@ model Document {
 
   lineItems    DocumentLineItem[]
   paymentTerms DocumentPaymentTerm[]
+  vendorCosts  VendorCost[]
 
   @@index([type, status])
   @@index([documentDate])
@@ -337,6 +338,53 @@ model Expense {
   @@index([categoryId])
   @@index([expenseDate])
   @@map("expenses")
+}
+
+// ============================================================
+// VENDOR COST TRACKING
+// ============================================================
+
+model VendorCost {
+  id            String        @id @default(cuid())
+  documentId    String?       @map("document_id")
+  document      Document?     @relation(fields: [documentId], references: [id])
+  vendorName    String        @map("vendor_name")
+  orderNumber   String?       @map("order_number")
+  orderDate     DateTime      @map("order_date") @db.Date
+  exchangeRate  Decimal?      @map("exchange_rate") @db.Decimal(10, 4)
+  shippingCost  Decimal       @default(0) @map("shipping_cost") @db.Decimal(12, 2)
+  otherCost     Decimal       @default(0) @map("other_cost") @db.Decimal(12, 2)
+  totalCost     Decimal       @default(0) @map("total_cost") @db.Decimal(12, 2)
+  paymentMethod PaymentMethod @default(TRANSFER) @map("payment_method")
+  notes         String?       @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  items VendorCostItem[]
+
+  @@index([documentId])
+  @@index([orderDate])
+  @@map("vendor_costs")
+}
+
+model VendorCostItem {
+  id           String     @id @default(cuid())
+  vendorCostId String     @map("vendor_cost_id")
+  vendorCost   VendorCost @relation(fields: [vendorCostId], references: [id], onDelete: Cascade)
+
+  sequence    Int
+  productName String  @map("product_name")
+  productSku  String? @map("product_sku")
+  quantity    Int
+  unitCost    Decimal @map("unit_cost") @db.Decimal(12, 2)
+  lineTotal   Decimal @map("line_total") @db.Decimal(12, 2)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([vendorCostId])
+  @@map("vendor_cost_items")
 }
 
 // ============================================================
