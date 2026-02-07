@@ -71,7 +71,7 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base font-semibold">
-              ภาพรวมรายรับและรายจ่าย
+              ภาพรวมรายรับและรายจ่ายตลอดทั้งปี
             </CardTitle>
             <div className="flex gap-6 mt-2">
               <div>

@@ -266,12 +266,21 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
   async function fetchExpenseData() {
     try {
       return await prisma.$queryRaw<{ month: number; total: number }[]>`
-        SELECT
-          EXTRACT(MONTH FROM expense_date)::int AS month,
-          COALESCE(SUM(amount), 0)::float8 AS total
-        FROM expenses
-        WHERE EXTRACT(YEAR FROM expense_date) = ${year}
-        GROUP BY EXTRACT(MONTH FROM expense_date)
+        SELECT month, COALESCE(SUM(total), 0)::float8 AS total
+        FROM (
+          SELECT
+            EXTRACT(MONTH FROM expense_date)::int AS month,
+            amount AS total
+          FROM expenses
+          WHERE EXTRACT(YEAR FROM expense_date) = ${year}
+          UNION ALL
+          SELECT
+            EXTRACT(MONTH FROM order_date)::int AS month,
+            total_cost AS total
+          FROM vendor_costs
+          WHERE EXTRACT(YEAR FROM order_date) = ${year}
+        ) combined
+        GROUP BY month
         ORDER BY month
       `;
     } catch {
