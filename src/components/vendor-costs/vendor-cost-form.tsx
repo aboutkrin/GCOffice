@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useEffect, useTransition, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -187,6 +187,18 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
     },
     [invoices, form]
   );
+
+  // Keep form's items field in sync with state so validation passes
+  useEffect(() => {
+    form.setValue("items", items.map((item) => ({
+      sequence: item.sequence,
+      productName: item.productName,
+      productSku: item.productSku || undefined,
+      quantity: item.quantity,
+      unitCost: item.unitCost,
+      lineTotal: item.lineTotal,
+    })));
+  }, [items, form]);
 
   const shippingCost = Number(form.watch("shippingCost")) || 0;
   const otherCost = Number(form.watch("otherCost")) || 0;
