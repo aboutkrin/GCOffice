@@ -176,6 +176,18 @@ export async function getInvoicesForSelect() {
         customer: {
           select: { customerName: true, companyName: true },
         },
+        lineItems: {
+          select: {
+            sequence: true,
+            productName: true,
+            productSku: true,
+            productImage: true,
+            quantity: true,
+            unitPrice: true,
+            lineTotal: true,
+          },
+          orderBy: { sequence: "asc" },
+        },
       },
       orderBy: { documentDate: "desc" },
     });

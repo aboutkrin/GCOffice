@@ -161,6 +161,32 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
     },
   });
 
+  const handleInvoiceChange = useCallback(
+    (documentId: string) => {
+      form.setValue("documentId", documentId);
+
+      if (documentId && documentId !== "none") {
+        const invoice = invoices.find((inv: any) => inv.id === documentId);
+        if (invoice?.lineItems?.length) {
+          const invoiceItems: CostItem[] = invoice.lineItems.map(
+            (li: any, index: number) => ({
+              id: generateId(),
+              sequence: index + 1,
+              productName: li.productName,
+              productSku: li.productSku ?? "",
+              productImage: li.productImage ?? undefined,
+              quantity: li.quantity,
+              unitCost: Number(li.unitPrice),
+              lineTotal: Number(li.lineTotal),
+            })
+          );
+          setItems(invoiceItems);
+        }
+      }
+    },
+    [invoices, form]
+  );
+
   const shippingCost = Number(form.watch("shippingCost")) || 0;
   const otherCost = Number(form.watch("otherCost")) || 0;
   const grandTotal = itemsSubtotal + shippingCost + otherCost;
@@ -211,7 +237,7 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
                 <FormItem>
                   <FormLabel>เลขที่บิล (ใบแจ้งหนี้)</FormLabel>
                   <Select
-                    onValueChange={field.onChange}
+                    onValueChange={handleInvoiceChange}
                     value={field.value || ""}
                   >
                     <FormControl>
