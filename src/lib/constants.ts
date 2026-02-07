@@ -5,6 +5,7 @@ export const DOCUMENT_STATUS_LABELS: Record<string, string> = {
   SAMPLE: "ตัวอย่าง",
   BILLED: "เรียกเก็บแล้ว",
   PAID: "ชำระแล้ว",
+  DEPOSITED: "มัดจำแล้ว",
   CANCELLED: "ยกเลิก",
 };
 
@@ -15,11 +16,12 @@ export const DOCUMENT_STATUS_COLORS: Record<string, string> = {
   SAMPLE: "bg-purple-100 text-purple-800",
   BILLED: "bg-blue-100 text-blue-800",
   PAID: "bg-green-100 text-green-800",
+  DEPOSITED: "bg-amber-100 text-amber-800",
   CANCELLED: "bg-red-100 text-red-800",
 };
 
 export const QUOTATION_STATUS_OPTIONS = ["DRAFT", "QUOTED", "CONFIRMED", "CANCELLED"] as const;
-export const INVOICE_STATUS_OPTIONS = ["DRAFT", "BILLED", "PAID", "CANCELLED"] as const;
+export const INVOICE_STATUS_OPTIONS = ["DRAFT", "BILLED", "DEPOSITED", "PAID", "CANCELLED"] as const;
 export const RECEIPT_STATUS_OPTIONS = ["DRAFT", "PAID", "CANCELLED"] as const;
 
 export const CUSTOMER_TYPE_LABELS: Record<string, string> = {
