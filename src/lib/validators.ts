@@ -194,3 +194,30 @@ export type WooCommerceConfigFormData = z.infer<typeof wooCommerceConfigSchema>;
 export type ProfileFormData = z.infer<typeof profileSchema>;
 export type ExpenseCategoryFormData = z.infer<typeof expenseCategorySchema>;
 export type ExpenseFormData = z.infer<typeof expenseSchema>;
+
+export const vendorCostItemSchema = z.object({
+  sequence: z.number(),
+  productName: z.string().min(1, "กรุณาระบุชื่อสินค้า"),
+  productSku: z.string().optional(),
+  quantity: z.coerce.number().int().min(1, "จำนวนต้องมากกว่า 0"),
+  unitCost: z.coerce.number().min(0, "ราคาต้องไม่ติดลบ"),
+  lineTotal: z.coerce.number(),
+});
+
+export const vendorCostSchema = z.object({
+  documentId: z.string().optional(),
+  vendorName: z.string().min(1, "กรุณาระบุชื่อ Vendor"),
+  orderNumber: z.string().optional(),
+  orderDate: z.coerce.date({ error: "กรุณาเลือกวันที่สั่งซื้อ" }),
+  exchangeRate: z.coerce.number().min(0, "อัตราแลกเปลี่ยนต้องไม่ติดลบ").optional().nullable(),
+  shippingCost: z.coerce.number().min(0, "ค่าส่งต้องไม่ติดลบ").default(0),
+  otherCost: z.coerce.number().min(0, "ค่าใช้จ่ายอื่นต้องไม่ติดลบ").default(0),
+  paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"], {
+    error: "กรุณาเลือกวิธีการชำระ",
+  }).default("TRANSFER"),
+  notes: z.string().optional(),
+  items: z.array(vendorCostItemSchema).min(1, "กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ"),
+});
+
+export type VendorCostItemFormData = z.infer<typeof vendorCostItemSchema>;
+export type VendorCostFormData = z.infer<typeof vendorCostSchema>;

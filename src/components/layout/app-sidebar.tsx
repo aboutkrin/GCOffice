@@ -19,6 +19,7 @@ import {
   Calculator,
   Wallet,
   ReceiptText,
+  Truck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,11 @@ const mainNavItems = [
     href: "/product-costs",
     label: "ต้นทุนสินค้า",
     icon: Calculator,
+  },
+  {
+    href: "/vendor-costs",
+    label: "ต้นทุนใบสั่งซื้อ",
+    icon: Truck,
   },
   {
     href: "/expenses",
