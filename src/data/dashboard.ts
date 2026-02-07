@@ -66,7 +66,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
 
     safeCount({
-      where: { type: DocumentType.INVOICE, status: { in: revenueStatuses }, ...thisMonthFilter },
+      where: { type: DocumentType.INVOICE, status: DocumentStatus.PAID, ...thisMonthFilter },
     }),
 
     safeCount({
@@ -177,7 +177,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
       where: { type: DocumentType.QUOTATION, ...excludeDraft, ...yearFilter },
     }),
     safeCount({
-      where: { type: DocumentType.INVOICE, status: { in: revenueStatuses }, ...yearFilter },
+      where: { type: DocumentType.INVOICE, status: DocumentStatus.PAID, ...yearFilter },
     }),
     safeCount({
       where: { status: { in: pendingStatuses }, ...yearFilter },
