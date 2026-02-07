@@ -212,13 +212,17 @@ export const vendorCostSchema = z.object({
   orderDate: z.coerce.date({ error: "กรุณาเลือกวันที่สั่งซื้อ" }),
   exchangeRate: z.coerce.number().min(0, "อัตราแลกเปลี่ยนต้องไม่ติดลบ").optional().nullable(),
   shippingCost: z.coerce.number().min(0, "ค่าส่งต้องไม่ติดลบ").default(0),
-  otherCost: z.coerce.number().min(0, "ค่าใช้จ่ายอื่นต้องไม่ติดลบ").default(0),
-  paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"], {
-    error: "กรุณาเลือกวิธีการชำระสินค้า",
-  }).default("TRANSFER"),
+  shippingProvider: z.enum(["UNEED_CARGO", "OTHER"], {
+    error: "กรุณาเลือกผู้ให้บริการจัดส่ง",
+  }).default("UNEED_CARGO"),
   shippingPaymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"], {
     error: "กรุณาเลือกวิธีการชำระค่าส่ง",
   }).default("TRANSFER"),
+  shippingPaymentMethodNote: z.string().optional(),
+  paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"], {
+    error: "กรุณาเลือกวิธีการชำระสินค้า",
+  }).default("TRANSFER"),
+  paymentMethodNote: z.string().optional(),
   notes: z.string().optional(),
   items: z.array(vendorCostItemSchema).min(1, "กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ"),
 });

@@ -81,3 +81,10 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
 };
 
 export const PAYMENT_METHOD_OPTIONS = ["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"] as const;
+
+export const SHIPPING_PROVIDER_LABELS: Record<string, string> = {
+  UNEED_CARGO: "Uneed cargo",
+  OTHER: "อื่นๆ",
+};
+
+export const SHIPPING_PROVIDER_OPTIONS = ["UNEED_CARGO", "OTHER"] as const;

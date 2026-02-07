@@ -18,6 +18,8 @@ import {
 import {
   PAYMENT_METHOD_LABELS,
   PAYMENT_METHOD_OPTIONS,
+  SHIPPING_PROVIDER_LABELS,
+  SHIPPING_PROVIDER_OPTIONS,
 } from "@/lib/constants";
 import { formatBaht } from "@/lib/thai-currency";
 
@@ -152,11 +154,11 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
       shippingCost: initialData?.shippingCost
         ? Number(initialData.shippingCost)
         : 0,
-      otherCost: initialData?.otherCost
-        ? Number(initialData.otherCost)
-        : 0,
-      paymentMethod: initialData?.paymentMethod ?? "TRANSFER",
+      shippingProvider: initialData?.shippingProvider ?? "UNEED_CARGO",
       shippingPaymentMethod: initialData?.shippingPaymentMethod ?? "TRANSFER",
+      shippingPaymentMethodNote: initialData?.shippingPaymentMethodNote ?? "",
+      paymentMethod: initialData?.paymentMethod ?? "TRANSFER",
+      paymentMethodNote: initialData?.paymentMethodNote ?? "",
       notes: initialData?.notes ?? "",
       items: initialItems,
     },
@@ -201,8 +203,7 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
   }, [items, form]);
 
   const shippingCost = Number(form.watch("shippingCost")) || 0;
-  const otherCost = Number(form.watch("otherCost")) || 0;
-  const grandTotal = itemsSubtotal + shippingCost + otherCost;
+  const grandTotal = itemsSubtotal + shippingCost;
 
   function onSubmit(values: VendorCostFormData) {
     startTransition(async () => {
@@ -504,6 +505,7 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
             <CardTitle>ค่าใช้จ่ายเพิ่มเติมและการชำระเงิน</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Row 1: ค่าส่งจีน-ไทย + จัดส่งโดย */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -526,16 +528,68 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
 
               <FormField
                 control={form.control}
-                name="otherCost"
+                name="shippingProvider"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>ค่าใช้จ่ายอื่นๆ (฿)</FormLabel>
+                    <FormLabel>จัดส่งโดย</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="เลือกผู้ให้บริการจัดส่ง" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {SHIPPING_PROVIDER_OPTIONS.map((provider) => (
+                          <SelectItem key={provider} value={provider}>
+                            {SHIPPING_PROVIDER_LABELS[provider]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Row 2: วิธีการชำระค่าส่ง + รายละเอียด */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="shippingPaymentMethod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>วิธีการชำระค่าส่ง</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="เลือกวิธีการชำระค่าส่ง" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {PAYMENT_METHOD_OPTIONS.map((method) => (
+                          <SelectItem key={method} value={method}>
+                            {PAYMENT_METHOD_LABELS[method]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="shippingPaymentMethodNote"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>รายละเอียดเพิ่มเติม</FormLabel>
                     <FormControl>
                       <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
+                        placeholder="รายละเอียดการชำระค่าส่ง..."
                         {...field}
+                        value={field.value ?? ""}
                       />
                     </FormControl>
                     <FormMessage />
@@ -544,6 +598,7 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
               />
             </div>
 
+            {/* Row 3: วิธีการชำระสินค้า + รายละเอียด */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -572,24 +627,17 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
 
               <FormField
                 control={form.control}
-                name="shippingPaymentMethod"
+                name="paymentMethodNote"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>วิธีการชำระค่าส่ง</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="เลือกวิธีการชำระค่าส่ง" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {PAYMENT_METHOD_OPTIONS.map((method) => (
-                          <SelectItem key={method} value={method}>
-                            {PAYMENT_METHOD_LABELS[method]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>รายละเอียดเพิ่มเติม</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="รายละเอียดการชำระสินค้า..."
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -624,10 +672,6 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
               <div className="flex justify-between text-sm">
                 <span>ค่าส่งจีน-ไทย</span>
                 <span>{formatBaht(shippingCost)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>ค่าใช้จ่ายอื่นๆ</span>
-                <span>{formatBaht(otherCost)}</span>
               </div>
               <div className="flex justify-between font-bold text-lg border-t pt-2">
                 <span>ยอดต้นทุนรวม</span>
