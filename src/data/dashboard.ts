@@ -246,12 +246,21 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
   async function fetchExpenseData() {
     try {
       return await prisma.$queryRaw<{ month: number; total: number }[]>`
-        SELECT
-          EXTRACT(MONTH FROM expense_date)::int AS month,
-          COALESCE(SUM(amount), 0)::float8 AS total
-        FROM expenses
-        WHERE EXTRACT(YEAR FROM expense_date) = ${year}
-        GROUP BY EXTRACT(MONTH FROM expense_date)
+        SELECT month, COALESCE(SUM(total), 0)::float8 AS total
+        FROM (
+          SELECT
+            EXTRACT(MONTH FROM expense_date)::int AS month,
+            amount AS total
+          FROM expenses
+          WHERE EXTRACT(YEAR FROM expense_date) = ${year}
+          UNION ALL
+          SELECT
+            EXTRACT(MONTH FROM order_date)::int AS month,
+            total_cost AS total
+          FROM vendor_costs
+          WHERE EXTRACT(YEAR FROM order_date) = ${year}
+        ) combined
+        GROUP BY month
         ORDER BY month
       `;
     } catch {
@@ -272,7 +281,19 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
       } catch {
         // expenses table may not exist
       }
-      const allYears = [...new Set([...docYears.map(d => d.year), ...expYears.map(d => d.year)])];
+      let vcYears: { year: number }[] = [];
+      try {
+        vcYears = await prisma.$queryRaw<{ year: number }[]>`
+          SELECT DISTINCT EXTRACT(YEAR FROM order_date)::int AS year FROM vendor_costs
+        `;
+      } catch {
+        // vendor_costs table may not exist
+      }
+      const allYears = [...new Set([
+        ...docYears.map(d => d.year),
+        ...expYears.map(d => d.year),
+        ...vcYears.map(d => d.year),
+      ])];
       allYears.sort((a, b) => b - a);
       return allYears.map(y => ({ year: y }));
     } catch {

@@ -83,7 +83,7 @@ export default async function DashboardPage() {
 
       {/* Revenue & Expense + Profit Charts */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-4">ภาพรวมรายรับและรายจ่าย</h2>
+        <h2 className="text-lg font-semibold mb-4">ภาพรวมรายรับและรายจ่ายตลอดทั้งปี</h2>
         <RevenueExpenseSection initialData={revenueExpense} />
       </div>
 
