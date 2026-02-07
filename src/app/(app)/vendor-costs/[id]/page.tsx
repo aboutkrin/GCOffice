@@ -16,14 +16,13 @@ export default async function EditVendorCostPage({
   params,
 }: EditVendorCostPageProps) {
   const { id } = await params;
-  const [vendorCost, invoices] = await Promise.all([
-    getVendorCostById(id),
-    getInvoicesForSelect(),
-  ]);
+  const vendorCost = await getVendorCostById(id);
 
   if (!vendorCost) {
     notFound();
   }
+
+  const invoices = await getInvoicesForSelect(vendorCost.documentId ?? undefined);
 
   return (
     <div className="space-y-6">
