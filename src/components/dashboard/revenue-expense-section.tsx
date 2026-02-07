@@ -25,11 +25,11 @@ import { formatBaht } from "@/lib/thai-currency";
 const lineChartConfig = {
   revenue: {
     label: "รายได้",
-    color: "oklch(0.55 0.2 25)",
+    color: "oklch(0.45 0.15 260)",
   },
   expense: {
     label: "ต้นทุน",
-    color: "oklch(0.45 0.15 260)",
+    color: "oklch(0.55 0.2 25)",
   },
 } satisfies ChartConfig;
 
@@ -76,13 +76,13 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
             <div className="flex gap-6 mt-2">
               <div>
                 <span className="text-sm text-muted-foreground">รายได้</span>
-                <p className="text-lg font-bold text-[oklch(0.55_0.2_25)]">
+                <p className="text-lg font-bold text-[oklch(0.45_0.15_260)]">
                   {formatBaht(data.totalRevenue)}
                 </p>
               </div>
               <div>
                 <span className="text-sm text-muted-foreground">ต้นทุน</span>
-                <p className="text-lg font-bold text-[oklch(0.45_0.15_260)]">
+                <p className="text-lg font-bold text-[oklch(0.55_0.2_25)]">
                   {formatBaht(data.totalExpense)}
                 </p>
               </div>
