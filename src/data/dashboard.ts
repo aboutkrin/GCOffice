@@ -9,6 +9,7 @@ export interface DashboardStats {
   thisMonthQuotations: number;
   thisMonthInvoices: number;
   thisMonthPendingDocuments: number;
+  thisMonthPendingCollection: number;
   thisMonthConfirmedTotal: number;
   // Recent documents
   recentDocuments: RecentDocument[];
@@ -55,6 +56,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     thisMonthQuotations,
     thisMonthInvoices,
     thisMonthPendingDocuments,
+    thisMonthPendingCollection,
     thisMonthPaidTotal,
     thisMonthDepositedTotal,
     recentDocuments,
@@ -70,6 +72,14 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     safeCount({
       where: {
         status: { in: pendingStatuses },
+        ...thisMonthFilter,
+      },
+    }),
+
+    safeCount({
+      where: {
+        type: DocumentType.INVOICE,
+        status: DocumentStatus.DEPOSITED,
         ...thisMonthFilter,
       },
     }),
@@ -118,6 +128,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     thisMonthQuotations,
     thisMonthInvoices,
     thisMonthPendingDocuments,
+    thisMonthPendingCollection,
     thisMonthConfirmedTotal:
       (thisMonthPaidTotal?._sum.grandTotal?.toNumber() ?? 0) +
       (thisMonthDepositedTotal?._sum.calculatedAmount?.toNumber() ?? 0),
@@ -133,6 +144,7 @@ export interface YearlyStats {
   quotations: number;
   invoices: number;
   pendingDocuments: number;
+  pendingCollection: number;
   confirmedTotal: number;
   availableYears: number[];
 }
@@ -160,7 +172,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     }
   }
 
-  const [quotations, invoices, pendingDocuments, paidTotal, depositedTotal, yearsData] = await Promise.all([
+  const [quotations, invoices, pendingDocuments, pendingCollection, paidTotal, depositedTotal, yearsData] = await Promise.all([
     safeCount({
       where: { type: DocumentType.QUOTATION, ...excludeDraft, ...yearFilter },
     }),
@@ -169,6 +181,13 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     }),
     safeCount({
       where: { status: { in: pendingStatuses }, ...yearFilter },
+    }),
+    safeCount({
+      where: {
+        type: DocumentType.INVOICE,
+        status: DocumentStatus.DEPOSITED,
+        ...yearFilter,
+      },
     }),
     // Sum grandTotal for PAID invoices
     prisma.document.aggregate({
@@ -210,6 +229,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     quotations,
     invoices,
     pendingDocuments,
+    pendingCollection,
     confirmedTotal:
       (paidTotal?._sum.grandTotal?.toNumber() ?? 0) +
       (depositedTotal?._sum.calculatedAmount?.toNumber() ?? 0),
