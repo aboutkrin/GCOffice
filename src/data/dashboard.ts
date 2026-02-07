@@ -3,26 +3,6 @@ import { DocumentType, DocumentStatus } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { getThaiNow } from "@/lib/thai-date";
 
-/**
- * Sum the first payment term (sequence=1) calculatedAmount
- * for all DEPOSITED documents within a date range.
- */
-async function getDepositedTotal(dateRange: { gte: Date; lte: Date }): Promise<number> {
-  try {
-    const result = await prisma.$queryRaw<{ total: number }[]>`
-      SELECT COALESCE(SUM(pt.calculated_amount), 0)::float8 AS total
-      FROM document_payment_terms pt
-      INNER JOIN documents d ON d.id = pt.document_id
-      WHERE d.status = 'DEPOSITED'
-        AND pt.sequence = 1
-        AND d.document_date >= ${dateRange.gte}
-        AND d.document_date <= ${dateRange.lte}
-    `;
-    return result[0]?.total ?? 0;
-  } catch {
-    return 0;
-  }
-}
 
 export interface DashboardStats {
   // This month stats
@@ -75,8 +55,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     thisMonthQuotations,
     thisMonthInvoices,
     thisMonthPendingDocuments,
-    thisMonthPaidTotal,
-    thisMonthDepositedTotal,
+    thisMonthInvoiceTotal,
     recentDocuments,
   ] = await Promise.all([
     safeCount({
@@ -94,20 +73,15 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
     }),
 
-    // Sum grandTotal for PAID documents
+    // Sum grandTotal for INVOICE documents with status PAID or DEPOSITED
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
-        status: DocumentStatus.PAID,
+        type: DocumentType.INVOICE,
+        status: { in: revenueStatuses },
         ...thisMonthFilter,
       },
     }).catch(() => null),
-
-    // Sum first payment term (sequence=1) for DEPOSITED documents
-    getDepositedTotal({
-      gte: startOfMonth,
-      lte: endOfMonth,
-    }),
 
     prisma.document.findMany({
       where: { status: { not: DocumentStatus.DRAFT } },
@@ -126,13 +100,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }).catch(() => [] as any[]),
   ]);
 
-  const paidTotal = thisMonthPaidTotal?._sum.grandTotal?.toNumber() ?? 0;
-
   return {
     thisMonthQuotations,
     thisMonthInvoices,
     thisMonthPendingDocuments,
-    thisMonthConfirmedTotal: paidTotal + thisMonthDepositedTotal,
+    thisMonthConfirmedTotal: thisMonthInvoiceTotal?._sum.grandTotal?.toNumber() ?? 0,
     recentDocuments: serialize(recentDocuments) as RecentDocument[],
   };
 }
@@ -172,7 +144,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     }
   }
 
-  const [quotations, invoices, pendingDocuments, paidTotal, depositedTotal, yearsData] = await Promise.all([
+  const [quotations, invoices, pendingDocuments, invoiceTotal, yearsData] = await Promise.all([
     safeCount({
       where: { type: DocumentType.QUOTATION, ...excludeDraft, ...yearFilter },
     }),
@@ -182,14 +154,15 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     safeCount({
       where: { status: { in: pendingStatuses }, ...yearFilter },
     }),
+    // Sum grandTotal for INVOICE documents with status PAID or DEPOSITED
     prisma.document.aggregate({
       _sum: { grandTotal: true },
-      where: { status: DocumentStatus.PAID, ...yearFilter },
+      where: {
+        type: DocumentType.INVOICE,
+        status: { in: revenueStatuses },
+        ...yearFilter,
+      },
     }).catch(() => null),
-    getDepositedTotal({
-      gte: startOfYear,
-      lte: endOfYear,
-    }),
     prisma.$queryRaw<{ year: number }[]>`
       SELECT DISTINCT EXTRACT(YEAR FROM document_date)::int AS year
       FROM documents
@@ -209,7 +182,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     quotations,
     invoices,
     pendingDocuments,
-    confirmedTotal: (paidTotal?._sum.grandTotal?.toNumber() ?? 0) + depositedTotal,
+    confirmedTotal: invoiceTotal?._sum.grandTotal?.toNumber() ?? 0,
     availableYears,
   };
 }
@@ -277,15 +250,16 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
-  // Revenue from PAID documents (full grandTotal)
-  async function fetchPaidRevenueData() {
+  // Revenue from INVOICE documents with status PAID or DEPOSITED (full grandTotal)
+  async function fetchInvoiceRevenueData() {
     try {
       return await prisma.$queryRaw<{ month: number; total: number }[]>`
         SELECT
           EXTRACT(MONTH FROM document_date)::int AS month,
           COALESCE(SUM(grand_total), 0)::float8 AS total
         FROM documents
-        WHERE status = 'PAID'
+        WHERE type = 'INVOICE'
+          AND status IN ('PAID', 'DEPOSITED')
           AND EXTRACT(YEAR FROM document_date) = ${year}
         GROUP BY EXTRACT(MONTH FROM document_date)
         ORDER BY month
@@ -295,29 +269,8 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
-  // Revenue from DEPOSITED documents (first payment term only)
-  async function fetchDepositedRevenueData() {
-    try {
-      return await prisma.$queryRaw<{ month: number; total: number }[]>`
-        SELECT
-          EXTRACT(MONTH FROM d.document_date)::int AS month,
-          COALESCE(SUM(pt.calculated_amount), 0)::float8 AS total
-        FROM document_payment_terms pt
-        INNER JOIN documents d ON d.id = pt.document_id
-        WHERE d.status = 'DEPOSITED'
-          AND pt.sequence = 1
-          AND EXTRACT(YEAR FROM d.document_date) = ${year}
-        GROUP BY EXTRACT(MONTH FROM d.document_date)
-        ORDER BY month
-      `;
-    } catch {
-      return [] as { month: number; total: number }[];
-    }
-  }
-
-  const [paidRevenueData, depositedRevenueData, expenseData, yearsData] = await Promise.all([
-    fetchPaidRevenueData(),
-    fetchDepositedRevenueData(),
+  const [revenueData, expenseData, yearsData] = await Promise.all([
+    fetchInvoiceRevenueData(),
     fetchExpenseData(),
     fetchAvailableYears(),
   ]);
@@ -325,10 +278,9 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
   // Build full 12-month array
   const monthlyData: MonthlyRevenueExpenseData[] = Array.from({ length: 12 }, (_, i) => {
     const monthNum = i + 1;
-    const paidRev = paidRevenueData.find((d) => d.month === monthNum);
-    const depositedRev = depositedRevenueData.find((d) => d.month === monthNum);
+    const rev = revenueData.find((d) => d.month === monthNum);
     const exp = expenseData.find((d) => d.month === monthNum);
-    const revenue = (paidRev?.total ?? 0) + (depositedRev?.total ?? 0);
+    const revenue = rev?.total ?? 0;
     const expense = exp ? exp.total : 0;
     return {
       month: monthNum,
