@@ -162,12 +162,16 @@ export async function getVendorCostById(id: string) {
   }
 }
 
-export async function getInvoicesForSelect() {
+export async function getInvoicesForSelect(currentDocumentId?: string) {
   try {
     const documents = await prisma.document.findMany({
       where: {
         type: "INVOICE",
         status: { in: ["DEPOSITED", "PAID"] },
+        OR: [
+          { vendorCosts: { none: {} } },
+          ...(currentDocumentId ? [{ id: currentDocumentId }] : []),
+        ],
       },
       select: {
         id: true,
