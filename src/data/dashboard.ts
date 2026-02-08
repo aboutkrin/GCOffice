@@ -288,22 +288,6 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
-  async function fetchVendorCostData() {
-    try {
-      return await prisma.$queryRaw<{ month: number; total: number }[]>`
-        SELECT
-          EXTRACT(MONTH FROM order_date)::int AS month,
-          COALESCE(SUM(total_cost), 0)::float8 AS total
-        FROM vendor_costs
-        WHERE EXTRACT(YEAR FROM order_date) = ${year}
-        GROUP BY EXTRACT(MONTH FROM order_date)
-        ORDER BY month
-      `;
-    } catch {
-      return [] as { month: number; total: number }[];
-    }
-  }
-
   async function fetchAvailableYears() {
     try {
       const docYears = await prisma.$queryRaw<{ year: number }[]>`
@@ -370,10 +354,9 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
-  const [revenueData, expenseData, vendorCostData, yearsData] = await Promise.all([
+  const [revenueData, expenseData, yearsData] = await Promise.all([
     fetchInvoiceRevenueData(),
     fetchExpenseData(),
-    fetchVendorCostData(),
     fetchAvailableYears(),
   ]);
 
@@ -383,9 +366,8 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     const monthNum = i + 1;
     const rev = revenueData.find((d) => d.month === monthNum);
     const exp = expenseData.find((d) => d.month === monthNum);
-    const vc = vendorCostData.find((d) => d.month === monthNum);
     const revenue = rev?.total ?? 0;
-    const expense = (exp?.total ?? 0) + (vc?.total ?? 0);
+    const expense = exp?.total ?? 0;
     return {
       month: monthNum,
       monthLabel: THAI_MONTHS_SHORT[i],
