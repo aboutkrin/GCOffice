@@ -46,13 +46,14 @@ export async function createVendorCost(data: unknown) {
     });
 
     revalidatePath("/vendor-costs");
-    return serialize(vendorCost);
+    return { success: true as const, data: serialize(vendorCost) };
   } catch (error) {
-    throw new Error(
-      error instanceof Error
+    return {
+      success: false as const,
+      error: error instanceof Error
         ? error.message
-        : "ไม่สามารถบันทึกต้นทุนใบสั่งซื้อได้ กรุณาลองใหม่อีกครั้ง"
-    );
+        : "ไม่สามารถบันทึกต้นทุนใบสั่งซื้อได้ กรุณาลองใหม่อีกครั้ง",
+    };
   }
 }
 
@@ -104,13 +105,14 @@ export async function updateVendorCost(id: string, data: unknown) {
     });
 
     revalidatePath("/vendor-costs");
-    return serialize(vendorCost);
+    return { success: true as const, data: serialize(vendorCost) };
   } catch (error) {
-    throw new Error(
-      error instanceof Error
+    return {
+      success: false as const,
+      error: error instanceof Error
         ? error.message
-        : "ไม่สามารถบันทึกต้นทุนใบสั่งซื้อได้ กรุณาลองใหม่อีกครั้ง"
-    );
+        : "ไม่สามารถบันทึกต้นทุนใบสั่งซื้อได้ กรุณาลองใหม่อีกครั้ง",
+    };
   }
 }
 
