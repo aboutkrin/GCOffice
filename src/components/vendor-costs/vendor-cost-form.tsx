@@ -101,6 +101,38 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
       ];
 
   const [items, setItems] = useState<CostItem[]>(initialItems);
+  const [currentRate, setCurrentRate] = useState<number>(defaultRate);
+
+  // Auto-fetch current CNY→THB exchange rate on mount
+  useEffect(() => {
+    // Skip fetching if editing existing data that already has a rate
+    if (initialData?.exchangeRate) return;
+
+    async function fetchRate() {
+      try {
+        const res = await fetch("/api/exchange-rate");
+        const data = await res.json();
+        if (data.rate && data.rate > 0) {
+          const rate = Math.round(data.rate * 10000) / 10000;
+          setCurrentRate(rate);
+          // Apply fetched rate to all items that don't have a rate yet
+          setItems((prev) =>
+            prev.map((item) => {
+              if (item.unitCostRate > 0) return item;
+              const updated = { ...item, unitCostRate: rate };
+              updated.unitCost = Math.round(updated.unitCostCny * updated.unitCostRate * 100) / 100;
+              updated.lineTotal = Math.round(updated.quantity * updated.unitCost * 100) / 100;
+              return updated;
+            })
+          );
+        }
+      } catch {
+        // Silently fail — user can still enter rate manually
+      }
+    }
+
+    fetchRate();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addItem = useCallback(() => {
     setItems((prev) => [
@@ -112,12 +144,12 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
         productSku: "",
         quantity: 1,
         unitCostCny: 0,
-        unitCostRate: prev[0]?.unitCostRate ?? 0,
+        unitCostRate: currentRate,
         unitCost: 0,
         lineTotal: 0,
       },
     ]);
-  }, []);
+  }, [currentRate]);
 
   const removeItem = useCallback((id: string) => {
     setItems((prev) =>
@@ -193,16 +225,16 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
               productImage: li.productImage ?? undefined,
               quantity: li.quantity,
               unitCostCny: 0,
-              unitCostRate: 0,
-              unitCost: Number(li.unitPrice),
-              lineTotal: Number(li.lineTotal),
+              unitCostRate: currentRate,
+              unitCost: 0,
+              lineTotal: 0,
             })
           );
           setItems(invoiceItems);
         }
       }
     },
-    [invoices, form]
+    [invoices, form, currentRate]
   );
 
   // Keep form's items field in sync with state so validation passes
@@ -478,7 +510,7 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
                     />
                   </div>
                   <div className="col-span-6 md:col-span-2">
-                    <label className="text-sm font-medium text-muted-foreground">เรท (฿/¥)</label>
+                    <label className="text-sm font-medium text-muted-foreground">เรท (¥)</label>
                     <Input
                       type="number"
                       step="0.0001"
