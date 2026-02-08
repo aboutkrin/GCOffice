@@ -264,33 +264,36 @@ export function VendorCostForm({ initialData, invoices }: VendorCostFormProps) {
 
   function onSubmit(values: VendorCostFormData) {
     startTransition(async () => {
-      try {
-        const payload = {
-          ...values,
-          documentId: values.documentId && values.documentId !== "none" ? values.documentId : undefined,
-          items: items.map((item) => ({
-            sequence: item.sequence,
-            productName: item.productName,
-            productSku: item.productSku || undefined,
-            quantity: item.quantity,
-            unitCostCny: item.unitCostCny || undefined,
-            unitCostRate: item.unitCostRate || undefined,
-            unitCost: item.unitCost,
-            lineTotal: item.lineTotal,
-          })),
-        };
+      const payload = {
+        ...values,
+        documentId: values.documentId && values.documentId !== "none" ? values.documentId : undefined,
+        items: items.map((item) => ({
+          sequence: item.sequence,
+          productName: item.productName,
+          productSku: item.productSku || undefined,
+          quantity: item.quantity,
+          unitCostCny: item.unitCostCny || undefined,
+          unitCostRate: item.unitCostRate || undefined,
+          unitCost: item.unitCost,
+          lineTotal: item.lineTotal,
+        })),
+      };
 
-        if (initialData) {
-          await updateVendorCost(initialData.id, payload);
-          toast.success("บันทึกต้นทุนใบสั่งซื้อเรียบร้อยแล้ว");
-        } else {
-          await createVendorCost(payload);
-          toast.success("เพิ่มต้นทุนใบสั่งซื้อเรียบร้อยแล้ว");
-        }
-        router.push("/vendor-costs");
-      } catch (error: any) {
-        toast.error(error?.message ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+      const result = initialData
+        ? await updateVendorCost(initialData.id, payload)
+        : await createVendorCost(payload);
+
+      if (!result.success) {
+        toast.error(result.error);
+        return;
       }
+
+      toast.success(
+        initialData
+          ? "บันทึกต้นทุนใบสั่งซื้อเรียบร้อยแล้ว"
+          : "เพิ่มต้นทุนใบสั่งซื้อเรียบร้อยแล้ว"
+      );
+      router.push("/vendor-costs");
     });
   }
 
