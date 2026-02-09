@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { ProductPicker } from "./product-picker";
 import { formatNumber } from "@/lib/thai-currency";
 import type { LineItem } from "@/hooks/use-line-items";
@@ -91,6 +92,17 @@ export function LineItemTable({
                     <p className="text-xs text-muted-foreground mt-1">
                       SKU: {item.productSku}
                     </p>
+                  )}
+                  {item.productImage && (
+                    <div className="mt-2">
+                      <Image
+                        src={item.productImage}
+                        alt={item.productName}
+                        width={80}
+                        height={80}
+                        className="rounded border object-cover"
+                      />
+                    </div>
                   )}
                 </TableCell>
                 <TableCell>
@@ -196,6 +208,17 @@ export function LineItemTable({
                 <p className="text-xs text-muted-foreground">
                   SKU: {item.productSku}
                 </p>
+              )}
+              {item.productImage && (
+                <div className="mt-2">
+                  <Image
+                    src={item.productImage}
+                    alt={item.productName}
+                    width={80}
+                    height={80}
+                    className="rounded border object-cover"
+                  />
+                </div>
               )}
             </div>
 
