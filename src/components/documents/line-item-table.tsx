@@ -70,50 +70,49 @@ export function LineItemTable({
               </TableRow>
             )}
             {items.map((item) => (
-              <TableRow key={item.id}>
+              <TableRow key={item.id} className="align-middle">
                 <TableCell className="text-center font-medium">
                   {item.sequence}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Input
-                      value={item.productName}
-                      onChange={(e) =>
-                        updateItem(item.id, { productName: e.target.value })
-                      }
-                      placeholder="ชื่อสินค้า"
-                      className="h-9"
-                    />
-                    <ProductPicker
-                      onSelect={(product) => setFromProduct(item.id, product)}
-                    />
-                  </div>
-                  {item.productSku && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      SKU: {item.productSku}
-                    </p>
-                  )}
-                  {item.productImage && (
-                    <div className="mt-2">
+                    {item.productImage && (
                       <Image
                         src={item.productImage}
                         alt={item.productName}
-                        width={80}
-                        height={80}
-                        className="rounded border object-cover"
+                        width={40}
+                        height={40}
+                        className="rounded border object-cover shrink-0"
+                      />
+                    )}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Input
+                        value={item.productName}
+                        onChange={(e) =>
+                          updateItem(item.id, { productName: e.target.value })
+                        }
+                        placeholder="ชื่อสินค้า"
+                        className="h-9"
+                      />
+                      <ProductPicker
+                        onSelect={(product) => setFromProduct(item.id, product)}
                       />
                     </div>
+                  </div>
+                  {item.productSku && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      SKU: {item.productSku}
+                    </p>
                   )}
                 </TableCell>
                 <TableCell>
-                  <Textarea
+                  <Input
                     value={item.details || ""}
                     onChange={(e) =>
                       updateItem(item.id, { details: e.target.value })
                     }
                     placeholder="รายละเอียดเพิ่มเติม"
-                    rows={2}
-                    className="min-h-[60px] text-sm"
+                    className="h-9 text-sm"
                   />
                 </TableCell>
                 <TableCell>
@@ -146,7 +145,7 @@ export function LineItemTable({
                     className="h-9 text-right"
                   />
                 </TableCell>
-                <TableCell className="text-right font-medium">
+                <TableCell className="text-right font-medium whitespace-nowrap">
                   {formatNumber(item.lineTotal)}
                 </TableCell>
                 <TableCell>
