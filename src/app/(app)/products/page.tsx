@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Tags } from "lucide-react";
+import { Plus, Tags, FileText } from "lucide-react";
 
 import { Status } from "@/generated/prisma/client";
 import { getProducts, getProductCategories } from "@/data/products";
@@ -52,6 +52,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
             <Link href="/categories">
               <Tags className="size-4" />
               หมวดหมู่
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link
+              href={`/products/summary${
+                params.categoryId ? `?categoryId=${params.categoryId}` : ""
+              }`}
+            >
+              <FileText className="size-4" />
+              ใบสรุปรายการ
             </Link>
           </Button>
           <Button asChild>

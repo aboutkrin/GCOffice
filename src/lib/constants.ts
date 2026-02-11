@@ -43,6 +43,7 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   QUOTATION: "ใบเสนอราคา",
   INVOICE: "ใบแจ้งหนี้",
   RECEIPT: "ใบเสร็จรับเงิน",
+  PRODUCT_SUMMARY: "ใบสรุปรายการสินค้า",
 };
 
 export const STATUS_LABELS: Record<string, string> = {

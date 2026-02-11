@@ -104,6 +104,37 @@ export async function searchProducts(query: string, categoryId?: string) {
   }
 }
 
+export async function getProductsForSummary(params?: {
+  search?: string;
+  categoryId?: string;
+}) {
+  const where: any = {
+    status: "ACTIVE",
+  };
+
+  if (params?.categoryId) {
+    where.categoryId = params.categoryId;
+  }
+
+  if (params?.search) {
+    where.OR = [
+      { name: { contains: params.search, mode: "insensitive" } },
+      { sku: { contains: params.search, mode: "insensitive" } },
+    ];
+  }
+
+  try {
+    const data = await prisma.product.findMany({
+      where,
+      include: { category: true },
+      orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
+    });
+    return serialize(data);
+  } catch {
+    return [];
+  }
+}
+
 export interface ProductForCost {
   id: string;
   sku: string;
