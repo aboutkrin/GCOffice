@@ -36,13 +36,13 @@ export default async function DashboardPage() {
       title: "ใบเสนอราคาเดือนนี้",
       value: stats.thisMonthQuotations.toLocaleString(),
       icon: FileText,
-      href: `/quotations?${monthParams}`,
+      href: `/quotations?${monthParams}&excludeStatus=DRAFT`,
     },
     {
       title: "รอดำเนินการเดือนนี้",
       value: stats.thisMonthPendingDocuments.toLocaleString(),
       icon: Clock,
-      href: `/quotations?${monthParams}&status=QUOTED`,
+      href: `/quotations?${monthParams}&status=QUOTED,BILLED`,
     },
     {
       title: "รอเรียกเก็บเดือนนี้",

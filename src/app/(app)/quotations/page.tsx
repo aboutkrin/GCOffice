@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function QuotationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string; month?: string; status?: string }>;
+  searchParams: Promise<{ year?: string; month?: string; status?: string; excludeStatus?: string }>;
 }) {
   const params = await searchParams;
   const now = new Date();
@@ -24,11 +24,16 @@ export default async function QuotationsPage({
     ? params.status.split(",").filter((s): s is DocumentStatus => s in DocumentStatus)
     : undefined;
 
+  const excludeStatusFilter = params.excludeStatus
+    ? params.excludeStatus.split(",").filter((s): s is DocumentStatus => s in DocumentStatus)
+    : undefined;
+
   const documents = await getDocuments({
     type: "QUOTATION",
     year,
     month,
     status: statusFilter && statusFilter.length === 1 ? statusFilter[0] : statusFilter,
+    excludeStatus: excludeStatusFilter && excludeStatusFilter.length === 1 ? excludeStatusFilter[0] : excludeStatusFilter,
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeDocuments = documents.filter((doc: any) => doc.status !== "CANCELLED");
@@ -51,7 +56,7 @@ export default async function QuotationsPage({
 
       <div className="mb-4 flex items-center justify-between gap-4">
         <MonthPicker basePath="/quotations" year={year} month={month} />
-        <StatusFilter basePath="/quotations" statuses={statusFilter || []} />
+        <StatusFilter basePath="/quotations" statuses={statusFilter || []} excludeStatuses={excludeStatusFilter || []} />
       </div>
 
       <DocumentPageTabs
