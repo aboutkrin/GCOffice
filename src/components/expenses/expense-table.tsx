@@ -10,7 +10,7 @@ import {
   flexRender,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Trash2, Search } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Search, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 import { deleteExpense } from "@/actions/expense-actions";
@@ -216,15 +216,25 @@ export function ExpenseTable({
   return (
     <div className="space-y-4">
       {/* Summary card */}
-      <div className="rounded-lg border bg-card p-4">
-        <div className="text-sm text-muted-foreground">
-          ยอดรวมค่าใช้จ่าย
-          {currentMonth ? ` ${THAI_MONTHS[currentMonth - 1]}` : ""} พ.ศ.{" "}
-          {buddhistYear}
+      <div className="rounded-lg border bg-card p-4 flex items-center justify-between">
+        <div>
+          <div className="text-sm text-muted-foreground">
+            ยอดรวมค่าใช้จ่าย
+            {currentMonth ? ` ${THAI_MONTHS[currentMonth - 1]}` : ""} พ.ศ.{" "}
+            {buddhistYear}
+          </div>
+          <div className="text-2xl font-bold text-green-600">
+            {formatBaht(totalAmount)}
+          </div>
         </div>
-        <div className="text-2xl font-bold text-green-600">
-          {formatBaht(totalAmount)}
-        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link
+            href={`/expenses/summary?${searchParams.toString()}`}
+          >
+            <FileText className="size-4" />
+            ดูใบสรุป
+          </Link>
+        </Button>
       </div>
 
       {/* Filters */}
