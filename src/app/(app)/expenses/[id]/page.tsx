@@ -66,7 +66,7 @@ export default async function ExpenseDetailPage({ params }: ExpenseDetailPagePro
           <div className="rounded-lg bg-muted/50 p-6 text-center">
             <div className="text-sm text-muted-foreground mb-1">จำนวนเงิน</div>
             <div className="text-3xl font-bold text-green-600">
-              {formatBaht(expense.amount)}
+              {formatBaht(Number(expense.amount))}
             </div>
           </div>
 

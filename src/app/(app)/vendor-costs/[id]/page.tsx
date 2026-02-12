@@ -100,7 +100,7 @@ export default async function VendorCostDetailPage({
               ยอดต้นทุนรวม
             </div>
             <div className="text-3xl font-bold text-green-600">
-              {formatBaht(vendorCost.totalCost)}
+              {formatBaht(Number(vendorCost.totalCost))}
             </div>
           </div>
 
@@ -112,14 +112,14 @@ export default async function VendorCostDetailPage({
             <div className="rounded-lg border p-3">
               <div className="text-muted-foreground">ค่าขนส่ง</div>
               <div className="font-medium text-lg">
-                {formatBaht(vendorCost.shippingCost)}
+                {formatBaht(Number(vendorCost.shippingCost))}
               </div>
             </div>
             {Number(vendorCost.otherCost) > 0 && (
               <div className="rounded-lg border p-3">
                 <div className="text-muted-foreground">ค่าใช้จ่ายอื่น</div>
                 <div className="font-medium text-lg">
-                  {formatBaht(vendorCost.otherCost)}
+                  {formatBaht(Number(vendorCost.otherCost))}
                 </div>
               </div>
             )}
@@ -293,10 +293,10 @@ export default async function VendorCostDetailPage({
                         </TableCell>
                       )}
                       <TableCell className="text-right">
-                        {formatBaht(item.unitCost)}
+                        {formatBaht(Number(item.unitCost))}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {formatBaht(item.lineTotal)}
+                        {formatBaht(Number(item.lineTotal))}
                       </TableCell>
                     </TableRow>
                   ))}
