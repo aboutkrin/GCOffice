@@ -36,6 +36,13 @@ export async function getDocuments(params?: {
       gte: startDate,
       lt: endDate,
     };
+  } else if (params?.year) {
+    const startDate = new Date(Date.UTC(params.year, 0, 1));
+    const endDate = new Date(Date.UTC(params.year + 1, 0, 1));
+    where.documentDate = {
+      gte: startDate,
+      lt: endDate,
+    };
   }
 
   try {

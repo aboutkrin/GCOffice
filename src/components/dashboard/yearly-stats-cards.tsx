@@ -44,25 +44,25 @@ export function YearlyStatsCards({ initialData }: YearlyStatsCardsProps) {
       title: "รอดำเนินการ",
       value: data.pendingDocuments.toLocaleString(),
       icon: Clock,
-      href: `/quotations?${yearParam}`,
+      href: `/quotations?${yearParam}&status=QUOTED`,
     },
     {
       title: "รอเรียกเก็บ",
       value: data.pendingCollection.toLocaleString(),
       icon: CircleDollarSign,
-      href: `/invoices?${yearParam}`,
+      href: `/invoices?${yearParam}&status=DEPOSITED`,
     },
     {
       title: "ใบแจ้งหนี้",
       value: data.invoices.toLocaleString(),
       icon: Receipt,
-      href: `/invoices?${yearParam}`,
+      href: `/invoices?${yearParam}&status=PAID`,
     },
     {
       title: "ยอดรวม",
       value: formatBaht(data.confirmedTotal),
       icon: Banknote,
-      href: `/invoices?${yearParam}`,
+      href: `/invoices?${yearParam}&status=PAID,DEPOSITED`,
     },
   ];
 
