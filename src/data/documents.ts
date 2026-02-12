@@ -59,6 +59,7 @@ export async function getConfirmedQuotations(params?: { year?: number; month?: n
     const where: any = {
       type: "QUOTATION",
       status: "CONFIRMED",
+      invoices: { none: {} },
     };
     if (params?.year && params?.month) {
       const startDate = new Date(Date.UTC(params.year, params.month - 1, 1));
