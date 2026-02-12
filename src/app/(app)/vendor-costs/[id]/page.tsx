@@ -48,7 +48,7 @@ export default async function VendorCostDetailPage({
   }
 
   const itemsTotal = (vendorCost.items ?? []).reduce(
-    (sum: number, item: { lineTotal: number | string }) => sum + Number(item.lineTotal),
+    (sum, item) => sum + Number(item.lineTotal),
     0
   );
 
