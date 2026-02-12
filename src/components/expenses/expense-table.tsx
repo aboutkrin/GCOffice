@@ -163,7 +163,7 @@ export function ExpenseTable({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <Link href={`/expenses/${row.original.id}`}>
+              <Link href={`/expenses/${row.original.id}/edit`}>
                 <Pencil className="size-4" />
                 แก้ไข
               </Link>
@@ -332,15 +332,22 @@ export function ExpenseTable({
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/expenses/${row.original.id}`)}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
                       className={
                         cell.column.id === "category.name" || cell.column.id === "paymentMethod"
                           ? "hidden md:table-cell"
-                          : ""
+                          : cell.column.id === "actions"
+                            ? ""
+                            : ""
                       }
+                      onClick={cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
