@@ -185,7 +185,7 @@ export function VendorCostTable({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <Link href={`/vendor-costs/${row.original.id}`}>
+              <Link href={`/vendor-costs/${row.original.id}/edit`}>
                 <Pencil className="size-4" />
                 แก้ไข
               </Link>
@@ -345,7 +345,11 @@ export function VendorCostTable({
           <TableBody>
             {table.getRowModel().rows.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer"
+                  onClick={() => router.push(`/vendor-costs/${row.original.id}`)}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
@@ -355,6 +359,7 @@ export function VendorCostTable({
                           ? "hidden md:table-cell"
                           : ""
                       }
+                      onClick={cell.column.id === "actions" ? (e) => e.stopPropagation() : undefined}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
