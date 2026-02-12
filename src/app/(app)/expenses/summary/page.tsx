@@ -66,7 +66,7 @@ export default async function ExpenseSummaryRoute({
   return (
     <ExpenseSummaryPage
       data={{
-        expenses,
+        expenses: expenses as any,
         totalAmount,
         periodLabel,
         company: company

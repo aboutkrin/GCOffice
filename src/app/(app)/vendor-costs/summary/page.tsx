@@ -63,7 +63,7 @@ export default async function VendorCostSummaryRoute({
   return (
     <VendorCostSummaryPage
       data={{
-        vendorCosts,
+        vendorCosts: vendorCosts as any,
         totalCost,
         periodLabel,
         company: company
