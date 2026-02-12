@@ -18,7 +18,7 @@ export default async function QuotationsPage({
   const params = await searchParams;
   const now = new Date();
   const year = params.year ? parseInt(params.year) : now.getFullYear();
-  const month = params.month ? parseInt(params.month) : now.getMonth() + 1;
+  const month = params.month ? parseInt(params.month) : (params.year ? undefined : now.getMonth() + 1);
 
   const statusFilter = params.status
     ? params.status.split(",").filter((s): s is DocumentStatus => s in DocumentStatus)
@@ -41,7 +41,7 @@ export default async function QuotationsPage({
         title="ใบเสนอราคา"
         description="จัดการใบเสนอราคาทั้งหมด"
       >
-        <Link href={`/quotations/new?year=${year}&month=${month}`}>
+        <Link href={`/quotations/new?year=${year}${month ? `&month=${month}` : ''}`}>
           <Button>
             <Plus className="h-4 w-4 mr-2" />
             สร้างใบเสนอราคา
