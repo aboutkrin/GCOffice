@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { FileText, Receipt, Clock, Banknote, CircleDollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,38 +22,45 @@ import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const currentYear = getThaiNow().year;
+  const { year: currentYear, month: currentMonth } = getThaiNow();
   const [stats, yearlyStats, revenueExpense] = await Promise.all([
     getDashboardStats(),
     getYearlyStats(currentYear),
     getMonthlyRevenueAndCost(currentYear),
   ]);
 
+  const monthParams = `year=${currentYear}&month=${currentMonth}`;
+
   const thisMonthCards = [
     {
       title: "ใบเสนอราคาเดือนนี้",
       value: stats.thisMonthQuotations.toLocaleString(),
       icon: FileText,
+      href: `/quotations?${monthParams}`,
     },
     {
       title: "รอดำเนินการเดือนนี้",
       value: stats.thisMonthPendingDocuments.toLocaleString(),
       icon: Clock,
+      href: `/quotations?${monthParams}`,
     },
     {
       title: "รอเรียกเก็บเดือนนี้",
       value: stats.thisMonthPendingCollection.toLocaleString(),
       icon: CircleDollarSign,
+      href: `/invoices?${monthParams}`,
     },
     {
       title: "ใบแจ้งหนี้เดือนนี้",
       value: stats.thisMonthInvoices.toLocaleString(),
       icon: Receipt,
+      href: `/invoices?${monthParams}`,
     },
     {
       title: "ยอดรวมเดือนนี้",
       value: formatBaht(stats.thisMonthConfirmedTotal),
       icon: Banknote,
+      href: `/invoices?${monthParams}`,
     },
   ];
 
@@ -68,17 +76,19 @@ export default async function DashboardPage() {
         <h2 className="text-lg font-semibold mb-4">เดือนนี้</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           {thisMonthCards.map((card) => (
-            <Card key={card.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {card.title}
-                </CardTitle>
-                <card.icon className="h-5 w-5 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{card.value}</p>
-              </CardContent>
-            </Card>
+            <Link key={card.title} href={card.href}>
+              <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {card.title}
+                  </CardTitle>
+                  <card.icon className="h-5 w-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <p className="text-2xl font-bold">{card.value}</p>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>
