@@ -38,10 +38,10 @@ interface VendorCostEntry {
 
 interface CompanyData {
   name: string;
-  address?: string;
-  logoUrl?: string;
-  phone?: string;
-  email?: string;
+  address?: string | null;
+  logoUrl?: string | null;
+  phone?: string | null;
+  email?: string | null;
 }
 
 export interface VendorCostSummaryData {
