@@ -4,14 +4,20 @@ import { serialize } from "@/lib/utils";
 
 export async function getDocuments(params?: {
   type?: DocumentType;
-  status?: DocumentStatus;
+  status?: DocumentStatus | DocumentStatus[];
   search?: string;
   year?: number;
   month?: number;
 }) {
   const where: any = {};
   if (params?.type) where.type = params.type;
-  if (params?.status) where.status = params.status;
+  if (params?.status) {
+    if (Array.isArray(params.status)) {
+      where.status = { in: params.status };
+    } else {
+      where.status = params.status;
+    }
+  }
   if (params?.search) {
     where.OR = [
       { documentNumber: { contains: params.search, mode: "insensitive" } },

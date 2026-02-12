@@ -42,25 +42,25 @@ export default async function DashboardPage() {
       title: "รอดำเนินการเดือนนี้",
       value: stats.thisMonthPendingDocuments.toLocaleString(),
       icon: Clock,
-      href: `/quotations?${monthParams}`,
+      href: `/quotations?${monthParams}&status=QUOTED`,
     },
     {
       title: "รอเรียกเก็บเดือนนี้",
       value: stats.thisMonthPendingCollection.toLocaleString(),
       icon: CircleDollarSign,
-      href: `/invoices?${monthParams}`,
+      href: `/invoices?${monthParams}&status=DEPOSITED`,
     },
     {
       title: "ใบแจ้งหนี้เดือนนี้",
       value: stats.thisMonthInvoices.toLocaleString(),
       icon: Receipt,
-      href: `/invoices?${monthParams}`,
+      href: `/invoices?${monthParams}&status=PAID`,
     },
     {
       title: "ยอดรวมเดือนนี้",
       value: formatBaht(stats.thisMonthConfirmedTotal),
       icon: Banknote,
-      href: `/invoices?${monthParams}`,
+      href: `/invoices?${monthParams}&status=PAID,DEPOSITED`,
     },
   ];
 
