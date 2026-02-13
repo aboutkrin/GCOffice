@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { CustomerSelect } from "@/components/customers/customer-select";
 
 interface PrintOrderFormProps {
@@ -15,11 +16,13 @@ interface PrintOrderFormProps {
 }
 
 interface ShopInfo {
-  name: string;
   address: string;
   logoUrl: string;
   phone: string;
   lineOa: string;
+  instagram: string;
+  facebook: string;
+  tiktok: string;
 }
 
 interface CustomerInfo {
@@ -63,12 +66,10 @@ function OrderSlipContent({
           padding: "0 4mm",
         }}
       >
-        {/* Logo */}
-        {shop.logoUrl ? (
+        {/* Logo — sized to match address block height */}
+        {shop.logoUrl && (
           <div
             style={{
-              width: "60px",
-              height: "60px",
               flexShrink: 0,
               overflow: "hidden",
               borderRadius: "6px",
@@ -77,52 +78,26 @@ function OrderSlipContent({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={shop.logoUrl}
-              alt={shop.name}
+              alt="โลโก้ร้าน"
               style={{
-                width: "100%",
-                height: "100%",
+                height: "auto",
+                maxHeight: "80px",
+                width: "auto",
+                maxWidth: "120px",
                 objectFit: "contain",
               }}
               crossOrigin="anonymous"
             />
           </div>
-        ) : (
-          <div
-            style={{
-              width: "60px",
-              height: "60px",
-              flexShrink: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: `${THEME_COLOR}15`,
-              borderRadius: "6px",
-            }}
-          >
-            <svg viewBox="0 0 24 24" width="36" height="36" fill={THEME_COLOR}>
-              <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z" />
-            </svg>
-          </div>
         )}
 
-        {/* Shop Name + Address */}
+        {/* Address */}
         <div style={{ lineHeight: 1.6 }}>
-          <div
-            style={{
-              fontSize: "22px",
-              fontWeight: 700,
-              color: THEME_COLOR,
-              lineHeight: 1.2,
-            }}
-          >
-            {shop.name || "ชื่อร้าน"}
-          </div>
           {shop.address && (
             <div
               style={{
                 fontSize: "13px",
                 whiteSpace: "pre-wrap",
-                marginTop: "2mm",
                 lineHeight: 1.7,
               }}
             >
@@ -225,7 +200,7 @@ function OrderSlipContent({
       </div>
 
       {/* Footer */}
-      {(shop.phone || shop.lineOa) && (
+      {(shop.phone || shop.lineOa || shop.instagram || shop.facebook || shop.tiktok) && (
         <div
           style={{
             background: THEME_COLOR,
@@ -252,13 +227,41 @@ function OrderSlipContent({
               fontSize: "12px",
               display: "flex",
               justifyContent: "center",
+              alignItems: "center",
               gap: "16px",
               flexWrap: "wrap",
             }}
           >
-            {shop.phone && <span>{shop.phone}</span>}
-            {shop.phone && shop.lineOa && <span>|</span>}
-            {shop.lineOa && <span>{shop.lineOa}</span>}
+            {shop.phone && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                {shop.phone}
+              </span>
+            )}
+            {shop.lineOa && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>
+                {shop.lineOa}
+              </span>
+            )}
+            {shop.instagram && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+                {shop.instagram}
+              </span>
+            )}
+            {shop.facebook && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                {shop.facebook}
+              </span>
+            )}
+            {shop.tiktok && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1 0-5.78 2.92 2.92 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.57 6.33 6.33 0 0 0 9.37 22a6.33 6.33 0 0 0 6.37-6.23V9.06a8.16 8.16 0 0 0 3.85.92V6.69Z"/></svg>
+                {shop.tiktok}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -275,20 +278,34 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       .replace(/"/g, "&quot;");
 
   const logoHtml = shop.logoUrl
-    ? `<img src="${escape(shop.logoUrl)}" alt="${escape(shop.name)}" style="width:60px;height:60px;object-fit:contain;border-radius:6px;" crossorigin="anonymous" />`
-    : `<svg viewBox="0 0 24 24" width="36" height="36" fill="${THEME_COLOR}"><path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z"/></svg>`;
+    ? `<img src="${escape(shop.logoUrl)}" alt="โลโก้ร้าน" style="height:auto;max-height:80px;width:auto;max-width:120px;object-fit:contain;border-radius:6px;" crossorigin="anonymous" />`
+    : "";
 
-  const footerHtml =
-    shop.phone || shop.lineOa
-      ? `<div class="footer">
+  const contactItems: string[] = [];
+  if (shop.phone) {
+    contactItems.push(`<span class="contact-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>${escape(shop.phone)}</span>`);
+  }
+  if (shop.lineOa) {
+    contactItems.push(`<span class="contact-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63H17.61v1.125h1.755c.349 0 .63.283.63.63 0 .344-.281.629-.63.629h-2.386c-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63h2.386c.346 0 .627.285.627.63 0 .349-.281.63-.63.63H17.61v1.125h1.755zm-3.855 3.016c0 .27-.174.51-.432.596-.064.021-.133.031-.199.031-.211 0-.391-.09-.51-.25l-2.443-3.317v2.94c0 .344-.279.629-.631.629-.346 0-.626-.285-.626-.629V8.108c0-.27.173-.51.43-.595.06-.023.136-.033.194-.033.195 0 .375.104.495.254l2.462 3.33V8.108c0-.345.282-.63.63-.63.345 0 .63.285.63.63v4.771zm-5.741 0c0 .344-.282.629-.631.629-.345 0-.627-.285-.627-.629V8.108c0-.345.282-.63.63-.63.346 0 .628.285.628.63v4.771zm-2.466.629H4.917c-.345 0-.63-.285-.63-.629V8.108c0-.345.285-.63.63-.63.348 0 .63.285.63.63v4.141h1.756c.348 0 .629.283.629.63 0 .344-.282.629-.629.629M24 10.314C24 4.943 18.615.572 12 .572S0 4.943 0 10.314c0 4.811 4.27 8.842 10.035 9.608.391.082.923.258 1.058.59.12.301.079.766.038 1.08l-.164 1.02c-.045.301-.24 1.186 1.049.645 1.291-.539 6.916-4.078 9.436-6.975C23.176 14.393 24 12.458 24 10.314"/></svg>${escape(shop.lineOa)}</span>`);
+  }
+  if (shop.instagram) {
+    contactItems.push(`<span class="contact-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>${escape(shop.instagram)}</span>`);
+  }
+  if (shop.facebook) {
+    contactItems.push(`<span class="contact-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>${escape(shop.facebook)}</span>`);
+  }
+  if (shop.tiktok) {
+    contactItems.push(`<span class="contact-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1 0-5.78 2.92 2.92 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.57 6.33 6.33 0 0 0 9.37 22a6.33 6.33 0 0 0 6.37-6.23V9.06a8.16 8.16 0 0 0 3.85.92V6.69Z"/></svg>${escape(shop.tiktok)}</span>`);
+  }
+
+  const footerHtml = contactItems.length > 0
+    ? `<div class="footer">
       <div class="footer-title">CONTACT US</div>
       <div class="footer-contacts">
-        ${shop.phone ? `<span>${escape(shop.phone)}</span>` : ""}
-        ${shop.phone && shop.lineOa ? `<span>|</span>` : ""}
-        ${shop.lineOa ? `<span>${escape(shop.lineOa)}</span>` : ""}
+        ${contactItems.join("\n        ")}
       </div>
     </div>`
-      : "";
+    : "";
 
   return `<!DOCTYPE html>
 <html lang="th">
@@ -325,29 +342,15 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       padding: 0 4mm;
     }
     .logo-img {
-      width: 60px;
-      height: 60px;
+      height: auto;
+      max-height: 80px;
+      width: auto;
+      max-width: 120px;
       object-fit: contain;
       border-radius: 6px;
       flex-shrink: 0;
     }
-    .logo-placeholder {
-      width: 60px;
-      height: 60px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: ${THEME_COLOR}15;
-      border-radius: 6px;
-    }
     .shop-info { line-height: 1.6; }
-    .shop-name {
-      font-size: 22px;
-      font-weight: 700;
-      color: ${THEME_COLOR};
-      line-height: 1.2;
-    }
     .shop-address {
       font-size: 13px;
       white-space: pre-wrap;
@@ -417,8 +420,17 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       font-size: 12px;
       display: flex;
       justify-content: center;
+      align-items: center;
       gap: 16px;
       flex-wrap: wrap;
+    }
+    .contact-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .contact-item svg {
+      flex-shrink: 0;
     }
     @media print {
       body { background: #fff; }
@@ -429,9 +441,8 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
 <body>
   <div class="page">
     <div class="header">
-      ${shop.logoUrl ? `<img class="logo-img" src="${escape(shop.logoUrl)}" alt="${escape(shop.name)}" crossorigin="anonymous" />` : `<div class="logo-placeholder">${logoHtml}</div>`}
+      ${logoHtml ? `${logoHtml}` : ""}
       <div class="shop-info">
-        <div class="shop-name">${escape(shop.name)}</div>
         ${shop.address ? `<div class="shop-address">${escape(shop.address)}</div>` : ""}
         ${shop.phone ? `<div class="shop-phone">Tel: ${escape(shop.phone)}</div>` : ""}
       </div>
@@ -454,24 +465,26 @@ const SHOP_INFO_STORAGE_KEY = "print-order-shop-info";
 
 function loadShopInfo(): ShopInfo {
   if (typeof window === "undefined") {
-    return { name: "", address: "", logoUrl: "", phone: "", lineOa: "" };
+    return { address: "", logoUrl: "", phone: "", lineOa: "", instagram: "", facebook: "", tiktok: "" };
   }
   try {
     const saved = localStorage.getItem(SHOP_INFO_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
-        name: parsed.name ?? "",
         address: parsed.address ?? "",
         logoUrl: parsed.logoUrl ?? "",
         phone: parsed.phone ?? "",
         lineOa: parsed.lineOa ?? "",
+        instagram: parsed.instagram ?? "",
+        facebook: parsed.facebook ?? "",
+        tiktok: parsed.tiktok ?? "",
       };
     }
   } catch {
     // ignore
   }
-  return { name: "", address: "", logoUrl: "", phone: "", lineOa: "" };
+  return { address: "", logoUrl: "", phone: "", lineOa: "", instagram: "", facebook: "", tiktok: "" };
 }
 
 export function PrintOrderForm({ customers }: PrintOrderFormProps) {
@@ -584,40 +597,17 @@ export function PrintOrderForm({ customers }: PrintOrderFormProps) {
             บันทึกข้อมูลร้าน
           </Button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label>ชื่อร้าน</Label>
-            <Input
-              placeholder="ชื่อร้าน"
-              value={shopInfo.name}
-              onChange={(e) => handleShopFieldChange("name", e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>เบอร์โทรศัพท์</Label>
-            <Input
-              placeholder="เบอร์โทรศัพท์"
-              value={shopInfo.phone}
-              onChange={(e) => handleShopFieldChange("phone", e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>Line OA</Label>
-            <Input
-              placeholder="Line OA"
-              value={shopInfo.lineOa}
-              onChange={(e) => handleShopFieldChange("lineOa", e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label>URL โลโก้</Label>
-            <Input
-              placeholder="https://..."
+            <Label>โลโก้ร้าน</Label>
+            <ImageUpload
               value={shopInfo.logoUrl}
-              onChange={(e) => handleShopFieldChange("logoUrl", e.target.value)}
+              onChange={(url) => handleShopFieldChange("logoUrl", url)}
+              bucket="company-logos"
+              folder="shop-logos"
             />
           </div>
-          <div className="space-y-2 sm:col-span-2">
+          <div className="space-y-2">
             <Label>ที่อยู่ร้าน</Label>
             <Textarea
               placeholder="ที่อยู่ร้าน"
@@ -625,6 +615,48 @@ export function PrintOrderForm({ customers }: PrintOrderFormProps) {
               onChange={(e) => handleShopFieldChange("address", e.target.value)}
               rows={3}
             />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>เบอร์โทรศัพท์</Label>
+              <Input
+                placeholder="0xx-xxx-xxxx"
+                value={shopInfo.phone}
+                onChange={(e) => handleShopFieldChange("phone", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>LINE OA</Label>
+              <Input
+                placeholder="@line-oa"
+                value={shopInfo.lineOa}
+                onChange={(e) => handleShopFieldChange("lineOa", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Instagram</Label>
+              <Input
+                placeholder="@instagram"
+                value={shopInfo.instagram}
+                onChange={(e) => handleShopFieldChange("instagram", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Facebook</Label>
+              <Input
+                placeholder="Facebook page"
+                value={shopInfo.facebook}
+                onChange={(e) => handleShopFieldChange("facebook", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>TikTok</Label>
+              <Input
+                placeholder="@tiktok"
+                value={shopInfo.tiktok}
+                onChange={(e) => handleShopFieldChange("tiktok", e.target.value)}
+              />
+            </div>
           </div>
         </div>
       </div>
