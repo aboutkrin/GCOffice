@@ -20,6 +20,7 @@ import {
   ShoppingCart,
   User,
   ReceiptText,
+  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/actions/auth-actions";
@@ -77,6 +78,11 @@ const mainNavItems = [
     href: "/customers",
     label: "ลูกค้า",
     icon: Users,
+  },
+  {
+    href: "/print-order",
+    label: "พิมพ์ใบสั่งของ",
+    icon: Printer,
   },
 ];
 
