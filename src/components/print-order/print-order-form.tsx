@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Printer, FileDown, Loader2, Save } from "lucide-react";
+import { Printer, FileDown, ImageIcon, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -581,6 +581,40 @@ export function PrintOrderForm({ customers }: PrintOrderFormProps) {
     }
   };
 
+  const handleExportJpg = async () => {
+    if (!customerInfo) {
+      toast.error("กรุณาเลือกลูกค้าก่อนส่งออกรูปภาพ");
+      return;
+    }
+
+    const el = previewRef.current;
+    if (!el) return;
+
+    setIsExporting(true);
+    try {
+      const origWidth = el.style.width;
+      const origMaxWidth = el.style.maxWidth;
+      const origTransform = el.style.transform;
+      el.style.width = "297mm";
+      el.style.maxWidth = "none";
+      el.style.transform = "none";
+      await new Promise((r) => setTimeout(r, 100));
+
+      const { exportToJpg } = await import("@/lib/export-jpg");
+      await exportToJpg(el, `ใบสั่งของ-${customerInfo.customerName}`);
+      toast.success("สร้างรูปภาพสำเร็จ");
+
+      el.style.width = origWidth;
+      el.style.maxWidth = origMaxWidth;
+      el.style.transform = origTransform;
+    } catch (error) {
+      console.error("JPG export failed:", error);
+      toast.error("ไม่สามารถสร้างรูปภาพได้");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Shop info — manual input */}
@@ -684,6 +718,18 @@ export function PrintOrderForm({ customers }: PrintOrderFormProps) {
             <FileDown className="size-4" />
           )}
           PDF
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleExportJpg}
+          disabled={isExporting || !customerInfo}
+        >
+          {isExporting ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <ImageIcon className="size-4" />
+          )}
+          JPG
         </Button>
         <Button onClick={handlePrint} disabled={!customerInfo}>
           <Printer className="size-4" />
