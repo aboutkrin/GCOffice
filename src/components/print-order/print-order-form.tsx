@@ -96,7 +96,7 @@ function OrderSlipContent({
           {shop.address && (
             <div
               style={{
-                fontSize: "13px",
+                fontSize: "11px",
                 whiteSpace: "pre-wrap",
                 lineHeight: 1.7,
               }}
@@ -105,7 +105,7 @@ function OrderSlipContent({
             </div>
           )}
           {shop.phone && (
-            <div style={{ fontSize: "13px", fontWeight: 600, marginTop: "1mm" }}>
+            <div style={{ fontSize: "11px", fontWeight: 600, marginTop: "1mm" }}>
               Tel: {shop.phone}
             </div>
           )}
@@ -122,7 +122,7 @@ function OrderSlipContent({
           overflow: "hidden",
           display: "flex",
           flexDirection: "column",
-          margin: "0 4mm",
+          margin: "auto 4mm",
           background: THEME_COLOR_LIGHT,
         }}
       >
@@ -152,7 +152,7 @@ function OrderSlipContent({
                 overflowWrap: "break-word",
               }}
             >
-              คุณ {customer.customerName}
+              {customer.customerName}
             </div>
 
             {/* Customer Address */}
@@ -250,16 +250,16 @@ function OrderSlipContent({
                 {shop.instagram}
               </span>
             )}
-            {shop.facebook && (
-              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                {shop.facebook}
-              </span>
-            )}
             {shop.tiktok && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1 0-5.78 2.92 2.92 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.57 6.33 6.33 0 0 0 9.37 22a6.33 6.33 0 0 0 6.37-6.23V9.06a8.16 8.16 0 0 0 3.85.92V6.69Z"/></svg>
                 {shop.tiktok}
+              </span>
+            )}
+            {shop.facebook && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                {shop.facebook}
               </span>
             )}
           </div>
@@ -291,11 +291,11 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
   if (shop.instagram) {
     contactItems.push(`<span class="contact-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>${escape(shop.instagram)}</span>`);
   }
-  if (shop.facebook) {
-    contactItems.push(`<span class="contact-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>${escape(shop.facebook)}</span>`);
-  }
   if (shop.tiktok) {
     contactItems.push(`<span class="contact-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1 0-5.78 2.92 2.92 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.57 6.33 6.33 0 0 0 9.37 22a6.33 6.33 0 0 0 6.37-6.23V9.06a8.16 8.16 0 0 0 3.85.92V6.69Z"/></svg>${escape(shop.tiktok)}</span>`);
+  }
+  if (shop.facebook) {
+    contactItems.push(`<span class="contact-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>${escape(shop.facebook)}</span>`);
   }
 
   const footerHtml = contactItems.length > 0
@@ -352,13 +352,13 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
     }
     .shop-info { line-height: 1.6; }
     .shop-address {
-      font-size: 13px;
+      font-size: 11px;
       white-space: pre-wrap;
       margin-top: 2mm;
       line-height: 1.7;
     }
     .shop-phone {
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 600;
       margin-top: 1mm;
     }
@@ -370,7 +370,7 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      margin: 0 4mm;
+      margin: auto 4mm;
       background: ${THEME_COLOR_LIGHT};
     }
     .deliver-label {
@@ -450,7 +450,7 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
 
     <div class="customer-box">
       <div class="deliver-label">กรุณาส่ง</div>
-      <div class="customer-name">คุณ ${escape(customer.customerName)}</div>
+      <div class="customer-name">${escape(customer.customerName)}</div>
       ${customer.address ? `<div class="customer-address">${escape(customer.address)}</div>` : ""}
       ${customer.phone ? `<div class="customer-phone">Tel: ${escape(customer.phone)}</div>` : ""}
     </div>
