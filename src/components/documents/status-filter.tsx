@@ -12,17 +12,19 @@ import {
 interface StatusFilterProps {
   basePath: string;
   statuses: string[];
+  excludeStatuses?: string[];
 }
 
-export function StatusFilter({ basePath, statuses }: StatusFilterProps) {
+export function StatusFilter({ basePath, statuses, excludeStatuses = [] }: StatusFilterProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  if (statuses.length === 0) return null;
+  if (statuses.length === 0 && excludeStatuses.length === 0) return null;
 
   function clearFilter() {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("status");
+    params.delete("excludeStatus");
     router.push(`${basePath}?${params.toString()}`);
   }
 
@@ -36,6 +38,15 @@ export function StatusFilter({ basePath, statuses }: StatusFilterProps) {
           className={DOCUMENT_STATUS_COLORS[status] || ""}
         >
           {DOCUMENT_STATUS_LABELS[status] || status}
+        </Badge>
+      ))}
+      {excludeStatuses.map((status) => (
+        <Badge
+          key={`exclude-${status}`}
+          variant="secondary"
+          className="bg-gray-100 text-gray-600"
+        >
+          ไม่รวม{DOCUMENT_STATUS_LABELS[status] || status}
         </Badge>
       ))}
       <Button

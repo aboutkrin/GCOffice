@@ -5,6 +5,7 @@ import { serialize } from "@/lib/utils";
 export async function getDocuments(params?: {
   type?: DocumentType;
   status?: DocumentStatus | DocumentStatus[];
+  excludeStatus?: DocumentStatus | DocumentStatus[];
   search?: string;
   year?: number;
   month?: number;
@@ -16,6 +17,12 @@ export async function getDocuments(params?: {
       where.status = { in: params.status };
     } else {
       where.status = params.status;
+    }
+  } else if (params?.excludeStatus) {
+    if (Array.isArray(params.excludeStatus)) {
+      where.status = { notIn: params.excludeStatus };
+    } else {
+      where.status = { not: params.excludeStatus };
     }
   }
   if (params?.search) {

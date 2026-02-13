@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function InvoicesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string; month?: string; status?: string }>;
+  searchParams: Promise<{ year?: string; month?: string; status?: string; excludeStatus?: string }>;
 }) {
   const params = await searchParams;
   const now = new Date();
@@ -24,11 +24,16 @@ export default async function InvoicesPage({
     ? params.status.split(",").filter((s): s is DocumentStatus => s in DocumentStatus)
     : undefined;
 
+  const excludeStatusFilter = params.excludeStatus
+    ? params.excludeStatus.split(",").filter((s): s is DocumentStatus => s in DocumentStatus)
+    : undefined;
+
   const documents = await getDocuments({
     type: "INVOICE",
     year,
     month,
     status: statusFilter && statusFilter.length === 1 ? statusFilter[0] : statusFilter,
+    excludeStatus: excludeStatusFilter && excludeStatusFilter.length === 1 ? excludeStatusFilter[0] : excludeStatusFilter,
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeDocuments = documents.filter((doc: any) => doc.status !== "CANCELLED");
@@ -51,7 +56,7 @@ export default async function InvoicesPage({
 
       <div className="mb-4 flex items-center justify-between gap-4">
         <MonthPicker basePath="/invoices" year={year} month={month} />
-        <StatusFilter basePath="/invoices" statuses={statusFilter || []} />
+        <StatusFilter basePath="/invoices" statuses={statusFilter || []} excludeStatuses={excludeStatusFilter || []} />
       </div>
 
       <DocumentPageTabs

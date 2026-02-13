@@ -38,13 +38,13 @@ export function YearlyStatsCards({ initialData }: YearlyStatsCardsProps) {
       title: "ใบเสนอราคา",
       value: data.quotations.toLocaleString(),
       icon: FileText,
-      href: `/quotations?${yearParam}`,
+      href: `/quotations?${yearParam}&excludeStatus=DRAFT`,
     },
     {
       title: "รอดำเนินการ",
       value: data.pendingDocuments.toLocaleString(),
       icon: Clock,
-      href: `/quotations?${yearParam}&status=QUOTED`,
+      href: `/quotations?${yearParam}&status=QUOTED,BILLED`,
     },
     {
       title: "รอเรียกเก็บ",
