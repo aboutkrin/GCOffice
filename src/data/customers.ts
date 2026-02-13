@@ -22,7 +22,7 @@ export async function getCustomers(params?: {
   try {
     const data = await prisma.customer.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: { code: "desc" },
     });
     return serialize(data);
   } catch {
