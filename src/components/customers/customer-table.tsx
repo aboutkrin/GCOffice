@@ -9,10 +9,11 @@ import {
   flexRender,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Trash2, Search } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Search, Printer } from "lucide-react";
 import { toast } from "sonner";
 
 import { deleteCustomer } from "@/actions/customer-actions";
+import { PrintOrderDialog } from "@/components/customers/print-order-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,7 @@ export function CustomerTable({ customers }: CustomerTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [printCustomer, setPrintCustomer] = useState<any | null>(null);
 
   const columns: ColumnDef<any>[] = [
     {
@@ -139,6 +141,10 @@ export function CustomerTable({ customers }: CustomerTableProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setPrintCustomer(row.original)}>
+              <Printer className="size-4" />
+              พิมพ์ใบสั่งของ
+            </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href={`/customers/${row.original.id}`}>
                 <Pencil className="size-4" />
@@ -275,6 +281,16 @@ export function CustomerTable({ customers }: CustomerTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {printCustomer && (
+        <PrintOrderDialog
+          customer={printCustomer}
+          open={!!printCustomer}
+          onOpenChange={(open) => {
+            if (!open) setPrintCustomer(null);
+          }}
+        />
+      )}
     </div>
   );
 }
