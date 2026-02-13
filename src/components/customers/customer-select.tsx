@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Check, ChevronsUpDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,32 +28,20 @@ interface CustomerSelectProps {
 export function CustomerSelect({ value, onSelect, customers: initialCustomers }: CustomerSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [customers, setCustomers] = useState<any[]>(initialCustomers ?? []);
-  const [loading, setLoading] = useState(false);
+  const customers = initialCustomers ?? [];
+
+  const filteredCustomers = useMemo(() => {
+    if (!query) return customers;
+    const q = query.toLowerCase();
+    return customers.filter(
+      (c) =>
+        c.code?.toLowerCase().includes(q) ||
+        c.customerName?.toLowerCase().includes(q) ||
+        c.companyName?.toLowerCase().includes(q)
+    );
+  }, [customers, query]);
 
   const selectedCustomer = customers.find((c) => c.id === value);
-
-  const fetchCustomers = useCallback(async (searchQuery: string) => {
-    setLoading(true);
-    try {
-      const { searchCustomers } = await import("@/data/customers");
-      const results = await searchCustomers(searchQuery || "");
-      setCustomers(results);
-    } catch {
-      // fallback to initial list
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (open) {
-        fetchCustomers(query);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query, open, fetchCustomers]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -82,11 +70,9 @@ export function CustomerSelect({ value, onSelect, customers: initialCustomers }:
             onValueChange={setQuery}
           />
           <CommandList>
-            <CommandEmpty>
-              {loading ? "กำลังค้นหา..." : "ไม่พบข้อมูลลูกค้า"}
-            </CommandEmpty>
+            <CommandEmpty>ไม่พบข้อมูลลูกค้า</CommandEmpty>
             <CommandGroup>
-              {customers.map((customer) => (
+              {filteredCustomers.map((customer) => (
                 <CommandItem
                   key={customer.id}
                   value={customer.id}
