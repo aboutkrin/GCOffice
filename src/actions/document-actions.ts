@@ -54,7 +54,7 @@ export async function createDocument(data: unknown) {
   const document = await prisma.document.create({
     data: {
       type: validated.type,
-      status: validated.type === "QUOTATION" ? DocumentStatus.QUOTED : undefined,
+      status: validated.type === "QUOTATION" ? DocumentStatus.QUOTED : validated.type === "INVOICE" ? DocumentStatus.BILLED : undefined,
       documentNumber,
       documentDate: validated.documentDate,
       companyId: validated.companyId,
