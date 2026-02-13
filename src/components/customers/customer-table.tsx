@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useCallback } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
   useReactTable,
@@ -9,10 +9,8 @@ import {
   flexRender,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Trash2, Search, ImageIcon, Loader2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
-
-import { exportToJpg } from "@/lib/export-jpg";
 
 import { deleteCustomer } from "@/actions/customer-actions";
 
@@ -62,24 +60,6 @@ export function CustomerTable({ customers }: CustomerTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [isExporting, setIsExporting] = useState(false);
-  const tableRef = useRef<HTMLDivElement>(null);
-
-  const handleExportJpg = useCallback(async () => {
-    const el = tableRef.current;
-    if (!el) return;
-
-    setIsExporting(true);
-    try {
-      await exportToJpg(el, "รายชื่อลูกค้า");
-      toast.success("สร้างรูปภาพสำเร็จ");
-    } catch (error) {
-      console.error("JPG export failed:", error);
-      toast.error("ไม่สามารถสร้างรูปภาพได้");
-    } finally {
-      setIsExporting(false);
-    }
-  }, []);
 
   const columns: ColumnDef<any>[] = [
     {
@@ -214,32 +194,17 @@ export function CustomerTable({ customers }: CustomerTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="ค้นหาลูกค้า..."
-            value={globalFilter}
-            onChange={(e) => setGlobalFilter(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExportJpg}
-          disabled={isExporting}
-        >
-          {isExporting ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <ImageIcon className="size-4" />
-          )}
-          JPG
-        </Button>
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <Input
+          placeholder="ค้นหาลูกค้า..."
+          value={globalFilter}
+          onChange={(e) => setGlobalFilter(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
-      <div ref={tableRef} className="rounded-md border">
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
