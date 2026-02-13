@@ -20,6 +20,7 @@ import {
   Wallet,
   ReceiptText,
   Truck,
+  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,11 @@ const mainNavItems = [
     href: "/expenses",
     label: "ค่าใช้จ่ายรายเดือน",
     icon: Wallet,
+  },
+  {
+    href: "/print-order",
+    label: "พิมพ์ใบสั่งของ",
+    icon: Printer,
   },
 ];
 
