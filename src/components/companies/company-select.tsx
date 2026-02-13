@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -27,21 +27,9 @@ interface CompanySelectProps {
 
 export function CompanySelect({ value, onSelect, companies: initialCompanies }: CompanySelectProps) {
   const [open, setOpen] = useState(false);
-  const [companies, setCompanies] = useState<any[]>(initialCompanies ?? []);
-  const [loading, setLoading] = useState(false);
+  const companies = initialCompanies ?? [];
 
   const selectedCompany = companies.find((c) => c.id === value);
-
-  useEffect(() => {
-    if (open && companies.length === 0) {
-      setLoading(true);
-      import("@/data/companies")
-        .then(({ getAllCompanies }) => getAllCompanies())
-        .then((results) => setCompanies(results))
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }
-  }, [open, companies.length]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -64,9 +52,7 @@ export function CompanySelect({ value, onSelect, companies: initialCompanies }: 
         <Command>
           <CommandInput placeholder="ค้นหาบริษัท..." />
           <CommandList>
-            <CommandEmpty>
-              {loading ? "กำลังโหลด..." : "ไม่พบข้อมูลบริษัท"}
-            </CommandEmpty>
+            <CommandEmpty>ไม่พบข้อมูลบริษัท</CommandEmpty>
             <CommandGroup>
               {companies.map((company) => (
                 <CommandItem
