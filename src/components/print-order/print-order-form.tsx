@@ -1,16 +1,16 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Printer, FileDown, Loader2 } from "lucide-react";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { Printer, FileDown, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { CompanySelect } from "@/components/companies/company-select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { CustomerSelect } from "@/components/customers/customer-select";
 
 interface PrintOrderFormProps {
-  companies: any[];
   customers: any[];
 }
 
@@ -28,7 +28,8 @@ interface CustomerInfo {
   address: string;
 }
 
-const GREEN = "#2d5a27";
+const THEME_COLOR = "#5b9bd5";
+const THEME_COLOR_LIGHT = "#d6e8f7";
 
 function OrderSlipContent({
   shop,
@@ -52,17 +53,6 @@ function OrderSlipContent({
         boxSizing: "border-box",
       }}
     >
-      {/* Green border frame */}
-      <div
-        style={{
-          position: "absolute",
-          inset: "5mm",
-          border: `2px solid ${GREEN}`,
-          borderRadius: "4px",
-          pointerEvents: "none",
-        }}
-      />
-
       {/* Header: Logo + Shop Info (top-left) */}
       <div
         style={{
@@ -105,11 +95,11 @@ function OrderSlipContent({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              background: `${GREEN}15`,
+              background: `${THEME_COLOR}15`,
               borderRadius: "6px",
             }}
           >
-            <svg viewBox="0 0 24 24" width="36" height="36" fill={GREEN}>
+            <svg viewBox="0 0 24 24" width="36" height="36" fill={THEME_COLOR}>
               <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z" />
             </svg>
           </div>
@@ -121,7 +111,7 @@ function OrderSlipContent({
             style={{
               fontSize: "22px",
               fontWeight: 700,
-              color: GREEN,
+              color: THEME_COLOR,
               lineHeight: 1.2,
             }}
           >
@@ -147,27 +137,29 @@ function OrderSlipContent({
         </div>
       </div>
 
-      {/* Customer Info Box (middle-left) */}
+      {/* Customer Info Box — half A4 width */}
       <div
         style={{
-          border: `2px solid ${GREEN}`,
+          border: `2px solid ${THEME_COLOR}`,
           borderRadius: "8px",
           padding: "8mm 10mm",
-          flex: 1,
+          width: "50%",
+          overflow: "hidden",
           display: "flex",
           flexDirection: "column",
           margin: "0 4mm",
+          background: THEME_COLOR_LIGHT,
         }}
       >
         {/* กรุณาส่ง label */}
         <div
           style={{
             fontSize: "20px",
-            color: GREEN,
+            color: THEME_COLOR,
             fontWeight: 600,
             marginBottom: "6mm",
             paddingBottom: "3mm",
-            borderBottom: `1px solid ${GREEN}40`,
+            borderBottom: `1px solid ${THEME_COLOR}40`,
           }}
         >
           กรุณาส่ง
@@ -175,23 +167,17 @@ function OrderSlipContent({
 
         {customer ? (
           <>
-            {/* Customer Name + Phone */}
+            {/* Customer Name */}
             <div
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "baseline",
+                fontSize: "22px",
+                fontWeight: 700,
                 marginBottom: "4mm",
+                wordBreak: "break-word",
+                overflowWrap: "break-word",
               }}
             >
-              <div style={{ fontSize: "22px", fontWeight: 700 }}>
-                คุณ {customer.customerName}
-              </div>
-              {customer.phone && (
-                <div style={{ fontSize: "16px", fontWeight: 500 }}>
-                  Tel: {customer.phone}
-                </div>
-              )}
+              คุณ {customer.customerName}
             </div>
 
             {/* Customer Address */}
@@ -201,9 +187,24 @@ function OrderSlipContent({
                   fontSize: "16px",
                   lineHeight: 2,
                   whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  overflowWrap: "break-word",
                 }}
               >
                 {customer.address}
+              </div>
+            )}
+
+            {/* Customer Phone — below address */}
+            {customer.phone && (
+              <div
+                style={{
+                  fontSize: "16px",
+                  fontWeight: 500,
+                  marginTop: "3mm",
+                }}
+              >
+                Tel: {customer.phone}
               </div>
             )}
           </>
@@ -227,13 +228,13 @@ function OrderSlipContent({
       {(shop.phone || shop.lineOa) && (
         <div
           style={{
-            background: GREEN,
+            background: THEME_COLOR,
             color: "white",
             padding: "4mm 10mm",
             borderRadius: "6px",
-            marginTop: "5mm",
+            marginTop: "auto",
             textAlign: "center",
-            margin: "5mm 4mm 0",
+            margin: "auto 4mm 0",
           }}
         >
           <div
@@ -275,7 +276,7 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
 
   const logoHtml = shop.logoUrl
     ? `<img src="${escape(shop.logoUrl)}" alt="${escape(shop.name)}" style="width:60px;height:60px;object-fit:contain;border-radius:6px;" crossorigin="anonymous" />`
-    : `<svg viewBox="0 0 24 24" width="36" height="36" fill="${GREEN}"><path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z"/></svg>`;
+    : `<svg viewBox="0 0 24 24" width="36" height="36" fill="${THEME_COLOR}"><path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z"/></svg>`;
 
   const footerHtml =
     shop.phone || shop.lineOa
@@ -316,13 +317,6 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       position: relative;
       color: #1a1a1a;
     }
-    .frame {
-      position: absolute;
-      inset: 5mm;
-      border: 2px solid ${GREEN};
-      border-radius: 4px;
-      pointer-events: none;
-    }
     .header {
       display: flex;
       align-items: flex-start;
@@ -344,14 +338,14 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: ${GREEN}15;
+      background: ${THEME_COLOR}15;
       border-radius: 6px;
     }
     .shop-info { line-height: 1.6; }
     .shop-name {
       font-size: 22px;
       font-weight: 700;
-      color: ${GREEN};
+      color: ${THEME_COLOR};
       line-height: 1.2;
     }
     .shop-address {
@@ -366,47 +360,49 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       margin-top: 1mm;
     }
     .customer-box {
-      border: 2px solid ${GREEN};
+      border: 2px solid ${THEME_COLOR};
       border-radius: 8px;
       padding: 8mm 10mm;
-      flex: 1;
+      width: 50%;
+      overflow: hidden;
       display: flex;
       flex-direction: column;
       margin: 0 4mm;
+      background: ${THEME_COLOR_LIGHT};
     }
     .deliver-label {
       font-size: 20px;
-      color: ${GREEN};
+      color: ${THEME_COLOR};
       font-weight: 600;
       margin-bottom: 6mm;
       padding-bottom: 3mm;
-      border-bottom: 1px solid ${GREEN}40;
-    }
-    .customer-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 4mm;
+      border-bottom: 1px solid ${THEME_COLOR}40;
     }
     .customer-name {
       font-size: 22px;
       font-weight: 700;
+      margin-bottom: 4mm;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
     .customer-phone {
       font-size: 16px;
       font-weight: 500;
+      margin-top: 3mm;
     }
     .customer-address {
       font-size: 16px;
       line-height: 2;
       white-space: pre-wrap;
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
     .footer {
-      background: ${GREEN};
+      background: ${THEME_COLOR};
       color: white;
       padding: 4mm 10mm;
       border-radius: 6px;
-      margin: 5mm 4mm 0;
+      margin: auto 4mm 0;
       text-align: center;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
@@ -432,8 +428,6 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
 </head>
 <body>
   <div class="page">
-    <div class="frame"></div>
-
     <div class="header">
       ${shop.logoUrl ? `<img class="logo-img" src="${escape(shop.logoUrl)}" alt="${escape(shop.name)}" crossorigin="anonymous" />` : `<div class="logo-placeholder">${logoHtml}</div>`}
       <div class="shop-info">
@@ -445,11 +439,9 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
 
     <div class="customer-box">
       <div class="deliver-label">กรุณาส่ง</div>
-      <div class="customer-header">
-        <div class="customer-name">คุณ ${escape(customer.customerName)}</div>
-        ${customer.phone ? `<div class="customer-phone">Tel: ${escape(customer.phone)}</div>` : ""}
-      </div>
+      <div class="customer-name">คุณ ${escape(customer.customerName)}</div>
       ${customer.address ? `<div class="customer-address">${escape(customer.address)}</div>` : ""}
+      ${customer.phone ? `<div class="customer-phone">Tel: ${escape(customer.phone)}</div>` : ""}
     </div>
 
     ${footerHtml}
@@ -458,33 +450,60 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
 </html>`;
 }
 
-export function PrintOrderForm({ companies, customers }: PrintOrderFormProps) {
+const SHOP_INFO_STORAGE_KEY = "print-order-shop-info";
+
+function loadShopInfo(): ShopInfo {
+  if (typeof window === "undefined") {
+    return { name: "", address: "", logoUrl: "", phone: "", lineOa: "" };
+  }
+  try {
+    const saved = localStorage.getItem(SHOP_INFO_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        name: parsed.name ?? "",
+        address: parsed.address ?? "",
+        logoUrl: parsed.logoUrl ?? "",
+        phone: parsed.phone ?? "",
+        lineOa: parsed.lineOa ?? "",
+      };
+    }
+  } catch {
+    // ignore
+  }
+  return { name: "", address: "", logoUrl: "", phone: "", lineOa: "" };
+}
+
+export function PrintOrderForm({ customers }: PrintOrderFormProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
 
-  const [shopInfo, setShopInfo] = useState<ShopInfo>({
-    name: "",
-    address: "",
-    logoUrl: "",
-    phone: "",
-    lineOa: "",
-  });
+  const [shopInfo, setShopInfo] = useState<ShopInfo>(() => loadShopInfo());
 
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
 
-  const handleCompanySelect = (company: any) => {
-    setSelectedCompanyId(company.id);
-    setShopInfo({
-      name: company.name ?? "",
-      address: company.address ?? "",
-      logoUrl: company.logoUrl ?? "",
-      phone: company.phone ?? "",
-      lineOa: company.lineOa ?? "",
-    });
-  };
+  // Load saved shop info on mount
+  useEffect(() => {
+    setShopInfo(loadShopInfo());
+  }, []);
+
+  const handleShopFieldChange = useCallback(
+    (field: keyof ShopInfo, value: string) => {
+      setShopInfo((prev) => ({ ...prev, [field]: value }));
+    },
+    []
+  );
+
+  const handleSaveShopInfo = useCallback(() => {
+    try {
+      localStorage.setItem(SHOP_INFO_STORAGE_KEY, JSON.stringify(shopInfo));
+      toast.success("บันทึกข้อมูลร้านสำเร็จ");
+    } catch {
+      toast.error("ไม่สามารถบันทึกข้อมูลร้านได้");
+    }
+  }, [shopInfo]);
 
   const handleCustomerSelect = (customer: any) => {
     setSelectedCustomerId(customer.id);
@@ -551,24 +570,73 @@ export function PrintOrderForm({ companies, customers }: PrintOrderFormProps) {
 
   return (
     <div className="space-y-6">
-      {/* Form controls */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>เลือกบริษัท (ข้อมูลร้าน)</Label>
-          <CompanySelect
-            value={selectedCompanyId}
-            onSelect={handleCompanySelect}
-            companies={companies}
-          />
+      {/* Shop info — manual input */}
+      <div className="rounded-lg border p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-base font-semibold">ข้อมูลร้าน</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleSaveShopInfo}
+          >
+            <Save className="size-4" />
+            บันทึกข้อมูลร้าน
+          </Button>
         </div>
-        <div className="space-y-2">
-          <Label>เลือกลูกค้า</Label>
-          <CustomerSelect
-            value={selectedCustomerId}
-            onSelect={handleCustomerSelect}
-            customers={customers}
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>ชื่อร้าน</Label>
+            <Input
+              placeholder="ชื่อร้าน"
+              value={shopInfo.name}
+              onChange={(e) => handleShopFieldChange("name", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>เบอร์โทรศัพท์</Label>
+            <Input
+              placeholder="เบอร์โทรศัพท์"
+              value={shopInfo.phone}
+              onChange={(e) => handleShopFieldChange("phone", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Line OA</Label>
+            <Input
+              placeholder="Line OA"
+              value={shopInfo.lineOa}
+              onChange={(e) => handleShopFieldChange("lineOa", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>URL โลโก้</Label>
+            <Input
+              placeholder="https://..."
+              value={shopInfo.logoUrl}
+              onChange={(e) => handleShopFieldChange("logoUrl", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label>ที่อยู่ร้าน</Label>
+            <Textarea
+              placeholder="ที่อยู่ร้าน"
+              value={shopInfo.address}
+              onChange={(e) => handleShopFieldChange("address", e.target.value)}
+              rows={3}
+            />
+          </div>
         </div>
+      </div>
+
+      {/* Customer selection */}
+      <div className="space-y-2">
+        <Label>เลือกลูกค้า</Label>
+        <CustomerSelect
+          value={selectedCustomerId}
+          onSelect={handleCustomerSelect}
+          customers={customers}
+        />
       </div>
 
       {/* Action buttons */}
