@@ -61,7 +61,7 @@ function OrderSlipContent({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "32px",
+          gap: "40px",
           marginBottom: "8mm",
           padding: "0 4mm",
         }}
@@ -349,7 +349,7 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
     .header {
       display: flex;
       align-items: center;
-      gap: 32px;
+      gap: 40px;
       margin-bottom: 8mm;
       padding: 0 4mm;
     }
