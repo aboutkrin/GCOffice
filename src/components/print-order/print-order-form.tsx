@@ -60,7 +60,7 @@ function OrderSlipContent({
       <div
         style={{
           display: "flex",
-          alignItems: "flex-start",
+          alignItems: "center",
           gap: "12px",
           marginBottom: "8mm",
           padding: "0 4mm",
@@ -81,9 +81,9 @@ function OrderSlipContent({
               alt="โลโก้ร้าน"
               style={{
                 height: "auto",
-                maxHeight: "140px",
+                maxHeight: "112px",
                 width: "auto",
-                maxWidth: "200px",
+                maxWidth: "160px",
                 objectFit: "contain",
               }}
               crossOrigin="anonymous"
@@ -278,7 +278,7 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       .replace(/"/g, "&quot;");
 
   const logoHtml = shop.logoUrl
-    ? `<img src="${escape(shop.logoUrl)}" alt="โลโก้ร้าน" style="height:auto;max-height:140px;width:auto;max-width:200px;object-fit:contain;border-radius:6px;" crossorigin="anonymous" />`
+    ? `<img src="${escape(shop.logoUrl)}" alt="โลโก้ร้าน" style="height:auto;max-height:112px;width:auto;max-width:160px;object-fit:contain;border-radius:6px;" crossorigin="anonymous" />`
     : "";
 
   const contactItems: string[] = [];
@@ -336,16 +336,16 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
     }
     .header {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       gap: 12px;
       margin-bottom: 8mm;
       padding: 0 4mm;
     }
     .logo-img {
       height: auto;
-      max-height: 140px;
+      max-height: 112px;
       width: auto;
-      max-width: 200px;
+      max-width: 160px;
       object-fit: contain;
       border-radius: 6px;
       flex-shrink: 0;
