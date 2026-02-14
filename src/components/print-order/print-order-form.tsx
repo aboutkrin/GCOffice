@@ -81,9 +81,9 @@ function OrderSlipContent({
               alt="โลโก้ร้าน"
               style={{
                 height: "auto",
-                maxHeight: "104px",
+                maxHeight: "140px",
                 width: "auto",
-                maxWidth: "156px",
+                maxWidth: "200px",
                 objectFit: "contain",
               }}
               crossOrigin="anonymous"
@@ -278,7 +278,7 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       .replace(/"/g, "&quot;");
 
   const logoHtml = shop.logoUrl
-    ? `<img src="${escape(shop.logoUrl)}" alt="โลโก้ร้าน" style="height:auto;max-height:104px;width:auto;max-width:156px;object-fit:contain;border-radius:6px;" crossorigin="anonymous" />`
+    ? `<img src="${escape(shop.logoUrl)}" alt="โลโก้ร้าน" style="height:auto;max-height:140px;width:auto;max-width:200px;object-fit:contain;border-radius:6px;" crossorigin="anonymous" />`
     : "";
 
   const contactItems: string[] = [];
@@ -343,9 +343,9 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
     }
     .logo-img {
       height: auto;
-      max-height: 104px;
+      max-height: 140px;
       width: auto;
-      max-width: 156px;
+      max-width: 200px;
       object-fit: contain;
       border-radius: 6px;
       flex-shrink: 0;
