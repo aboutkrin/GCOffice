@@ -64,7 +64,7 @@ export function PreviewHeader({
       <div className="flex items-center gap-3 sm:gap-5">
         {/* Logo - large, spanning full height of address block + extra */}
         {company.logoUrl && (
-          <div className="relative h-36 w-36 sm:h-40 sm:w-40 shrink-0 overflow-hidden rounded">
+          <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={company.logoUrl}
@@ -76,7 +76,7 @@ export function PreviewHeader({
 
         {/* Vertical Divider */}
         {company.logoUrl && (
-          <div className="self-stretch w-[1.5px] bg-gray-400 shrink-0" />
+          <div className="self-stretch w-px bg-gray-300 shrink-0" />
         )}
 
         {/* Company Name + Contact Info - vertically centered */}
