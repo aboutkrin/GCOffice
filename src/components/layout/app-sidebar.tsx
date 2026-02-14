@@ -72,7 +72,7 @@ const mainNavItems = [
   },
   {
     href: "/print-order",
-    label: "พิมพ์ใบสั่งของ",
+    label: "พิมพ์ใบส่งของ",
     icon: Printer,
   },
 ];

@@ -51,7 +51,7 @@ export async function searchCustomers(query: string) {
         ],
       },
       take: 20,
-      orderBy: { customerName: "asc" },
+      orderBy: { code: "desc" },
     });
     return serialize(data);
   } catch {
