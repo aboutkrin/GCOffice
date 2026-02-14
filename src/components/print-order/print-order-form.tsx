@@ -60,8 +60,8 @@ function OrderSlipContent({
       <div
         style={{
           display: "flex",
-          alignItems: "flex-start",
-          gap: "12px",
+          alignItems: "center",
+          gap: "40px",
           marginBottom: "8mm",
           padding: "0 4mm",
         }}
@@ -81,14 +81,26 @@ function OrderSlipContent({
               alt="โลโก้ร้าน"
               style={{
                 height: "auto",
-                maxHeight: "80px",
+                maxHeight: "112px",
                 width: "auto",
-                maxWidth: "120px",
+                maxWidth: "160px",
                 objectFit: "contain",
               }}
               crossOrigin="anonymous"
             />
           </div>
+        )}
+
+        {/* Divider */}
+        {shop.logoUrl && (
+          <div
+            style={{
+              width: "2px",
+              alignSelf: "stretch",
+              backgroundColor: "#1a1a1a",
+              flexShrink: 0,
+            }}
+          />
         )}
 
         {/* Address */}
@@ -278,7 +290,7 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       .replace(/"/g, "&quot;");
 
   const logoHtml = shop.logoUrl
-    ? `<img src="${escape(shop.logoUrl)}" alt="โลโก้ร้าน" style="height:auto;max-height:80px;width:auto;max-width:120px;object-fit:contain;border-radius:6px;" crossorigin="anonymous" />`
+    ? `<img src="${escape(shop.logoUrl)}" alt="โลโก้ร้าน" style="height:auto;max-height:112px;width:auto;max-width:160px;object-fit:contain;border-radius:6px;" crossorigin="anonymous" />`
     : "";
 
   const contactItems: string[] = [];
@@ -336,18 +348,24 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
     }
     .header {
       display: flex;
-      align-items: flex-start;
-      gap: 12px;
+      align-items: center;
+      gap: 40px;
       margin-bottom: 8mm;
       padding: 0 4mm;
     }
     .logo-img {
       height: auto;
-      max-height: 80px;
+      max-height: 112px;
       width: auto;
-      max-width: 120px;
+      max-width: 160px;
       object-fit: contain;
       border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .header-divider {
+      width: 2px;
+      align-self: stretch;
+      background-color: #1a1a1a;
       flex-shrink: 0;
     }
     .shop-info { line-height: 1.6; }
@@ -441,7 +459,7 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
 <body>
   <div class="page">
     <div class="header">
-      ${logoHtml ? `${logoHtml}` : ""}
+      ${logoHtml ? `${logoHtml}<div class="header-divider"></div>` : ""}
       <div class="shop-info">
         ${shop.address ? `<div class="shop-address">${escape(shop.address)}</div>` : ""}
         ${shop.phone ? `<div class="shop-phone">Tel: ${escape(shop.phone)}</div>` : ""}
