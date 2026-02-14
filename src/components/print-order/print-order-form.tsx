@@ -91,6 +91,18 @@ function OrderSlipContent({
           </div>
         )}
 
+        {/* Divider */}
+        {shop.logoUrl && (
+          <div
+            style={{
+              width: "1px",
+              alignSelf: "stretch",
+              backgroundColor: "#d1d5db",
+              flexShrink: 0,
+            }}
+          />
+        )}
+
         {/* Address */}
         <div style={{ lineHeight: 1.6 }}>
           {shop.address && (
@@ -350,6 +362,12 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       border-radius: 6px;
       flex-shrink: 0;
     }
+    .header-divider {
+      width: 1px;
+      align-self: stretch;
+      background-color: #d1d5db;
+      flex-shrink: 0;
+    }
     .shop-info { line-height: 1.6; }
     .shop-address {
       font-size: 11px;
@@ -441,7 +459,7 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
 <body>
   <div class="page">
     <div class="header">
-      ${logoHtml ? `${logoHtml}` : ""}
+      ${logoHtml ? `${logoHtml}<div class="header-divider"></div>` : ""}
       <div class="shop-info">
         ${shop.address ? `<div class="shop-address">${escape(shop.address)}</div>` : ""}
         ${shop.phone ? `<div class="shop-phone">Tel: ${escape(shop.phone)}</div>` : ""}
