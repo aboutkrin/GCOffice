@@ -61,7 +61,7 @@ function OrderSlipContent({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "20px",
+          gap: "32px",
           marginBottom: "8mm",
           padding: "0 4mm",
         }}
@@ -95,9 +95,9 @@ function OrderSlipContent({
         {shop.logoUrl && (
           <div
             style={{
-              width: "1px",
+              width: "2px",
               alignSelf: "stretch",
-              backgroundColor: "#000000",
+              backgroundColor: "#1a1a1a",
               flexShrink: 0,
             }}
           />
@@ -349,7 +349,7 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
     .header {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 32px;
       margin-bottom: 8mm;
       padding: 0 4mm;
     }
@@ -363,9 +363,9 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
       flex-shrink: 0;
     }
     .header-divider {
-      width: 1px;
+      width: 2px;
       align-self: stretch;
-      background-color: #000000;
+      background-color: #1a1a1a;
       flex-shrink: 0;
     }
     .shop-info { line-height: 1.6; }
