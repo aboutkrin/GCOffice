@@ -23,20 +23,20 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
     <div className="mb-3">
       <table className="w-full border-collapse text-[10px]">
         <thead>
-          <tr className="bg-gray-800 text-white">
-            <th className="border border-gray-700 px-1 sm:px-2 py-1 sm:py-1.5 text-center w-7 sm:w-12">
+          <tr className="bg-blue-800 text-white">
+            <th className="border border-blue-700 px-1 sm:px-2 py-1 sm:py-1.5 text-center w-7 sm:w-12">
               ลำดับ
             </th>
-            <th className="border border-gray-700 px-1 sm:px-2 py-1 sm:py-1.5 text-left">
+            <th className="border border-blue-700 px-1 sm:px-2 py-1 sm:py-1.5 text-left">
               รายการ
             </th>
-            <th className="border border-gray-700 px-1 sm:px-2 py-1 sm:py-1.5 text-center w-10 sm:w-20">
+            <th className="border border-blue-700 px-1 sm:px-2 py-1 sm:py-1.5 text-center w-10 sm:w-20">
               จำนวน
             </th>
-            <th className="border border-gray-700 px-1 sm:px-2 py-1 sm:py-1.5 text-right w-16 sm:w-28">
+            <th className="border border-blue-700 px-1 sm:px-2 py-1 sm:py-1.5 text-right w-16 sm:w-28">
               ราคา/หน่วย
             </th>
-            <th className="border border-gray-700 px-1 sm:px-2 py-1 sm:py-1.5 text-right w-16 sm:w-28">
+            <th className="border border-blue-700 px-1 sm:px-2 py-1 sm:py-1.5 text-right w-16 sm:w-28">
               รวม
             </th>
           </tr>
@@ -45,18 +45,18 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
           {items.map((item, index) => (
             <tr
               key={item.sequence}
-              className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+              className={index % 2 === 0 ? "bg-white" : "bg-blue-50"}
             >
               {/* Sequence */}
-              <td className="border border-gray-200 px-1 sm:px-2 py-1 sm:py-1.5 text-center text-gray-600">
+              <td className="border border-blue-200 px-1 sm:px-2 py-1 sm:py-1.5 text-center text-gray-600">
                 {item.sequence}
               </td>
 
               {/* Product Name + Image + Details */}
-              <td className="border border-gray-200 px-1 sm:px-2 py-1 sm:py-1.5">
+              <td className="border border-blue-200 px-1 sm:px-2 py-1 sm:py-1.5">
                 <div className="flex items-start gap-2 sm:gap-3">
                   {item.productImage && (
-                    <div className="relative h-8 w-8 sm:h-10 sm:w-10 shrink-0 overflow-hidden rounded border border-gray-200">
+                    <div className="relative h-8 w-8 sm:h-10 sm:w-10 shrink-0 overflow-hidden rounded border border-blue-200">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={item.productImage}
@@ -84,17 +84,17 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
               </td>
 
               {/* Quantity */}
-              <td className="border border-gray-200 px-1 sm:px-2 py-1 sm:py-1.5 text-center text-gray-700">
+              <td className="border border-blue-200 px-1 sm:px-2 py-1 sm:py-1.5 text-center text-gray-700">
                 {formatNumber(item.quantity)}
               </td>
 
               {/* Unit Price */}
-              <td className="border border-gray-200 px-1 sm:px-2 py-1 sm:py-1.5 text-right text-gray-700">
+              <td className="border border-blue-200 px-1 sm:px-2 py-1 sm:py-1.5 text-right text-gray-700">
                 {formatNumber(item.unitPrice)}
               </td>
 
               {/* Line Total */}
-              <td className="border border-gray-200 px-1 sm:px-2 py-1 sm:py-1.5 text-right font-medium text-gray-900">
+              <td className="border border-blue-200 px-1 sm:px-2 py-1 sm:py-1.5 text-right font-medium text-gray-900">
                 {formatNumber(item.lineTotal)}
               </td>
             </tr>
