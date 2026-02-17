@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Menu,
@@ -137,7 +138,16 @@ export function AppHeader({ user }: AppHeaderProps) {
         </SheetTrigger>
         <SheetContent side="left" className="w-64 p-0">
           <SheetHeader className="border-b px-6">
-            <SheetTitle className="text-left">GCOffice</SheetTitle>
+            <SheetTitle className="flex items-center gap-2 text-left">
+              <Image
+                src="/logo.png"
+                alt="GCOffice"
+                width={28}
+                height={28}
+                className="size-7"
+              />
+              GCOffice
+            </SheetTitle>
           </SheetHeader>
           <nav className="flex-1 overflow-y-auto space-y-1 p-4">
             {mainNavItems.map((item) => {
