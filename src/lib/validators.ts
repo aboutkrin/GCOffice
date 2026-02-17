@@ -48,6 +48,7 @@ export const companySchema = z.object({
   phone: z.string().optional(),
   email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง").optional().or(z.literal("")),
   facebook: z.string().optional(),
+  instagram: z.string().optional(),
   lineOa: z.string().optional(),
   tiktok: z.string().optional(),
   logoUrl: z.string().optional(),

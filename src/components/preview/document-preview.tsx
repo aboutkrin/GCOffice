@@ -15,6 +15,7 @@ interface CompanySnapshot {
   phone?: string;
   email?: string;
   facebook?: string;
+  instagram?: string;
   lineOa?: string;
   tiktok?: string;
   logoUrl?: string;

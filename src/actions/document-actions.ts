@@ -256,6 +256,7 @@ export async function getDocumentForShare(id: string) {
           phone: document.company.phone,
           email: document.company.email,
           facebook: document.company.facebook,
+          instagram: document.company.instagram,
           lineOa: document.company.lineOa,
           tiktok: document.company.tiktok,
           logoUrl: document.company.logoUrl,

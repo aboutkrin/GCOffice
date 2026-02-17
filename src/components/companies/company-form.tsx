@@ -42,6 +42,7 @@ export function CompanyForm({ initialData }: CompanyFormProps) {
       phone: initialData?.phone ?? "",
       email: initialData?.email ?? "",
       facebook: initialData?.facebook ?? "",
+      instagram: initialData?.instagram ?? "",
       lineOa: initialData?.lineOa ?? "",
       tiktok: initialData?.tiktok ?? "",
       logoUrl: initialData?.logoUrl ?? "",
@@ -199,7 +200,25 @@ export function CompanyForm({ initialData }: CompanyFormProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <FormField
+                control={form.control}
+                name="instagram"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Instagram</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="@instagram"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="facebook"
