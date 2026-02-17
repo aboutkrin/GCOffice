@@ -39,10 +39,11 @@ model Company {
   phone   String?
   email   String?
 
-  facebook String?
-  lineOa   String? @map("line_oa")
-  tiktok   String?
-  logoUrl  String? @map("logo_url")
+  facebook  String?
+  instagram String?
+  lineOa    String? @map("line_oa")
+  tiktok    String?
+  logoUrl   String? @map("logo_url")
 
   bankName      String? @map("bank_name")
   accountName   String? @map("account_name")
