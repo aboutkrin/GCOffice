@@ -34,7 +34,7 @@ export function PreviewFooter({
                 />
               )}
             </div>
-            <div className="mx-auto w-24 sm:w-40 border-b border-blue-400" />
+            <div className="mx-auto w-24 sm:w-40 border-b border-blue-200" />
             {createdBy?.firstName || createdBy?.lastName ? (
               <p className="mt-1.5 text-[10px] text-gray-700">
                 {[createdBy.firstName, createdBy.lastName]
@@ -56,7 +56,7 @@ export function PreviewFooter({
           {/* Right: Approver */}
           <div className="text-center">
             <div className="h-8 sm:h-12" />
-            <div className="mx-auto w-24 sm:w-40 border-b border-blue-400" />
+            <div className="mx-auto w-24 sm:w-40 border-b border-blue-200" />
             <p className="mt-1.5 text-[10px] text-gray-700">
               ผู้อนุมัติ / ลูกค้า
             </p>
