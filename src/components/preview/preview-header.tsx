@@ -48,8 +48,23 @@ export function PreviewHeader({
 
   return (
     <div className="mb-3">
-      {/* Document Type - right aligned */}
-      <div className="flex justify-end mb-1.5">
+      {/* Top row: Logo + Company Name on left, Document Type on right */}
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2">
+          {company.logoUrl && (
+            <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={company.logoUrl}
+                alt={company.name}
+                className="h-full w-full object-contain"
+              />
+            </div>
+          )}
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 break-words">
+            {company.name}
+          </h1>
+        </div>
         <div className="text-right shrink-0">
           <h2 className="text-lg sm:text-2xl font-bold text-primary">
             {typeLabel}
@@ -60,80 +75,55 @@ export function PreviewHeader({
         </div>
       </div>
 
-      {/* Logo + Divider + Company Info */}
-      <div className="flex items-center gap-3 sm:gap-5">
-        {/* Logo - large, spanning full height of address block + extra */}
-        {company.logoUrl && (
-          <div className="relative h-24 w-24 sm:h-28 sm:w-28 shrink-0 overflow-hidden rounded">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={company.logoUrl}
-              alt={company.name}
-              className="h-full w-full object-contain"
-            />
+      {/* Company address & contact info - below logo row */}
+      <div className="grid grid-cols-1 gap-0.5 text-[8px] text-gray-600">
+        {(company.address || company.taxId) && (
+          <div className="flex items-start gap-1.5">
+            <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+            <span>
+              {company.address}
+              {company.address && company.taxId && "  "}
+              {company.taxId && `เลขประจำตัวผู้เสียภาษี: ${company.taxId}`}
+            </span>
           </div>
         )}
-
-        {/* Vertical Divider */}
-        {company.logoUrl && (
-          <div className="self-stretch w-px bg-gray-300 shrink-0" />
-        )}
-
-        {/* Company Name + Contact Info - vertically centered */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 break-words mb-1">
-            {company.name}
-          </h1>
-          <div className="grid grid-cols-1 gap-0.5 text-[8px] text-gray-600">
-            {(company.address || company.taxId) && (
-              <div className="flex items-start gap-1.5">
-                <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
-                <span>
-                  {company.address}
-                  {company.address && company.taxId && "  "}
-                  {company.taxId && `เลขประจำตัวผู้เสียภาษี: ${company.taxId}`}
-                </span>
-              </div>
-            )}
-            <div className="flex flex-wrap gap-x-4 gap-y-1">
-              {company.phone && (
-                <div className="flex items-center gap-1.5">
-                  <Phone className="h-3 w-3 shrink-0" />
-                  <span>{company.phone}</span>
-                </div>
-              )}
-              {company.email && (
-                <div className="flex items-center gap-1.5">
-                  <Mail className="h-3 w-3 shrink-0" />
-                  <span>{company.email}</span>
-                </div>
-              )}
-              {company.lineOa && (
-                <div className="flex items-center gap-1.5">
-                  <MessageCircle className="h-3 w-3 shrink-0" />
-                  <span>LINE: {company.lineOa}</span>
-                </div>
-              )}
-              {company.tiktok && (
-                <div className="flex items-center gap-1.5">
-                  <svg
-                    className="h-3 w-3 shrink-0"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1 0-5.78 2.92 2.92 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.57 6.33 6.33 0 0 0 9.37 22a6.33 6.33 0 0 0 6.37-6.23V9.06a8.16 8.16 0 0 0 3.85.92V6.69Z" />
-                  </svg>
-                  <span>{company.tiktok}</span>
-                </div>
-              )}
-              {company.facebook && (
-                <div className="flex items-center gap-1.5">
-                  <Facebook className="h-3 w-3 shrink-0" />
-                  <span>{company.facebook}</span>
-                </div>
-              )}
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          {company.phone && (
+            <div className="flex items-center gap-1.5">
+              <Phone className="h-3 w-3 shrink-0" />
+              <span>{company.phone}</span>
             </div>
-          </div>
+          )}
+          {company.email && (
+            <div className="flex items-center gap-1.5">
+              <Mail className="h-3 w-3 shrink-0" />
+              <span>{company.email}</span>
+            </div>
+          )}
+          {company.lineOa && (
+            <div className="flex items-center gap-1.5">
+              <MessageCircle className="h-3 w-3 shrink-0" />
+              <span>LINE: {company.lineOa}</span>
+            </div>
+          )}
+          {company.tiktok && (
+            <div className="flex items-center gap-1.5">
+              <svg
+                className="h-3 w-3 shrink-0"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1 0-5.78 2.92 2.92 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.57 6.33 6.33 0 0 0 9.37 22a6.33 6.33 0 0 0 6.37-6.23V9.06a8.16 8.16 0 0 0 3.85.92V6.69Z" />
+              </svg>
+              <span>{company.tiktok}</span>
+            </div>
+          )}
+          {company.facebook && (
+            <div className="flex items-center gap-1.5">
+              <Facebook className="h-3 w-3 shrink-0" />
+              <span>{company.facebook}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

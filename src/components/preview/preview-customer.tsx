@@ -32,7 +32,7 @@ export function PreviewCustomer({
     : customer.customerName;
 
   return (
-    <div className="mb-3 flex items-stretch gap-4 max-w-[85%] mx-auto">
+    <div className="mb-3 flex items-stretch gap-4">
       {/* Left: Customer Info */}
       <div className="flex-1 min-w-0 rounded border border-blue-100 p-2 sm:p-3">
         <h3 className="mb-1 sm:mb-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wide">
