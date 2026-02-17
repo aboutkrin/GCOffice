@@ -23,7 +23,7 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
     <div className="mb-3">
       <table className="w-full border-collapse text-[10px]">
         <thead>
-          <tr className="bg-blue-800 text-white">
+          <tr className="bg-blue-950 text-white">
             <th className="border border-blue-200 px-1 sm:px-2 py-1 sm:py-1.5 text-center w-7 sm:w-12">
               ลำดับ
             </th>
