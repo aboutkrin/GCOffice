@@ -97,7 +97,7 @@ export function PreviewSummary({
             )}
 
             {/* Grand Total */}
-            <tr className="border-t-2 border-blue-800 bg-blue-100">
+            <tr className="border-t-2 border-blue-400 bg-blue-100">
               <td className="pt-2 pb-1 pr-2 sm:pr-4 text-right text-[14px] font-bold text-gray-900">
                 รวมทั้งสิ้น
               </td>
@@ -115,7 +115,7 @@ export function PreviewSummary({
         </table>
 
         {/* Thai Baht Text */}
-        <div className="mt-1 rounded bg-blue-50 px-2 py-1 text-center text-[10px] text-gray-700 border border-blue-200">
+        <div className="mt-1 rounded bg-blue-50 px-2 py-1 text-center text-[10px] text-gray-700 border border-blue-400">
           <span className="font-medium">({bahtText(grandTotal)})</span>
         </div>
       </div>
