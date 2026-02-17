@@ -34,7 +34,7 @@ export function PreviewCustomer({
   return (
     <div className="mb-3 flex items-stretch gap-4 max-w-[85%] mx-auto">
       {/* Left: Customer Info */}
-      <div className="flex-1 min-w-0 rounded border border-blue-50 p-2 sm:p-3">
+      <div className="flex-1 min-w-0 rounded border border-blue-100 p-2 sm:p-3">
         <h3 className="mb-1 sm:mb-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wide">
           เรียน
         </h3>
@@ -91,7 +91,7 @@ export function PreviewCustomer({
       </div>
 
       {/* Right: Document Date & Number */}
-      <div className="shrink-0 rounded border border-blue-50 p-2 sm:p-3">
+      <div className="shrink-0 rounded border border-blue-100 p-2 sm:p-3">
         <div className="grid grid-cols-[auto_auto_1fr] gap-x-1.5 gap-y-1 text-[10px] text-gray-700">
           <span className="font-semibold text-right text-black">วันที่</span>
           <span className="text-black">:</span>
