@@ -147,16 +147,32 @@ export function ProductTable({
     {
       accessorKey: "name",
       header: "ชื่อสินค้า",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          {row.original.name}
-          {row.original.source === "WOOCOMMERCE" && (
-            <Badge className="bg-purple-100 text-purple-800 text-[10px] px-1.5 py-0">
-              WC
-            </Badge>
-          )}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const url = row.original.imageUrl;
+        return (
+          <div className="flex items-center gap-2">
+            {url ? (
+              <Image
+                src={url}
+                alt={row.original.name}
+                width={32}
+                height={32}
+                className="rounded object-cover size-8 md:hidden flex-shrink-0"
+              />
+            ) : (
+              <div className="size-8 rounded bg-muted flex items-center justify-center text-muted-foreground text-[10px] md:hidden flex-shrink-0">
+                N/A
+              </div>
+            )}
+            <span>{row.original.name}</span>
+            {row.original.source === "WOOCOMMERCE" && (
+              <Badge className="bg-purple-100 text-purple-800 text-[10px] px-1.5 py-0">
+                WC
+              </Badge>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "category.name",
