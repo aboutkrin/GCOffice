@@ -21,6 +21,9 @@ import {
   User,
   ReceiptText,
   Printer,
+  Calculator,
+  Truck,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/actions/auth-actions";
@@ -78,6 +81,21 @@ const mainNavItems = [
     href: "/customers",
     label: "ลูกค้า",
     icon: Users,
+  },
+  {
+    href: "/product-costs",
+    label: "ต้นทุนสินค้า",
+    icon: Calculator,
+  },
+  {
+    href: "/vendor-costs",
+    label: "ต้นทุนใบสั่งซื้อ",
+    icon: Truck,
+  },
+  {
+    href: "/expenses",
+    label: "ค่าใช้จ่ายรายเดือน",
+    icon: Wallet,
   },
   {
     href: "/print-order",
