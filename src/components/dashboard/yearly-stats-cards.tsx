@@ -87,18 +87,22 @@ export function YearlyStatsCards({ initialData }: YearlyStatsCardsProps) {
           </SelectContent>
         </Select>
       </div>
-      <div className={`grid gap-4 md:grid-cols-2 lg:grid-cols-5 ${isPending ? "opacity-50" : ""}`}>
-        {cards.map((card) => (
-          <Link key={card.title} href={card.href}>
+      <div className={`grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-5 ${isPending ? "opacity-50" : ""}`}>
+        {cards.map((card, index) => (
+          <Link
+            key={card.title}
+            href={card.href}
+            className={index === cards.length - 1 ? "col-span-2 lg:col-span-1" : ""}
+          >
             <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+                <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                   {card.title}
                 </CardTitle>
-                <card.icon className="h-5 w-5 text-muted-foreground" />
+                <card.icon className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold">{card.value}</p>
+                <p className="text-lg md:text-2xl font-bold">{card.value}</p>
               </CardContent>
             </Card>
           </Link>

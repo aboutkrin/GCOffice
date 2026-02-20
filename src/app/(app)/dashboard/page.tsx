@@ -74,18 +74,22 @@ export default async function DashboardPage() {
       {/* This Month Stats */}
       <div className="mb-6">
         <h2 className="text-lg font-semibold mb-4">เดือนนี้</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {thisMonthCards.map((card) => (
-            <Link key={card.title} href={card.href}>
+        <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-5">
+          {thisMonthCards.map((card, index) => (
+            <Link
+              key={card.title}
+              href={card.href}
+              className={index === thisMonthCards.length - 1 ? "col-span-2 lg:col-span-1" : ""}
+            >
               <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                  <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                     {card.title}
                   </CardTitle>
-                  <card.icon className="h-5 w-5 text-muted-foreground" />
+                  <card.icon className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{card.value}</p>
+                  <p className="text-lg md:text-2xl font-bold">{card.value}</p>
                 </CardContent>
               </Card>
             </Link>
@@ -105,65 +109,96 @@ export default async function DashboardPage() {
       {/* Recent Documents */}
       <div className="mt-8">
         <h2 className="text-lg font-semibold mb-4">เอกสารล่าสุด</h2>
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>เลขที่เอกสาร</TableHead>
-                  <TableHead>ประเภท</TableHead>
-                  <TableHead>ลูกค้า</TableHead>
-                  <TableHead>วันที่</TableHead>
-                  <TableHead className="text-right">ยอดรวม</TableHead>
-                  <TableHead>สถานะ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stats.recentDocuments.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="text-center text-muted-foreground py-8"
-                    >
-                      ยังไม่มีเอกสาร
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  stats.recentDocuments.map((doc) => {
-                    const snapshot = doc.customerSnapshot as Record<string, unknown>;
-                    const customerName =
-                      (snapshot?.customerName as string) ||
-                      (snapshot?.companyName as string) ||
-                      "-";
 
-                    return (
-                      <TableRow key={doc.id}>
-                        <TableCell className="font-medium">
-                          {doc.documentNumber}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {DOCUMENT_TYPE_LABELS[doc.type] || doc.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{customerName}</TableCell>
-                        <TableCell>
-                          {formatThaiDate(new Date(doc.documentDate), "short")}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatBaht(doc.grandTotal.toString())}
-                        </TableCell>
-                        <TableCell>
-                          <DocumentStatusBadge status={doc.status} />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        {stats.recentDocuments.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground border rounded-lg">
+            ยังไม่มีเอกสาร
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table */}
+            <Card className="hidden md:block">
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>เลขที่เอกสาร</TableHead>
+                      <TableHead>ประเภท</TableHead>
+                      <TableHead>ลูกค้า</TableHead>
+                      <TableHead>วันที่</TableHead>
+                      <TableHead className="text-right">ยอดรวม</TableHead>
+                      <TableHead>สถานะ</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stats.recentDocuments.map((doc) => {
+                      const snapshot = doc.customerSnapshot as Record<string, unknown>;
+                      const customerName =
+                        (snapshot?.customerName as string) ||
+                        (snapshot?.companyName as string) ||
+                        "-";
+
+                      return (
+                        <TableRow key={doc.id}>
+                          <TableCell className="font-medium">
+                            {doc.documentNumber}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              {DOCUMENT_TYPE_LABELS[doc.type] || doc.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{customerName}</TableCell>
+                          <TableCell>
+                            {formatThaiDate(new Date(doc.documentDate), "short")}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatBaht(doc.grandTotal.toString())}
+                          </TableCell>
+                          <TableCell>
+                            <DocumentStatusBadge status={doc.status} />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Mobile Card Layout */}
+            <div className="md:hidden space-y-3">
+              {stats.recentDocuments.map((doc) => {
+                const snapshot = doc.customerSnapshot as Record<string, unknown>;
+                const customerName =
+                  (snapshot?.customerName as string) ||
+                  (snapshot?.companyName as string) ||
+                  "-";
+
+                return (
+                  <div key={doc.id} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">{doc.documentNumber}</span>
+                      <DocumentStatusBadge status={doc.status} />
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <Badge variant="outline" className="text-xs">
+                        {DOCUMENT_TYPE_LABELS[doc.type] || doc.type}
+                      </Badge>
+                      <span className="font-semibold">
+                        {formatBaht(doc.grandTotal.toString())}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>{customerName}</span>
+                      <span>{formatThaiDate(new Date(doc.documentDate), "short")}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
