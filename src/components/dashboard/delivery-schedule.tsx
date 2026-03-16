@@ -336,7 +336,7 @@ export function DeliverySchedule({
                             onClick={() => setSelectedItem(bar.item)}
                             style={{ gridColumn: `span ${bar.span}` }}
                             className={cn(
-                              "text-left text-[11px] leading-tight py-0.5 px-1.5 mb-0.5 truncate cursor-pointer border transition-colors hover:opacity-80",
+                              "text-left text-[11px] leading-tight h-5 px-1.5 mb-0.5 truncate cursor-pointer border transition-colors hover:opacity-80",
                               bar.colorClass,
                               bar.isStart ? "rounded-l-md ml-0.5" : "",
                               bar.isEnd ? "rounded-r-md mr-0.5" : ""
