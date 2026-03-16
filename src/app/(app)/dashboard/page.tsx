@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layout/page-header";
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge";
-import { getDashboardStats, getYearlyStats, getMonthlyRevenueAndCost } from "@/data/dashboard";
+import { getDashboardStats, getYearlyStats, getMonthlyRevenueAndCost, getDeliverySchedule } from "@/data/dashboard";
 import { YearlyStatsCards } from "@/components/dashboard/yearly-stats-cards";
 import { RevenueExpenseSection } from "@/components/dashboard/revenue-expense-section";
+import { DeliverySchedule } from "@/components/dashboard/delivery-schedule";
 import { formatBaht } from "@/lib/thai-currency";
 import { formatThaiDate, getThaiNow } from "@/lib/thai-date";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
@@ -23,10 +24,11 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const { year: currentYear, month: currentMonth } = getThaiNow();
-  const [stats, yearlyStats, revenueExpense] = await Promise.all([
+  const [stats, yearlyStats, revenueExpense, deliverySchedule] = await Promise.all([
     getDashboardStats(),
     getYearlyStats(currentYear),
     getMonthlyRevenueAndCost(currentYear),
+    getDeliverySchedule(currentYear, currentMonth),
   ]);
 
   const monthParams = `year=${currentYear}&month=${currentMonth}`;
@@ -104,6 +106,16 @@ export default async function DashboardPage() {
       <div className="mt-8">
         <h2 className="text-lg font-semibold mb-4">ภาพรวมรายรับและรายจ่ายตลอดทั้งปี</h2>
         <RevenueExpenseSection initialData={revenueExpense} />
+      </div>
+
+      {/* Delivery Schedule */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold mb-4">กำหนดส่งสินค้า</h2>
+        <DeliverySchedule
+          initialData={deliverySchedule}
+          initialYear={currentYear}
+          initialMonth={currentMonth}
+        />
       </div>
 
       {/* Recent Documents */}

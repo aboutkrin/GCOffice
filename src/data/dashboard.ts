@@ -396,3 +396,92 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     availableYears,
   };
 }
+
+// Delivery schedule for confirmed quotations
+
+export interface DeliveryScheduleItem {
+  id: string;
+  documentNumber: string;
+  customerName: string;
+  deliveryDateStart: string;
+  deliveryDateEnd: string | null;
+  grandTotal: number;
+  productionDays: string | null;
+  lineItems: {
+    productName: string;
+    quantity: number;
+    unit: string | null;
+  }[];
+}
+
+export async function getDeliverySchedule(
+  year: number,
+  month: number
+): Promise<DeliveryScheduleItem[]> {
+  const startOfMonth = new Date(Date.UTC(year, month - 1, 1));
+  const endOfMonth = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+
+  try {
+    const documents = await prisma.document.findMany({
+      where: {
+        type: DocumentType.QUOTATION,
+        status: DocumentStatus.CONFIRMED,
+        deliveryDateStart: { not: null },
+        OR: [
+          {
+            deliveryDateStart: { gte: startOfMonth, lte: endOfMonth },
+          },
+          {
+            deliveryDateEnd: { gte: startOfMonth, lte: endOfMonth },
+          },
+          {
+            deliveryDateStart: { lte: startOfMonth },
+            deliveryDateEnd: { gte: endOfMonth },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        documentNumber: true,
+        customerSnapshot: true,
+        deliveryDateStart: true,
+        deliveryDateEnd: true,
+        grandTotal: true,
+        productionDays: true,
+        lineItems: {
+          select: {
+            productName: true,
+            quantity: true,
+            unit: true,
+          },
+          orderBy: { sequence: "asc" },
+        },
+      },
+      orderBy: { deliveryDateStart: "asc" },
+    });
+
+    return documents.map((doc) => {
+      const snapshot = doc.customerSnapshot as Record<string, unknown>;
+      const customerName =
+        (snapshot?.customerName as string) ||
+        (snapshot?.companyName as string) ||
+        "-";
+      return {
+        id: doc.id,
+        documentNumber: doc.documentNumber,
+        customerName,
+        deliveryDateStart: doc.deliveryDateStart!.toISOString(),
+        deliveryDateEnd: doc.deliveryDateEnd?.toISOString() ?? null,
+        grandTotal: Number(doc.grandTotal),
+        productionDays: doc.productionDays,
+        lineItems: doc.lineItems.map((li) => ({
+          productName: li.productName,
+          quantity: Number(li.quantity),
+          unit: li.unit,
+        })),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
