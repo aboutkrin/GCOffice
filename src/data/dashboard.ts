@@ -410,6 +410,7 @@ export interface DeliveryScheduleItem {
   lineItems: {
     productName: string;
     quantity: number;
+    productImage: string | null;
   }[];
 }
 
@@ -451,6 +452,7 @@ export async function getDeliverySchedule(
           select: {
             productName: true,
             quantity: true,
+            productImage: true,
           },
           orderBy: { sequence: "asc" },
         },
@@ -475,6 +477,7 @@ export async function getDeliverySchedule(
         lineItems: doc.lineItems.map((li) => ({
           productName: li.productName,
           quantity: Number(li.quantity),
+          productImage: li.productImage,
         })),
       };
     });
