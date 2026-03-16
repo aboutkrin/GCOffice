@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight, Package, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -413,10 +414,24 @@ export function DeliverySchedule({
                   {selectedItem.lineItems.map((li, i) => (
                     <div
                       key={i}
-                      className="flex items-start justify-between text-sm border-b pb-2 last:border-0"
+                      className="flex items-start gap-2 text-sm border-b pb-2 last:border-0"
                     >
-                      <span className="flex-1 mr-2">{li.productName}</span>
-                      <Badge variant="secondary" className="shrink-0">
+                      {li.productImage ? (
+                        <Image
+                          src={li.productImage}
+                          alt={li.productName}
+                          width={48}
+                          height={48}
+                          className="rounded object-cover shrink-0"
+                          style={{ width: 48, height: 48 }}
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded bg-muted flex items-center justify-center shrink-0">
+                          <Package className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      )}
+                      <span className="flex-1 min-w-0 pt-1">{li.productName}</span>
+                      <Badge variant="secondary" className="shrink-0 mt-1">
                         {li.quantity.toLocaleString()}
                       </Badge>
                     </div>
@@ -434,7 +449,7 @@ export function DeliverySchedule({
 
               {/* Link to quotation */}
               <Link
-                href={`/quotations/${selectedItem.id}`}
+                href={`/quotations/${selectedItem.id}/preview`}
                 className="block text-center text-sm text-primary hover:underline"
               >
                 ดูใบเสนอราคา →
