@@ -418,7 +418,6 @@ export function DeliverySchedule({
                       <span className="flex-1 mr-2">{li.productName}</span>
                       <Badge variant="secondary" className="shrink-0">
                         {li.quantity.toLocaleString()}
-                        {li.unit ? ` ${li.unit}` : ""}
                       </Badge>
                     </div>
                   ))}

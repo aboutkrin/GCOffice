@@ -410,7 +410,6 @@ export interface DeliveryScheduleItem {
   lineItems: {
     productName: string;
     quantity: number;
-    unit: string | null;
   }[];
 }
 
@@ -452,7 +451,6 @@ export async function getDeliverySchedule(
           select: {
             productName: true,
             quantity: true,
-            unit: true,
           },
           orderBy: { sequence: "asc" },
         },
@@ -477,7 +475,6 @@ export async function getDeliverySchedule(
         lineItems: doc.lineItems.map((li) => ({
           productName: li.productName,
           quantity: Number(li.quantity),
-          unit: li.unit,
         })),
       };
     });
