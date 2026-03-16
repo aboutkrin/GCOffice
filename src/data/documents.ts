@@ -79,7 +79,7 @@ export async function getConfirmedQuotations(params?: { year?: number; month?: n
     const where: any = {
       type: "QUOTATION",
       status: "CONFIRMED",
-      invoices: { none: {} },
+      invoices: { none: { status: { not: "CANCELLED" } } },
     };
     if (params?.year && params?.month) {
       const startDate = new Date(Date.UTC(params.year, params.month - 1, 1));
@@ -122,7 +122,7 @@ export async function getPaidInvoices(params?: { year?: number; month?: number }
     const where: any = {
       type: "INVOICE",
       status: "PAID",
-      receipts: { none: {} },
+      receipts: { none: { status: { not: "CANCELLED" } } },
     };
     if (params?.year && params?.month) {
       const startDate = new Date(Date.UTC(params.year, params.month - 1, 1));
