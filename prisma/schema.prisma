@@ -428,6 +428,7 @@ enum DocumentStatus {
   DRAFT
   QUOTED
   CONFIRMED
+  SHIPPED
   SAMPLE
   BILLED
   PAID

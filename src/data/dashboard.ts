@@ -3,6 +3,12 @@ import { DocumentType, DocumentStatus } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { getThaiNow } from "@/lib/thai-date";
 
+export interface HolidayItem {
+  id: string;
+  name: string;
+  date: string;
+}
+
 
 export interface DashboardStats {
   // This month stats
@@ -403,6 +409,7 @@ export interface DeliveryScheduleItem {
   id: string;
   documentNumber: string;
   customerName: string;
+  status: string;
   deliveryDateStart: string;
   deliveryDateEnd: string | null;
   grandTotal: number;
@@ -425,7 +432,7 @@ export async function getDeliverySchedule(
     const documents = await prisma.document.findMany({
       where: {
         type: DocumentType.QUOTATION,
-        status: DocumentStatus.CONFIRMED,
+        status: { in: [DocumentStatus.CONFIRMED, DocumentStatus.SHIPPED] },
         deliveryDateStart: { not: null },
         OR: [
           {
@@ -442,6 +449,7 @@ export async function getDeliverySchedule(
       },
       select: {
         id: true,
+        status: true,
         documentNumber: true,
         customerSnapshot: true,
         deliveryDateStart: true,
@@ -470,6 +478,7 @@ export async function getDeliverySchedule(
         id: doc.id,
         documentNumber: doc.documentNumber,
         customerName,
+        status: doc.status,
         deliveryDateStart: doc.deliveryDateStart!.toISOString(),
         deliveryDateEnd: doc.deliveryDateEnd?.toISOString() ?? null,
         grandTotal: Number(doc.grandTotal),
@@ -481,6 +490,39 @@ export async function getDeliverySchedule(
         })),
       };
     });
+  } catch {
+    return [];
+  }
+}
+
+export async function getHolidaysForMonth(
+  year: number,
+  month: number
+): Promise<HolidayItem[]> {
+  const startOfMonth = new Date(Date.UTC(year, month - 1, 1));
+  const endOfMonth = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
+
+  try {
+    const holidays = await prisma.holiday.findMany({
+      where: {
+        date: {
+          gte: startOfMonth,
+          lte: endOfMonth,
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        date: true,
+      },
+      orderBy: { date: "asc" },
+    });
+
+    return holidays.map((h) => ({
+      id: h.id,
+      name: h.name,
+      date: h.date.toISOString(),
+    }));
   } catch {
     return [];
   }

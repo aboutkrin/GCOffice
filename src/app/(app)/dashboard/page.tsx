@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { PageHeader } from "@/components/layout/page-header";
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge";
-import { getDashboardStats, getYearlyStats, getMonthlyRevenueAndCost, getDeliverySchedule } from "@/data/dashboard";
+import { getDashboardStats, getYearlyStats, getMonthlyRevenueAndCost, getDeliverySchedule, getHolidaysForMonth } from "@/data/dashboard";
 import { YearlyStatsCards } from "@/components/dashboard/yearly-stats-cards";
 import { RevenueExpenseSection } from "@/components/dashboard/revenue-expense-section";
 import { DeliverySchedule } from "@/components/dashboard/delivery-schedule";
@@ -24,11 +24,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const { year: currentYear, month: currentMonth } = getThaiNow();
-  const [stats, yearlyStats, revenueExpense, deliverySchedule] = await Promise.all([
+  const [stats, yearlyStats, revenueExpense, deliverySchedule, holidays] = await Promise.all([
     getDashboardStats(),
     getYearlyStats(currentYear),
     getMonthlyRevenueAndCost(currentYear),
     getDeliverySchedule(currentYear, currentMonth),
+    getHolidaysForMonth(currentYear, currentMonth),
   ]);
 
   const monthParams = `year=${currentYear}&month=${currentMonth}`;
@@ -115,6 +116,7 @@ export default async function DashboardPage() {
           initialData={deliverySchedule}
           initialYear={currentYear}
           initialMonth={currentMonth}
+          initialHolidays={holidays}
         />
       </div>
 

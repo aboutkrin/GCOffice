@@ -2,6 +2,7 @@ export const DOCUMENT_STATUS_LABELS: Record<string, string> = {
   DRAFT: "ร่าง",
   QUOTED: "เสนอราคาแล้ว",
   CONFIRMED: "ยืนยันสั่งซื้อ",
+  SHIPPED: "ส่งสินค้าแล้ว",
   SAMPLE: "ตัวอย่าง",
   BILLED: "เรียกเก็บแล้ว",
   PAID: "ชำระแล้ว",
@@ -13,6 +14,7 @@ export const DOCUMENT_STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-800",
   QUOTED: "bg-blue-100 text-blue-800",
   CONFIRMED: "bg-green-100 text-green-800",
+  SHIPPED: "bg-gray-200 text-gray-600",
   SAMPLE: "bg-purple-100 text-purple-800",
   BILLED: "bg-blue-100 text-blue-800",
   PAID: "bg-green-100 text-green-800",
@@ -20,7 +22,7 @@ export const DOCUMENT_STATUS_COLORS: Record<string, string> = {
   CANCELLED: "bg-red-100 text-red-800",
 };
 
-export const QUOTATION_STATUS_OPTIONS = ["DRAFT", "QUOTED", "CONFIRMED", "CANCELLED"] as const;
+export const QUOTATION_STATUS_OPTIONS = ["DRAFT", "QUOTED", "CONFIRMED", "SHIPPED", "CANCELLED"] as const;
 export const INVOICE_STATUS_OPTIONS = ["DRAFT", "BILLED", "DEPOSITED", "PAID", "CANCELLED"] as const;
 export const RECEIPT_STATUS_OPTIONS = ["DRAFT", "PAID", "CANCELLED"] as const;
 

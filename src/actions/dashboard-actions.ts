@@ -4,9 +4,11 @@ import {
   getYearlyStats,
   getMonthlyRevenueAndCost,
   getDeliverySchedule,
+  getHolidaysForMonth,
   type YearlyStats,
   type MonthlyRevenueExpenseResult,
   type DeliveryScheduleItem,
+  type HolidayItem,
 } from "@/data/dashboard";
 
 export async function fetchYearlyStatsAction(
@@ -26,4 +28,22 @@ export async function fetchDeliveryScheduleAction(
   month: number
 ): Promise<DeliveryScheduleItem[]> {
   return getDeliverySchedule(year, month);
+}
+
+export async function fetchHolidaysForMonthAction(
+  year: number,
+  month: number
+): Promise<HolidayItem[]> {
+  return getHolidaysForMonth(year, month);
+}
+
+export async function markDocumentShippedAction(
+  id: string
+): Promise<void> {
+  const { prisma } = await import("@/lib/prisma");
+  const { DocumentStatus } = await import("@/generated/prisma/client");
+  await prisma.document.update({
+    where: { id },
+    data: { status: DocumentStatus.SHIPPED },
+  });
 }

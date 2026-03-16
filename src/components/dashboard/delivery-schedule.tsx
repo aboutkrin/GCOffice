@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, Package, FileText } from "lucide-react";
+import { ChevronLeft, ChevronRight, Package, FileText, Truck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,8 +16,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatBaht } from "@/lib/thai-currency";
-import { fetchDeliveryScheduleAction } from "@/actions/dashboard-actions";
-import type { DeliveryScheduleItem } from "@/data/dashboard";
+import {
+  fetchDeliveryScheduleAction,
+  fetchHolidaysForMonthAction,
+  markDocumentShippedAction,
+} from "@/actions/dashboard-actions";
+import type { DeliveryScheduleItem, HolidayItem } from "@/data/dashboard";
 
 const THAI_MONTHS = [
   "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
@@ -31,6 +35,7 @@ interface DeliveryScheduleProps {
   initialData: DeliveryScheduleItem[];
   initialYear: number;
   initialMonth: number;
+  initialHolidays: HolidayItem[];
 }
 
 // Color palette for delivery bars
@@ -45,7 +50,10 @@ const BAR_COLORS = [
   "bg-indigo-100 text-indigo-800 border-indigo-200",
 ];
 
-function getBarColor(index: number) {
+const SHIPPED_BAR_COLOR = "bg-gray-200 text-gray-500 border-gray-300";
+
+function getBarColor(index: number, status: string) {
+  if (status === "SHIPPED") return SHIPPED_BAR_COLOR;
   return BAR_COLORS[index % BAR_COLORS.length];
 }
 
@@ -148,7 +156,7 @@ function computeDeliveryBars(
 
     const bar: DeliveryBar = {
       item,
-      colorClass: getBarColor(idx),
+      colorClass: getBarColor(idx, item.status),
       startCol,
       span: endCol - startCol + 1,
       isStart: itemStart >= weekStart,
@@ -176,15 +184,23 @@ function computeDeliveryBars(
   return lanes;
 }
 
+function isHolidayDate(dateObj: Date, holidays: HolidayItem[]): HolidayItem | undefined {
+  const dateStr = dateObj.toISOString().slice(0, 10);
+  return holidays.find((h) => h.date.slice(0, 10) === dateStr);
+}
+
 export function DeliverySchedule({
   initialData,
   initialYear,
   initialMonth,
+  initialHolidays,
 }: DeliveryScheduleProps) {
   const [data, setData] = useState(initialData);
+  const [holidays, setHolidays] = useState(initialHolidays);
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const [isPending, startTransition] = useTransition();
+  const [isShipping, setIsShipping] = useState(false);
   const [selectedItem, setSelectedItem] = useState<DeliveryScheduleItem | null>(
     null
   );
@@ -213,8 +229,12 @@ export function DeliverySchedule({
     setYear(newYear);
     setMonth(newMonth);
     startTransition(async () => {
-      const result = await fetchDeliveryScheduleAction(newYear, newMonth);
+      const [result, holidayResult] = await Promise.all([
+        fetchDeliveryScheduleAction(newYear, newMonth),
+        fetchHolidaysForMonthAction(newYear, newMonth),
+      ]);
       setData(result);
+      setHolidays(holidayResult);
     });
   }
 
@@ -225,9 +245,34 @@ export function DeliverySchedule({
     setYear(todayYear);
     setMonth(todayMonth);
     startTransition(async () => {
-      const result = await fetchDeliveryScheduleAction(todayYear, todayMonth);
+      const [result, holidayResult] = await Promise.all([
+        fetchDeliveryScheduleAction(todayYear, todayMonth),
+        fetchHolidaysForMonthAction(todayYear, todayMonth),
+      ]);
       setData(result);
+      setHolidays(holidayResult);
     });
+  }
+
+  async function handleMarkShipped(id: string) {
+    setIsShipping(true);
+    try {
+      await markDocumentShippedAction(id);
+      // Update local state
+      setData((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, status: "SHIPPED" } : item
+        )
+      );
+      // Update selected item too
+      setSelectedItem((prev) =>
+        prev && prev.id === id ? { ...prev, status: "SHIPPED" } : prev
+      );
+    } catch (error) {
+      console.error("Failed to mark as shipped:", error);
+    } finally {
+      setIsShipping(false);
+    }
   }
 
   return (
@@ -277,13 +322,14 @@ export function DeliverySchedule({
           </div>
 
           {/* Day of week headers */}
-          <div className="grid grid-cols-7 mb-1">
+          <div className="grid grid-cols-7">
             {DAY_LABELS.map((label, i) => (
               <div
                 key={label}
                 className={cn(
                   "text-center text-xs font-medium py-1",
-                  i === 0 ? "text-red-500" : "text-muted-foreground"
+                  i === 0 ? "text-red-500" : "text-muted-foreground",
+                  i > 0 && "border-l border-gray-200"
                 )}
               >
                 {label}
@@ -299,26 +345,39 @@ export function DeliverySchedule({
                 <div key={weekIdx} className="border-b">
                   {/* Date number row */}
                   <div className="grid grid-cols-7">
-                    {week.map((day, dayIdx) => (
-                      <div
-                        key={dayIdx}
-                        className={cn(
-                          "text-right px-1 pt-1 pb-0 text-sm min-h-[28px]",
-                          !day.isCurrentMonth && "text-muted-foreground/40",
-                          dayIdx === 0 && day.isCurrentMonth && "text-red-500"
-                        )}
-                      >
-                        <span
+                    {week.map((day, dayIdx) => {
+                      const holiday = day.isCurrentMonth
+                        ? isHolidayDate(day.dateObj, holidays)
+                        : undefined;
+                      return (
+                        <div
+                          key={dayIdx}
                           className={cn(
-                            "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs",
-                            day.isToday &&
-                              "bg-red-500 text-white font-bold"
+                            "text-center px-1 pt-1 pb-0 text-sm min-h-[28px] relative",
+                            dayIdx > 0 && "border-l border-gray-200",
+                            !day.isCurrentMonth && "text-muted-foreground/40",
+                            dayIdx === 0 && day.isCurrentMonth && "text-red-500",
+                            holiday && "bg-red-50"
                           )}
+                          title={holiday?.name}
                         >
-                          {day.date}
-                        </span>
-                      </div>
-                    ))}
+                          <span
+                            className={cn(
+                              "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs",
+                              day.isToday &&
+                                "bg-red-500 text-white font-bold"
+                            )}
+                          >
+                            {day.date}
+                          </span>
+                          {holiday && (
+                            <div className="text-[9px] text-red-500 leading-tight truncate px-0.5">
+                              {holiday.name}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                   {/* Delivery bars */}
                   <div className="relative min-h-[4px]">
@@ -337,14 +396,21 @@ export function DeliverySchedule({
                             onClick={() => setSelectedItem(bar.item)}
                             style={{ gridColumn: `span ${bar.span}` }}
                             className={cn(
-                              "text-left text-[11px] leading-tight h-5 px-1.5 mb-0.5 truncate cursor-pointer border transition-colors hover:opacity-80",
+                              "flex items-center text-[11px] leading-tight h-5 px-1.5 mb-0.5 cursor-pointer border transition-colors hover:opacity-80",
                               bar.colorClass,
                               bar.isStart ? "rounded-l-md ml-0.5" : "",
                               bar.isEnd ? "rounded-r-md mr-0.5" : ""
                             )}
                             title={bar.item.customerName}
                           >
-                            {bar.isStart && bar.item.customerName}
+                            <span className="truncate flex-1 text-left">
+                              {bar.isStart && bar.item.customerName}
+                            </span>
+                            {bar.isEnd && !bar.isStart && (
+                              <span className="truncate text-right ml-1 font-medium">
+                                {bar.item.customerName}
+                              </span>
+                            )}
                           </button>
                         </div>
                       ))
@@ -446,6 +512,26 @@ export function DeliverySchedule({
                   {formatBaht(selectedItem.grandTotal)}
                 </span>
               </div>
+
+              {/* Shipped button */}
+              {selectedItem.status === "CONFIRMED" && (
+                <Button
+                  onClick={() => handleMarkShipped(selectedItem.id)}
+                  disabled={isShipping}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <Truck className="h-4 w-4 mr-2" />
+                  {isShipping ? "กำลังบันทึก..." : "ส่งสินค้าแล้ว"}
+                </Button>
+              )}
+
+              {selectedItem.status === "SHIPPED" && (
+                <div className="flex items-center justify-center gap-2 py-2 text-sm text-gray-500 bg-gray-100 rounded-md">
+                  <Truck className="h-4 w-4" />
+                  ส่งสินค้าแล้ว
+                </div>
+              )}
 
               {/* Link to quotation */}
               <Link
