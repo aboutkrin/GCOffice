@@ -18,11 +18,25 @@ export function PreviewFooter({
   createdBy,
 }: PreviewFooterProps) {
   return (
-    <div>
-      {/* Signatures */}
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
+      {/* Left: Notes */}
+      <div className="flex items-end">
+        {footerNotes && (
+          <div className="border border-gray-300 rounded p-2 sm:p-3 w-full">
+            <p className="text-[10px] text-gray-600 whitespace-pre-line leading-relaxed">
+              <span className="font-bold text-gray-800 underline">
+                หมายเหตุ
+              </span>
+              <span className="font-bold text-gray-800">:</span> {footerNotes}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Right: Signatures */}
       <div>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
-          {/* Left: Issuer */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          {/* Issuer */}
           <div className="text-center">
             <div className="flex items-end justify-center h-8 sm:h-12">
               {createdBy?.signatureUrl && (
@@ -53,7 +67,7 @@ export function PreviewFooter({
             </p>
           </div>
 
-          {/* Right: Approver */}
+          {/* Approver */}
           <div className="text-center">
             <div className="h-8 sm:h-12" />
             <div className="mx-auto w-24 sm:w-40 border-b border-blue-200" />
@@ -66,17 +80,6 @@ export function PreviewFooter({
           </div>
         </div>
       </div>
-
-      {/* Notes (below) */}
-      {footerNotes && (
-        <div className="mt-2">
-          <p className="text-[10px] text-gray-600 whitespace-pre-line leading-relaxed">
-            <span className="font-bold text-gray-800 underline">หมายเหตุ</span>
-            <span className="font-bold text-gray-800">:</span>{" "}
-            {footerNotes}
-          </p>
-        </div>
-      )}
     </div>
   );
 }
