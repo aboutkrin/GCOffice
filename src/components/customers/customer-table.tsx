@@ -9,10 +9,11 @@ import {
   flexRender,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Trash2, Search } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Search, GitMerge } from "lucide-react";
 import { toast } from "sonner";
 
-import { deleteCustomer } from "@/actions/customer-actions";
+import { deleteCustomer, mergeCustomers } from "@/actions/customer-actions";
+import { CustomerSelect } from "@/components/customers/customer-select";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const LEAD_TYPE_LABELS: Record<string, string> = {
   FACEBOOK: "Facebook",
@@ -59,6 +68,8 @@ interface CustomerTableProps {
 export function CustomerTable({ customers }: CustomerTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [mergeSource, setMergeSource] = useState<any | null>(null);
+  const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const columns: ColumnDef<any>[] = [
@@ -146,6 +157,15 @@ export function CustomerTable({ customers }: CustomerTableProps) {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
+              onClick={() => {
+                setMergeSource(row.original);
+                setMergeTargetId(null);
+              }}
+            >
+              <GitMerge className="size-4" />
+              รวมลูกค้า
+            </DropdownMenuItem>
+            <DropdownMenuItem
               variant="destructive"
               onClick={() => setDeleteId(row.original.id)}
             >
@@ -191,6 +211,25 @@ export function CustomerTable({ customers }: CustomerTableProps) {
       }
     });
   }
+
+  function handleMerge() {
+    if (!mergeSource || !mergeTargetId) return;
+    startTransition(async () => {
+      try {
+        await mergeCustomers(mergeSource.id, mergeTargetId);
+        toast.success("รวมลูกค้าเรียบร้อยแล้ว");
+      } catch {
+        toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+      } finally {
+        setMergeSource(null);
+        setMergeTargetId(null);
+      }
+    });
+  }
+
+  const mergeTargetCustomers = customers.filter(
+    (c) => c.id !== mergeSource?.id && c.status === "ACTIVE"
+  );
 
   return (
     <div className="space-y-4">
@@ -275,6 +314,34 @@ export function CustomerTable({ customers }: CustomerTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!mergeSource} onOpenChange={() => { setMergeSource(null); setMergeTargetId(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>รวมลูกค้า</DialogTitle>
+            <DialogDescription>
+              ย้ายเอกสารทั้งหมดของ {mergeSource?.code} ({mergeSource?.customerName}) ไปยังลูกค้าที่เลือก
+              แล้วปิดการใช้งาน {mergeSource?.code}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <label className="text-sm font-medium mb-2 block">เลือกลูกค้าปลายทาง</label>
+            <CustomerSelect
+              value={mergeTargetId ?? undefined}
+              onSelect={(customer) => setMergeTargetId(customer.id)}
+              customers={mergeTargetCustomers}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setMergeSource(null); setMergeTargetId(null); }}>
+              ยกเลิก
+            </Button>
+            <Button onClick={handleMerge} disabled={!mergeTargetId || isPending}>
+              {isPending ? "กำลังรวม..." : "ยืนยันรวมลูกค้า"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

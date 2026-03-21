@@ -42,3 +42,37 @@ export async function deleteCustomer(id: string) {
   });
   revalidatePath("/customers");
 }
+
+export async function mergeCustomers(sourceId: string, targetId: string) {
+  if (sourceId === targetId) {
+    throw new Error("ไม่สามารถรวมลูกค้าเดียวกันได้");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Verify both customers exist
+    const [source, target] = await Promise.all([
+      tx.customer.findUnique({ where: { id: sourceId } }),
+      tx.customer.findUnique({ where: { id: targetId } }),
+    ]);
+
+    if (!source || !target) {
+      throw new Error("ไม่พบข้อมูลลูกค้า");
+    }
+
+    // Transfer all documents from source to target
+    await tx.document.updateMany({
+      where: { customerId: sourceId },
+      data: { customerId: targetId },
+    });
+
+    // Deactivate source customer
+    await tx.customer.update({
+      where: { id: sourceId },
+      data: { status: "INACTIVE" },
+    });
+  });
+
+  revalidatePath("/customers");
+  revalidatePath("/quotations");
+  revalidatePath("/invoices");
+}
