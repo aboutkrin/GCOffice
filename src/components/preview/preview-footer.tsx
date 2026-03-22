@@ -75,7 +75,10 @@ export function PreviewFooter({
               ผู้อนุมัติ / ลูกค้า
             </p>
             <p className="mt-1 text-[8px] text-gray-500">
-              วันที่ ____/____/________
+              วันที่{" "}
+              {documentDate
+                ? formatThaiDate(new Date(documentDate))
+                : "____/____/________"}
             </p>
           </div>
         </div>
