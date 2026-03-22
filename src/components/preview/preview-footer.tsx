@@ -18,11 +18,11 @@ export function PreviewFooter({
   createdBy,
 }: PreviewFooterProps) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
+    <div className="flex gap-3 sm:gap-4 w-full">
       {/* Left: Notes */}
-      <div className="flex items-end">
+      <div className="flex-1 min-w-0 flex items-end">
         {footerNotes && (
-          <div className="border border-gray-300 rounded p-2 sm:p-3 w-full">
+          <div className="p-2 sm:p-3 w-full">
             <p className="text-[10px] text-gray-600 whitespace-pre-line leading-relaxed">
               <span className="font-bold text-gray-800 underline">
                 หมายเหตุ
@@ -34,7 +34,7 @@ export function PreviewFooter({
       </div>
 
       {/* Right: Signatures */}
-      <div>
+      <div className="w-full max-w-sm shrink-0">
         <div className="grid grid-cols-2 gap-2 sm:gap-3">
           {/* Issuer */}
           <div className="text-center">
@@ -50,16 +50,16 @@ export function PreviewFooter({
             </div>
             <div className="mx-auto w-24 sm:w-40 border-b border-blue-200" />
             {createdBy?.firstName || createdBy?.lastName ? (
-              <p className="mt-1.5 text-[10px] text-gray-700">
+              <p className="mt-1.5 text-[8px] text-gray-700">
                 {[createdBy.firstName, createdBy.lastName]
                   .filter(Boolean)
                   .join(" ")}
               </p>
             ) : null}
-            <p className="mt-1 text-[10px] text-gray-700">
+            <p className="mt-1 text-[8px] text-gray-700">
               ผู้เสนอราคา / ผู้ออกเอกสาร
             </p>
-            <p className="mt-1 text-[10px] text-gray-500">
+            <p className="mt-1 text-[8px] text-gray-500">
               วันที่{" "}
               {documentDate
                 ? formatThaiDate(new Date(documentDate))
@@ -71,10 +71,10 @@ export function PreviewFooter({
           <div className="text-center">
             <div className="h-8 sm:h-12" />
             <div className="mx-auto w-24 sm:w-40 border-b border-blue-200" />
-            <p className="mt-1.5 text-[10px] text-gray-700">
+            <p className="mt-1.5 text-[8px] text-gray-700">
               ผู้อนุมัติ / ลูกค้า
             </p>
-            <p className="mt-1 text-[10px] text-gray-500">
+            <p className="mt-1 text-[8px] text-gray-500">
               วันที่ ____/____/________
             </p>
           </div>
