@@ -470,10 +470,14 @@ export async function getDeliverySchedule(
 
     return documents.map((doc) => {
       const snapshot = doc.customerSnapshot as Record<string, unknown>;
-      const customerName =
+      const baseName =
         (snapshot?.customerName as string) ||
         (snapshot?.companyName as string) ||
         "-";
+      const leadName = snapshot?.leadName as string | undefined;
+      const customerName = leadName
+        ? `${baseName} (${leadName})`
+        : baseName;
       return {
         id: doc.id,
         documentNumber: doc.documentNumber,
