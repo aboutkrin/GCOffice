@@ -122,7 +122,7 @@ export async function getPaidInvoices(params?: { year?: number; month?: number }
     const where: any = {
       type: "INVOICE",
       status: "PAID",
-      receipts: { none: { status: { not: "CANCELLED" } } },
+      receipts: { none: {} },
     };
     if (params?.year && params?.month) {
       const startDate = new Date(Date.UTC(params.year, params.month - 1, 1));
