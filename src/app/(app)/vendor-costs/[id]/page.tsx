@@ -9,6 +9,7 @@ import {
   Package,
   Truck,
   Receipt,
+  Printer,
 } from "lucide-react";
 
 import { getVendorCostById } from "@/data/vendor-costs";
@@ -73,6 +74,12 @@ export default async function VendorCostDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/vendor-costs/${id}/print`}>
+              <Printer className="size-4" />
+              พิมพ์
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href={`/vendor-costs/${id}/edit`}>
               <Pencil className="size-4" />
