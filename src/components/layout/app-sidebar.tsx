@@ -21,6 +21,7 @@ import {
   ReceiptText,
   Truck,
   Printer,
+  Warehouse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +55,11 @@ const mainNavItems = [
     href: "/products",
     label: "สินค้า",
     icon: Package,
+  },
+  {
+    href: "/stock",
+    label: "สต็อคสินค้า",
+    icon: Warehouse,
   },
   {
     href: "/product-costs",
