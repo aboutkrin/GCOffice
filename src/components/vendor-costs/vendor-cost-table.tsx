@@ -348,7 +348,7 @@ export function VendorCostTable({
                 <TableRow
                   key={row.id}
                   className="cursor-pointer"
-                  onClick={() => router.push(`/vendor-costs/${row.original.id}`)}
+                  onClick={() => router.push(`/vendor-costs/${row.original.id}/print`)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
