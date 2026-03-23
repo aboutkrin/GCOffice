@@ -24,6 +24,7 @@ import {
   Calculator,
   Truck,
   Wallet,
+  Warehouse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/actions/auth-actions";
@@ -76,6 +77,11 @@ const mainNavItems = [
     href: "/products",
     label: "สินค้า",
     icon: Package,
+  },
+  {
+    href: "/stock",
+    label: "สต็อคสินค้า",
+    icon: Warehouse,
   },
   {
     href: "/customers",

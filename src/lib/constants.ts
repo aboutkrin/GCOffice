@@ -90,3 +90,29 @@ export const SHIPPING_PROVIDER_LABELS: Record<string, string> = {
 };
 
 export const SHIPPING_PROVIDER_OPTIONS = ["UNEED_CARGO", "OTHER"] as const;
+
+export const STOCK_MOVEMENT_TYPE_LABELS: Record<string, string> = {
+  IN: "รับเข้า",
+  OUT: "เบิกออก",
+  ADJUSTMENT: "ปรับยอด",
+  INITIAL: "ตั้งต้น",
+};
+
+export const STOCK_MOVEMENT_TYPE_COLORS: Record<string, string> = {
+  IN: "bg-green-100 text-green-800",
+  OUT: "bg-red-100 text-red-800",
+  ADJUSTMENT: "bg-blue-100 text-blue-800",
+  INITIAL: "bg-gray-100 text-gray-800",
+};
+
+export const STOCK_STATUS_LABELS: Record<string, string> = {
+  IN_STOCK: "มีสินค้า",
+  LOW_STOCK: "สินค้าใกล้หมด",
+  OUT_OF_STOCK: "สินค้าหมด",
+};
+
+export const STOCK_STATUS_COLORS: Record<string, string> = {
+  IN_STOCK: "bg-green-100 text-green-800",
+  LOW_STOCK: "bg-amber-100 text-amber-800",
+  OUT_OF_STOCK: "bg-red-100 text-red-800",
+};
