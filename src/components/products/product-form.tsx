@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import { Loader2, Plus } from "lucide-react";
 
 import { productSchema, updateProductSchema, type ProductFormData, type UpdateProductFormData } from "@/lib/validators";
-import { createProduct, updateProduct, createProductCategory } from "@/actions/product-actions";
+import { createProduct, updateProduct, createProductCategory, saveProductColorVariants } from "@/actions/product-actions";
+import { ColorVariantsSection, type ColorVariantItem } from "./color-variants-section";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,15 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryPrefix, setNewCategoryPrefix] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [colorVariants, setColorVariants] = useState<ColorVariantItem[]>(
+    initialData?.colorVariants?.map((v: any) => ({
+      id: v.id,
+      name: v.name,
+      colorHex: v.colorHex ?? "",
+      imageUrl: v.imageUrl ?? "",
+      sortOrder: v.sortOrder ?? 0,
+    })) ?? []
+  );
   const isEditing = !!initialData;
 
   const form = useForm<ProductFormData>({
@@ -72,11 +82,20 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
   function onSubmit(values: ProductFormData | UpdateProductFormData) {
     startTransition(async () => {
       try {
+        let productId: string;
         if (initialData) {
-          await updateProduct(initialData.id, values);
+          const result = await updateProduct(initialData.id, values);
+          productId = result.id;
+          // Save color variants
+          await saveProductColorVariants(productId, colorVariants);
           toast.success("บันทึกสินค้าเรียบร้อยแล้ว");
         } else {
-          await createProduct(values);
+          const result = await createProduct(values);
+          productId = result.id;
+          // Save color variants if any
+          if (colorVariants.length > 0) {
+            await saveProductColorVariants(productId, colorVariants);
+          }
           toast.success("เพิ่มสินค้าเรียบร้อยแล้ว");
         }
         router.push("/products");
@@ -307,6 +326,11 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
             />
           </CardContent>
         </Card>
+
+        <ColorVariantsSection
+          variants={colorVariants}
+          onChange={setColorVariants}
+        />
 
         <div className="flex justify-end gap-3">
           <Button

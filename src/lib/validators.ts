@@ -68,6 +68,7 @@ export const lineItemSchema = z.object({
   productSku: z.string().optional(),
   productName: z.string().min(1, "กรุณาระบุชื่อสินค้า"),
   productImage: z.string().optional(),
+  colorVariantName: z.string().optional(),
   showImage: z.boolean().default(true),
   details: z.string().optional(),
   quantity: z.coerce.number().int().min(1, "จำนวนต้องมากกว่า 0"),
@@ -233,8 +234,24 @@ export const vendorCostSchema = z.object({
 export type VendorCostItemFormData = z.infer<typeof vendorCostItemSchema>;
 export type VendorCostFormData = z.infer<typeof vendorCostSchema>;
 
+export const colorVariantSchema = z.object({
+  name: z.string().min(1, "กรุณาระบุชื่อสี"),
+  colorHex: z.string().optional(),
+  imageUrl: z.string().optional(),
+  sortOrder: z.coerce.number().int().default(0),
+});
+
+export const colorVariantInputSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, "กรุณาระบุชื่อสี"),
+  colorHex: z.string().optional(),
+  imageUrl: z.string().optional(),
+  sortOrder: z.coerce.number().int().default(0),
+});
+
 export const stockAdjustmentSchema = z.object({
   productId: z.string().min(1, "กรุณาเลือกสินค้า"),
+  colorVariantId: z.string().optional(),
   quantity: z.coerce.number().int().min(1, "จำนวนต้องมากกว่า 0"),
   reason: z.string().optional(),
   reference: z.string().optional(),
@@ -242,8 +259,11 @@ export const stockAdjustmentSchema = z.object({
 
 export const stockThresholdSchema = z.object({
   productId: z.string().min(1, "กรุณาเลือกสินค้า"),
+  colorVariantId: z.string().optional(),
   lowStockThreshold: z.coerce.number().int().min(0, "จำนวนต้องไม่ติดลบ"),
 });
 
+export type ColorVariantFormData = z.infer<typeof colorVariantSchema>;
+export type ColorVariantInputFormData = z.infer<typeof colorVariantInputSchema>;
 export type StockAdjustmentFormData = z.infer<typeof stockAdjustmentSchema>;
 export type StockThresholdFormData = z.infer<typeof stockThresholdSchema>;

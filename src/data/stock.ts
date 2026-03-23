@@ -47,7 +47,20 @@ export async function getStockOverview(params?: {
     const [data, total] = await Promise.all([
       prisma.product.findMany({
         where,
-        include: { category: true },
+        include: {
+          category: true,
+          colorVariants: {
+            orderBy: { sortOrder: "asc" },
+            select: {
+              id: true,
+              name: true,
+              colorHex: true,
+              imageUrl: true,
+              stockQuantity: true,
+              lowStockThreshold: true,
+            },
+          },
+        },
         orderBy: { name: "asc" },
         skip: (page - 1) * perPage,
         take: perPage,
@@ -95,12 +108,14 @@ export async function getStockStats() {
 
 export async function getStockMovements(params?: {
   productId?: string;
+  colorVariantId?: string;
   type?: string;
   page?: number;
   perPage?: number;
 }) {
   const where: any = {};
   if (params?.productId) where.productId = params.productId;
+  if (params?.colorVariantId) where.colorVariantId = params.colorVariantId;
   if (params?.type) where.type = params.type;
 
   const page = params?.page ?? 1;
@@ -113,6 +128,9 @@ export async function getStockMovements(params?: {
         include: {
           product: {
             select: { id: true, sku: true, name: true, imageUrl: true },
+          },
+          colorVariant: {
+            select: { id: true, name: true, colorHex: true },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -132,7 +150,12 @@ export async function getProductStock(productId: string) {
   try {
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      include: { category: true },
+      include: {
+        category: true,
+        colorVariants: {
+          orderBy: { sortOrder: "asc" },
+        },
+      },
     });
     return serialize(product);
   } catch {

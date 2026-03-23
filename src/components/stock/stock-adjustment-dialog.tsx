@@ -31,6 +31,11 @@ interface StockAdjustmentDialogProps {
     sku: string;
     stockQuantity: number;
   } | null;
+  colorVariant?: {
+    id: string;
+    name: string;
+    stockQuantity: number;
+  } | null;
 }
 
 export function StockAdjustmentDialog({
@@ -38,23 +43,30 @@ export function StockAdjustmentDialog({
   onOpenChange,
   mode,
   product,
+  colorVariant,
 }: StockAdjustmentDialogProps) {
   const [isPending, startTransition] = useTransition();
+
+  const currentStock = colorVariant ? colorVariant.stockQuantity : (product?.stockQuantity ?? 0);
 
   const form = useForm<StockAdjustmentFormData>({
     resolver: zodResolver(stockAdjustmentSchema) as any,
     defaultValues: {
       productId: product?.id ?? "",
+      colorVariantId: colorVariant?.id ?? undefined,
       quantity: 1,
       reason: "",
       reference: "",
     },
   });
 
-  // Reset form when product changes
-  if (product && form.getValues("productId") !== product.id) {
+  // Reset form when product/variant changes
+  if (product && form.getValues("productId") !== product.id ||
+      (colorVariant?.id && form.getValues("colorVariantId") !== colorVariant.id) ||
+      (!colorVariant && form.getValues("colorVariantId"))) {
     form.reset({
-      productId: product.id,
+      productId: product?.id ?? "",
+      colorVariantId: colorVariant?.id ?? undefined,
       quantity: 1,
       reason: "",
       reference: "",
@@ -91,7 +103,9 @@ export function StockAdjustmentDialog({
             {mode === "in" ? "เพิ่มสต็อค" : "ลดสต็อค"}
           </DialogTitle>
           <DialogDescription>
-            {product?.name} ({product?.sku}) — สต็อคปัจจุบัน: {product?.stockQuantity ?? 0} ชิ้น
+            {product?.name} ({product?.sku})
+            {colorVariant && <> — สี: {colorVariant.name}</>}
+            {" "}— สต็อคปัจจุบัน: {currentStock} ชิ้น
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -100,7 +114,7 @@ export function StockAdjustmentDialog({
             <Input
               type="number"
               min={1}
-              max={mode === "out" ? product?.stockQuantity : undefined}
+              max={mode === "out" ? currentStock : undefined}
               {...form.register("quantity")}
             />
             {form.formState.errors.quantity && (

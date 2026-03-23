@@ -89,6 +89,7 @@ export async function createDocument(data: unknown) {
           productSku: item.productSku,
           productName: item.productName,
           productImage: item.productImage,
+          colorVariantName: item.colorVariantName,
           showImage: item.showImage,
           details: item.details,
           quantity: item.quantity,

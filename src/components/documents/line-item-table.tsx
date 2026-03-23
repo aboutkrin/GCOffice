@@ -99,9 +99,11 @@ export function LineItemTable({
                       />
                     </div>
                   </div>
-                  {item.productSku && (
+                  {(item.productSku || item.colorVariantName) && (
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      SKU: {item.productSku}
+                      {item.productSku && <>SKU: {item.productSku}</>}
+                      {item.productSku && item.colorVariantName && " — "}
+                      {item.colorVariantName && <>สี: {item.colorVariantName}</>}
                     </p>
                   )}
                 </TableCell>
@@ -203,9 +205,11 @@ export function LineItemTable({
                   onSelect={(product) => setFromProduct(item.id, product)}
                 />
               </div>
-              {item.productSku && (
+              {(item.productSku || item.colorVariantName) && (
                 <p className="text-xs text-muted-foreground">
-                  SKU: {item.productSku}
+                  {item.productSku && <>SKU: {item.productSku}</>}
+                  {item.productSku && item.colorVariantName && " — "}
+                  {item.colorVariantName && <>สี: {item.colorVariantName}</>}
                 </p>
               )}
               {item.productImage && (
