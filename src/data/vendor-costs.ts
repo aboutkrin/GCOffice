@@ -38,6 +38,7 @@ export async function ensureVendorCostTables() {
         "sequence" INTEGER NOT NULL,
         "product_name" TEXT NOT NULL,
         "product_sku" TEXT,
+        "product_image" TEXT,
         "quantity" INTEGER NOT NULL,
         "unit_cost_cny" DECIMAL(12,2),
         "unit_cost_rate" DECIMAL(10,4),
@@ -77,6 +78,9 @@ export async function ensureVendorCostTables() {
     `).catch(() => {});
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "vendor_cost_items" ADD COLUMN IF NOT EXISTS "unit_cost_rate" DECIMAL(10,4)
+    `).catch(() => {});
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "vendor_cost_items" ADD COLUMN IF NOT EXISTS "product_image" TEXT
     `).catch(() => {});
 
     tablesCreated = true;

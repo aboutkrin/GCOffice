@@ -389,6 +389,7 @@ model VendorCostItem {
   sequence      Int
   productName   String  @map("product_name")
   productSku    String? @map("product_sku")
+  productImage  String? @map("product_image")
   quantity      Int
   unitCostCny   Decimal? @map("unit_cost_cny") @db.Decimal(12, 2)
   unitCostRate  Decimal? @map("unit_cost_rate") @db.Decimal(10, 4)

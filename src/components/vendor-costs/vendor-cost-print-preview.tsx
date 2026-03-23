@@ -10,6 +10,7 @@ interface VendorCostItem {
   sequence: number;
   productName: string;
   productSku?: string;
+  productImage?: string;
   quantity: number;
   unitCost: number;
   unitCostCny?: number;
@@ -41,6 +42,7 @@ interface InvoiceLineItem {
   sequence: number;
   productName: string;
   productSku?: string;
+  productImage?: string;
   quantity: number;
   unitPrice: number;
   lineTotal: number;
@@ -173,14 +175,28 @@ export const VendorCostPrintPreview = forwardRef<
                   {item.sequence}
                 </td>
                 <td className="border border-gray-200 px-1 sm:px-2 py-1">
-                  <div className="font-medium text-gray-900">
-                    {item.productName}
-                  </div>
-                  {item.productSku && (
-                    <div className="text-[9px] text-gray-500">
-                      SKU: {item.productSku}
+                  <div className="flex items-start gap-2">
+                    {item.productImage && (
+                      <div className="relative h-8 w-8 sm:h-10 sm:w-10 shrink-0 overflow-hidden rounded border border-gray-200">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={item.productImage}
+                          alt={item.productName}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="font-medium text-gray-900">
+                        {item.productName}
+                      </div>
+                      {item.productSku && (
+                        <div className="text-[9px] text-gray-500">
+                          SKU: {item.productSku}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </td>
                 <td className="border border-gray-200 px-1 sm:px-2 py-1 text-center text-gray-700">
                   {item.quantity}
@@ -306,14 +322,28 @@ export const VendorCostPrintPreview = forwardRef<
                     {item.sequence}
                   </td>
                   <td className="border border-gray-200 px-1 sm:px-2 py-1">
-                    <div className="font-medium text-gray-900">
-                      {item.productName}
-                    </div>
-                    {item.productSku && (
-                      <div className="text-[9px] text-gray-500">
-                        SKU: {item.productSku}
+                    <div className="flex items-start gap-2">
+                      {item.productImage && (
+                        <div className="relative h-8 w-8 sm:h-10 sm:w-10 shrink-0 overflow-hidden rounded border border-gray-200">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.productImage}
+                            alt={item.productName}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="font-medium text-gray-900">
+                          {item.productName}
+                        </div>
+                        {item.productSku && (
+                          <div className="text-[9px] text-gray-500">
+                            SKU: {item.productSku}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </td>
                   <td className="border border-gray-200 px-1 sm:px-2 py-1 text-center text-gray-700">
                     {item.quantity}
