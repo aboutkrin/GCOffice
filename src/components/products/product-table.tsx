@@ -155,6 +155,11 @@ export function ProductTable({
               WC
             </Badge>
           )}
+          {row.original._count?.colorVariants > 0 && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {row.original._count.colorVariants} สี
+            </Badge>
+          )}
         </div>
       ),
     },

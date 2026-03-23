@@ -26,7 +26,10 @@ export async function getProducts(params?: {
     const [data, total] = await Promise.all([
       prisma.product.findMany({
         where,
-        include: { category: true },
+        include: {
+          category: true,
+          _count: { select: { colorVariants: true } },
+        },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * perPage,
         take: perPage,
@@ -44,7 +47,10 @@ export async function getProductById(id: string) {
   try {
     const data = await prisma.product.findUnique({
       where: { id },
-      include: { category: true },
+      include: {
+        category: true,
+        colorVariants: { orderBy: { sortOrder: "asc" } },
+      },
     });
     return serialize(data);
   } catch {
@@ -95,6 +101,12 @@ export async function searchProducts(query: string, categoryId?: string) {
   try {
     const data = await prisma.product.findMany({
       where,
+      include: {
+        colorVariants: {
+          orderBy: { sortOrder: "asc" },
+          select: { id: true, name: true, colorHex: true, imageUrl: true, stockQuantity: true },
+        },
+      },
       take: 20,
       orderBy: { name: "asc" },
     });

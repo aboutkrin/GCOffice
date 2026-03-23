@@ -86,7 +86,14 @@ export function StockMovementTable({
             header: "สินค้า",
             cell: ({ row }: any) => (
               <div>
-                <div className="font-medium">{row.original.product?.name}</div>
+                <div className="font-medium">
+                  {row.original.product?.name}
+                  {row.original.colorVariant && (
+                    <span className="text-muted-foreground font-normal">
+                      {" "}— {row.original.colorVariant.name}
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {row.original.product?.sku}
                 </div>

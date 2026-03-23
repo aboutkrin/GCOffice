@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState, useEffect } from "react";
+import { useTransition, useState } from "react";
 import { toast } from "sonner";
 
 import { updateStockThreshold } from "@/actions/stock-actions";
@@ -26,21 +26,32 @@ interface StockThresholdDialogProps {
     sku: string;
     lowStockThreshold: number;
   } | null;
+  colorVariant?: {
+    id: string;
+    name: string;
+    lowStockThreshold: number;
+  } | null;
 }
 
 export function StockThresholdDialog({
   open,
   onOpenChange,
   product,
+  colorVariant,
 }: StockThresholdDialogProps) {
   const [isPending, startTransition] = useTransition();
-  const [threshold, setThreshold] = useState(product?.lowStockThreshold ?? 5);
+  const currentThreshold = colorVariant
+    ? colorVariant.lowStockThreshold
+    : (product?.lowStockThreshold ?? 5);
+  const [threshold, setThreshold] = useState(currentThreshold);
+  const [prevKey, setPrevKey] = useState("");
 
-  useEffect(() => {
-    if (product) {
-      setThreshold(product.lowStockThreshold);
-    }
-  }, [product]);
+  // Sync threshold when product/variant changes
+  const key = `${product?.id}-${colorVariant?.id}`;
+  if (key !== prevKey) {
+    setPrevKey(key);
+    setThreshold(currentThreshold);
+  }
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,7 +59,7 @@ export function StockThresholdDialog({
 
     startTransition(async () => {
       try {
-        await updateStockThreshold(product.id, threshold);
+        await updateStockThreshold(product.id, threshold, colorVariant?.id);
         toast.success("อัปเดตจุดแจ้งเตือนเรียบร้อย");
         onOpenChange(false);
       } catch {
@@ -64,6 +75,7 @@ export function StockThresholdDialog({
           <DialogTitle>ตั้งค่าจุดแจ้งเตือน</DialogTitle>
           <DialogDescription>
             {product?.name} ({product?.sku})
+            {colorVariant && <> — สี: {colorVariant.name}</>}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">

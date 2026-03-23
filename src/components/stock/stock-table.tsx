@@ -15,11 +15,14 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   X,
   Plus,
   Minus,
   History,
   Settings2,
+  Palette,
 } from "lucide-react";
 
 import {
@@ -90,7 +93,10 @@ export function StockTable({
   // Dialog state
   const [adjustMode, setAdjustMode] = useState<"in" | "out">("in");
   const [adjustProduct, setAdjustProduct] = useState<any>(null);
+  const [adjustVariant, setAdjustVariant] = useState<any>(null);
   const [thresholdProduct, setThresholdProduct] = useState<any>(null);
+  const [thresholdVariant, setThresholdVariant] = useState<any>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -150,6 +156,41 @@ export function StockTable({
     {
       accessorKey: "name",
       header: "ชื่อสินค้า",
+      cell: ({ row }) => {
+        const hasVariants = row.original.colorVariants?.length > 0;
+        const isExpanded = expandedRows.has(row.original.id);
+        return (
+          <div className="flex items-center gap-1.5">
+            {hasVariants && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="shrink-0"
+                onClick={() => {
+                  const next = new Set(expandedRows);
+                  if (isExpanded) next.delete(row.original.id);
+                  else next.add(row.original.id);
+                  setExpandedRows(next);
+                }}
+              >
+                {isExpanded ? (
+                  <ChevronUp className="size-3.5" />
+                ) : (
+                  <ChevronDown className="size-3.5" />
+                )}
+              </Button>
+            )}
+            <span>{row.original.name}</span>
+            {hasVariants && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                <Palette className="size-3 mr-0.5" />
+                {row.original.colorVariants.length} สี
+              </Badge>
+            )}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "category.name",
@@ -201,6 +242,7 @@ export function StockTable({
               onClick={() => {
                 setAdjustMode("in");
                 setAdjustProduct(row.original);
+                setAdjustVariant(null);
               }}
             >
               <Plus className="size-4" />
@@ -210,13 +252,17 @@ export function StockTable({
               onClick={() => {
                 setAdjustMode("out");
                 setAdjustProduct(row.original);
+                setAdjustVariant(null);
               }}
             >
               <Minus className="size-4" />
               ลดสต็อค
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => setThresholdProduct(row.original)}
+              onClick={() => {
+                setThresholdProduct(row.original);
+                setThresholdVariant(null);
+              }}
             >
               <Settings2 className="size-4" />
               ตั้งค่าจุดแจ้งเตือน
@@ -321,22 +367,112 @@ export function StockTable({
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell
-                      key={cell.id}
-                      className={
-                        ["imageUrl", "lowStockThreshold", "category.name"].includes(cell.column.id)
-                          ? "hidden md:table-cell"
-                          : ""
-                      }
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const product = row.original;
+                const isExpanded = expandedRows.has(product.id);
+                const variants = product.colorVariants ?? [];
+                return (
+                  <>
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className={
+                            ["imageUrl", "lowStockThreshold", "category.name"].includes(cell.column.id)
+                              ? "hidden md:table-cell"
+                              : ""
+                          }
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                    {isExpanded && variants.map((variant: any) => {
+                      const variantStatus =
+                        variant.stockQuantity === 0
+                          ? "OUT_OF_STOCK"
+                          : variant.stockQuantity <= variant.lowStockThreshold
+                          ? "LOW_STOCK"
+                          : "IN_STOCK";
+                      return (
+                        <TableRow key={`variant-${variant.id}`} className="bg-muted/30">
+                          <TableCell className="hidden md:table-cell" />
+                          <TableCell />
+                          <TableCell>
+                            <div className="flex items-center gap-2 pl-6">
+                              {variant.colorHex ? (
+                                <div
+                                  className="size-4 rounded-full border shrink-0"
+                                  style={{ backgroundColor: variant.colorHex }}
+                                />
+                              ) : (
+                                <div className="size-4 rounded-full border bg-muted shrink-0" />
+                              )}
+                              <span className="text-sm">{variant.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell" />
+                          <TableCell>
+                            <span className="font-mono font-medium">
+                              {variant.stockQuantity}
+                            </span>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            <span className="font-mono text-muted-foreground">
+                              {variant.lowStockThreshold}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={STOCK_STATUS_COLORS[variantStatus]}>
+                              {STOCK_STATUS_LABELS[variantStatus]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon-xs">
+                                  <MoreHorizontal className="size-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setAdjustMode("in");
+                                    setAdjustProduct(product);
+                                    setAdjustVariant(variant);
+                                  }}
+                                >
+                                  <Plus className="size-4" />
+                                  เพิ่มสต็อค
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setAdjustMode("out");
+                                    setAdjustProduct(product);
+                                    setAdjustVariant(variant);
+                                  }}
+                                >
+                                  <Minus className="size-4" />
+                                  ลดสต็อค
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setThresholdProduct(product);
+                                    setThresholdVariant(variant);
+                                  }}
+                                >
+                                  <Settings2 className="size-4" />
+                                  ตั้งค่าจุดแจ้งเตือน
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
@@ -384,19 +520,27 @@ export function StockTable({
       <StockAdjustmentDialog
         open={!!adjustProduct}
         onOpenChange={(open) => {
-          if (!open) setAdjustProduct(null);
+          if (!open) {
+            setAdjustProduct(null);
+            setAdjustVariant(null);
+          }
         }}
         mode={adjustMode}
         product={adjustProduct}
+        colorVariant={adjustVariant}
       />
 
       {/* Threshold Dialog */}
       <StockThresholdDialog
         open={!!thresholdProduct}
         onOpenChange={(open) => {
-          if (!open) setThresholdProduct(null);
+          if (!open) {
+            setThresholdProduct(null);
+            setThresholdVariant(null);
+          }
         }}
         product={thresholdProduct}
+        colorVariant={thresholdVariant}
       />
     </div>
   );

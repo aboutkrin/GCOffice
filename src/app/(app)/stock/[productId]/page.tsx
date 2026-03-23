@@ -66,7 +66,7 @@ export default async function ProductStockPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              สต็อคปัจจุบัน
+              สต็อคปัจจุบัน {product.colorVariants?.length > 0 && "(รวมทุกสี)"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -96,6 +96,50 @@ export default async function ProductStockPage({
           </CardContent>
         </Card>
       </div>
+
+      {product.colorVariants?.length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-4">สต็อคแยกตามสี</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {product.colorVariants.map((variant: any) => {
+              const variantStatus =
+                variant.stockQuantity === 0
+                  ? "OUT_OF_STOCK"
+                  : variant.stockQuantity <= variant.lowStockThreshold
+                  ? "LOW_STOCK"
+                  : "IN_STOCK";
+              return (
+                <Card key={variant.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      {variant.colorHex ? (
+                        <div
+                          className="size-5 rounded-full border shrink-0"
+                          style={{ backgroundColor: variant.colorHex }}
+                        />
+                      ) : (
+                        <div className="size-5 rounded-full border bg-muted shrink-0" />
+                      )}
+                      <span className="font-medium text-sm">{variant.name}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold font-mono">
+                        {variant.stockQuantity}
+                      </span>
+                      <Badge className={STOCK_STATUS_COLORS[variantStatus]}>
+                        {STOCK_STATUS_LABELS[variantStatus]}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      แจ้งเตือน: {variant.lowStockThreshold}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div>
         <h2 className="text-lg font-semibold mb-4">ประวัติการเคลื่อนไหว</h2>

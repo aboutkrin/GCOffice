@@ -116,6 +116,7 @@ model Product {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   stockMovements StockMovement[]
+  colorVariants  ProductColorVariant[]
 
   @@map("products")
 }
@@ -226,12 +227,13 @@ model DocumentLineItem {
   documentId String   @map("document_id")
   document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
-  sequence     Int
-  productSku   String?  @map("product_sku")
-  productName  String   @map("product_name")
-  productImage String?  @map("product_image")
-  showImage    Boolean  @default(false) @map("show_image")
-  details      String?  @db.Text
+  sequence         Int
+  productSku       String?  @map("product_sku")
+  productName      String   @map("product_name")
+  productImage     String?  @map("product_image")
+  colorVariantName String?  @map("color_variant_name")
+  showImage        Boolean  @default(false) @map("show_image")
+  details          String?  @db.Text
   quantity     Int
   unitPrice    Decimal  @map("unit_price") @db.Decimal(12, 2)
   lineTotal    Decimal  @map("line_total") @db.Decimal(12, 2)
@@ -487,10 +489,36 @@ enum StockMovementType {
 // STOCK MANAGEMENT
 // ============================================================
 
+model ProductColorVariant {
+  id        String  @id @default(cuid())
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  name      String
+  colorHex  String? @map("color_hex")
+  imageUrl  String? @map("image_url")
+  sortOrder Int     @default(0) @map("sort_order")
+
+  stockQuantity     Int @default(0) @map("stock_quantity")
+  lowStockThreshold Int @default(5) @map("low_stock_threshold")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stockMovements StockMovement[]
+
+  @@unique([productId, name])
+  @@index([productId])
+  @@map("product_color_variants")
+}
+
 model StockMovement {
   id        String            @id @default(cuid())
   productId String            @map("product_id")
   product   Product           @relation(fields: [productId], references: [id])
+
+  colorVariantId String?              @map("color_variant_id")
+  colorVariant   ProductColorVariant? @relation(fields: [colorVariantId], references: [id])
 
   type         StockMovementType
   quantity     Int
@@ -501,6 +529,7 @@ model StockMovement {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([productId])
+  @@index([colorVariantId])
   @@index([createdAt])
   @@map("stock_movements")
 }

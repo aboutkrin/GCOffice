@@ -1,10 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { productSchema, updateProductSchema, productCategorySchema } from "@/lib/validators";
+import { productSchema, updateProductSchema, productCategorySchema, colorVariantInputSchema } from "@/lib/validators";
 import { generateProductSku } from "@/lib/sku-generator";
 import { serialize } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 export async function createProduct(data: unknown) {
   const validated = productSchema.parse(data);
@@ -126,6 +127,76 @@ export async function deleteProductCategory(
   revalidatePath("/products");
   revalidatePath("/product-costs");
   revalidatePath("/categories");
+}
+
+// ============================================================
+// COLOR VARIANT ACTIONS
+// ============================================================
+
+export async function saveProductColorVariants(
+  productId: string,
+  variants: unknown[]
+) {
+  const validated = z.array(colorVariantInputSchema).parse(variants);
+
+  await prisma.$transaction(async (tx) => {
+    // Get existing variants
+    const existing = await tx.productColorVariant.findMany({
+      where: { productId },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((v) => v.id));
+    const submittedIds = new Set(validated.filter((v) => v.id).map((v) => v.id!));
+
+    // Delete removed variants
+    const toDelete = [...existingIds].filter((id) => !submittedIds.has(id));
+    if (toDelete.length > 0) {
+      await tx.stockMovement.deleteMany({
+        where: { colorVariantId: { in: toDelete } },
+      });
+      await tx.productColorVariant.deleteMany({
+        where: { id: { in: toDelete } },
+      });
+    }
+
+    // Upsert variants
+    for (const variant of validated) {
+      if (variant.id && existingIds.has(variant.id)) {
+        await tx.productColorVariant.update({
+          where: { id: variant.id },
+          data: {
+            name: variant.name,
+            colorHex: variant.colorHex || null,
+            imageUrl: variant.imageUrl || null,
+            sortOrder: variant.sortOrder,
+          },
+        });
+      } else {
+        await tx.productColorVariant.create({
+          data: {
+            productId,
+            name: variant.name,
+            colorHex: variant.colorHex || null,
+            imageUrl: variant.imageUrl || null,
+            sortOrder: variant.sortOrder,
+          },
+        });
+      }
+    }
+
+    // Sync aggregate stock
+    const result = await tx.productColorVariant.aggregate({
+      where: { productId },
+      _sum: { stockQuantity: true },
+    });
+    await tx.product.update({
+      where: { id: productId },
+      data: { stockQuantity: result._sum.stockQuantity ?? 0 },
+    });
+  });
+
+  revalidatePath("/products");
+  revalidatePath("/stock");
 }
 
 export async function searchProductsAction(query: string, categoryId?: string) {
