@@ -146,6 +146,34 @@ export async function getStockMovements(params?: {
   }
 }
 
+export async function getInStockProducts() {
+  try {
+    const data = await prisma.product.findMany({
+      where: {
+        status: "ACTIVE",
+        stockQuantity: { gt: 0 },
+      },
+      include: {
+        category: true,
+        colorVariants: {
+          orderBy: { sortOrder: "asc" },
+          select: {
+            id: true,
+            name: true,
+            colorHex: true,
+            imageUrl: true,
+            stockQuantity: true,
+          },
+        },
+      },
+      orderBy: [{ category: { name: "asc" } }, { name: "asc" }],
+    });
+    return serialize(data);
+  } catch {
+    return [];
+  }
+}
+
 export async function getProductStock(productId: string) {
   try {
     const product = await prisma.product.findUnique({
