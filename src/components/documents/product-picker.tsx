@@ -105,12 +105,12 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
     }
   };
 
-  const finalizeSelect = (product: Product, variantName?: string) => {
+  const finalizeSelect = (product: Product, variantName?: string, variantImageUrl?: string) => {
     onSelect({
       sku: product.sku,
       name: product.name,
       basePrice: Number(product.basePrice),
-      imageUrl: product.imageUrl || undefined,
+      imageUrl: variantImageUrl || product.imageUrl || undefined,
       colorVariantName: variantName,
     });
     setOpen(false);
@@ -179,7 +179,7 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                     key={variant.id}
                     type="button"
                     onClick={() =>
-                      finalizeSelect(selectedProduct, variant.name)
+                      finalizeSelect(selectedProduct, variant.name, variant.imageUrl || undefined)
                     }
                     className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent text-left transition-colors"
                   >
