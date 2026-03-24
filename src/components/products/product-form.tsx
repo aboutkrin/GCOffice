@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Loader2, Plus } from "lucide-react";
 
 import { productSchema, updateProductSchema, type ProductFormData, type UpdateProductFormData } from "@/lib/validators";
-import { createProduct, updateProduct, createProductCategory, saveProductColorVariants } from "@/actions/product-actions";
+import { createProductWithColorVariants, updateProductWithColorVariants, createProductCategory } from "@/actions/product-actions";
 import { ColorVariantsSection, type ColorVariantItem } from "./color-variants-section";
 
 import { Button } from "@/components/ui/button";
@@ -82,20 +82,11 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
   function onSubmit(values: ProductFormData | UpdateProductFormData) {
     startTransition(async () => {
       try {
-        let productId: string;
         if (initialData) {
-          const result = await updateProduct(initialData.id, values);
-          productId = result.id;
-          // Save color variants
-          await saveProductColorVariants(productId, colorVariants);
+          await updateProductWithColorVariants(initialData.id, values, colorVariants);
           toast.success("บันทึกสินค้าเรียบร้อยแล้ว");
         } else {
-          const result = await createProduct(values);
-          productId = result.id;
-          // Save color variants if any
-          if (colorVariants.length > 0) {
-            await saveProductColorVariants(productId, colorVariants);
-          }
+          await createProductWithColorVariants(values, colorVariants);
           toast.success("เพิ่มสินค้าเรียบร้อยแล้ว");
         }
         router.push("/products");

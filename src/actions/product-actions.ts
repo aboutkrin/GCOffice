@@ -133,6 +133,66 @@ export async function deleteProductCategory(
 // COLOR VARIANT ACTIONS
 // ============================================================
 
+async function saveColorVariantsInTransaction(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  productId: string,
+  validated: z.infer<typeof colorVariantInputSchema>[]
+) {
+  // Get existing variants
+  const existing = await tx.productColorVariant.findMany({
+    where: { productId },
+    select: { id: true },
+  });
+  const existingIds = new Set(existing.map((v) => v.id));
+  const submittedIds = new Set(validated.filter((v) => v.id).map((v) => v.id!));
+
+  // Delete removed variants
+  const toDelete = [...existingIds].filter((id) => !submittedIds.has(id));
+  if (toDelete.length > 0) {
+    await tx.stockMovement.deleteMany({
+      where: { colorVariantId: { in: toDelete } },
+    });
+    await tx.productColorVariant.deleteMany({
+      where: { id: { in: toDelete } },
+    });
+  }
+
+  // Upsert variants
+  for (const variant of validated) {
+    if (variant.id && existingIds.has(variant.id)) {
+      await tx.productColorVariant.update({
+        where: { id: variant.id },
+        data: {
+          name: variant.name,
+          colorHex: variant.colorHex || null,
+          imageUrl: variant.imageUrl || null,
+          sortOrder: variant.sortOrder,
+        },
+      });
+    } else {
+      await tx.productColorVariant.create({
+        data: {
+          productId,
+          name: variant.name,
+          colorHex: variant.colorHex || null,
+          imageUrl: variant.imageUrl || null,
+          sortOrder: variant.sortOrder,
+        },
+      });
+    }
+  }
+
+  // Sync aggregate stock
+  const result = await tx.productColorVariant.aggregate({
+    where: { productId },
+    _sum: { stockQuantity: true },
+  });
+  await tx.product.update({
+    where: { id: productId },
+    data: { stockQuantity: result._sum.stockQuantity ?? 0 },
+  });
+}
+
 export async function saveProductColorVariants(
   productId: string,
   variants: unknown[]
@@ -140,63 +200,71 @@ export async function saveProductColorVariants(
   const validated = z.array(colorVariantInputSchema).parse(variants);
 
   await prisma.$transaction(async (tx) => {
-    // Get existing variants
-    const existing = await tx.productColorVariant.findMany({
-      where: { productId },
-      select: { id: true },
-    });
-    const existingIds = new Set(existing.map((v) => v.id));
-    const submittedIds = new Set(validated.filter((v) => v.id).map((v) => v.id!));
-
-    // Delete removed variants
-    const toDelete = [...existingIds].filter((id) => !submittedIds.has(id));
-    if (toDelete.length > 0) {
-      await tx.stockMovement.deleteMany({
-        where: { colorVariantId: { in: toDelete } },
-      });
-      await tx.productColorVariant.deleteMany({
-        where: { id: { in: toDelete } },
-      });
-    }
-
-    // Upsert variants
-    for (const variant of validated) {
-      if (variant.id && existingIds.has(variant.id)) {
-        await tx.productColorVariant.update({
-          where: { id: variant.id },
-          data: {
-            name: variant.name,
-            colorHex: variant.colorHex || null,
-            imageUrl: variant.imageUrl || null,
-            sortOrder: variant.sortOrder,
-          },
-        });
-      } else {
-        await tx.productColorVariant.create({
-          data: {
-            productId,
-            name: variant.name,
-            colorHex: variant.colorHex || null,
-            imageUrl: variant.imageUrl || null,
-            sortOrder: variant.sortOrder,
-          },
-        });
-      }
-    }
-
-    // Sync aggregate stock
-    const result = await tx.productColorVariant.aggregate({
-      where: { productId },
-      _sum: { stockQuantity: true },
-    });
-    await tx.product.update({
-      where: { id: productId },
-      data: { stockQuantity: result._sum.stockQuantity ?? 0 },
-    });
+    await saveColorVariantsInTransaction(tx, productId, validated);
   });
 
   revalidatePath("/products");
   revalidatePath("/stock");
+}
+
+export async function updateProductWithColorVariants(
+  id: string,
+  data: unknown,
+  variants: unknown[]
+) {
+  const validatedProduct = updateProductSchema.parse(data);
+  const validatedVariants = z.array(colorVariantInputSchema).parse(variants);
+
+  const product = await prisma.$transaction(async (tx) => {
+    const updated = await tx.product.update({
+      where: { id },
+      data: {
+        name: validatedProduct.name,
+        description: validatedProduct.description,
+        categoryId: validatedProduct.categoryId,
+        basePrice: validatedProduct.basePrice,
+        imageUrl: validatedProduct.imageUrl,
+        status: validatedProduct.status,
+      },
+    });
+    await saveColorVariantsInTransaction(tx, id, validatedVariants);
+    return updated;
+  });
+
+  revalidatePath("/products");
+  revalidatePath("/stock");
+  return serialize(product);
+}
+
+export async function createProductWithColorVariants(
+  data: unknown,
+  variants: unknown[]
+) {
+  const validatedProduct = productSchema.parse(data);
+  const validatedVariants = z.array(colorVariantInputSchema).parse(variants);
+
+  const product = await prisma.$transaction(async (tx) => {
+    const sku = await generateProductSku(validatedProduct.categoryId, tx);
+    const created = await tx.product.create({
+      data: {
+        sku,
+        name: validatedProduct.name,
+        description: validatedProduct.description,
+        categoryId: validatedProduct.categoryId,
+        basePrice: validatedProduct.basePrice,
+        imageUrl: validatedProduct.imageUrl,
+        status: validatedProduct.status,
+      },
+    });
+    if (validatedVariants.length > 0) {
+      await saveColorVariantsInTransaction(tx, created.id, validatedVariants);
+    }
+    return created;
+  });
+
+  revalidatePath("/products");
+  revalidatePath("/stock");
+  return serialize(product);
 }
 
 export async function searchProductsAction(query: string, categoryId?: string) {
