@@ -5,7 +5,7 @@ export async function getCompanies() {
   try {
     const data = await prisma.company.findMany({
       where: { status: "ACTIVE" },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: "asc" },
     });
     return serialize(data);
   } catch {

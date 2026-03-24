@@ -39,8 +39,7 @@ export default async function VendorCostSummaryRoute({
     getCompanies(),
   ]);
 
-  // Use the first-created (primary) company
-  const company = companies.at(-1);
+  const company = companies[0];
   const totalCost = vendorCosts.reduce(
     (sum: number, vc: any) => sum + Number(vc.totalCost),
     0

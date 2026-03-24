@@ -41,8 +41,7 @@ export default async function ExpenseSummaryRoute({
     getCompanies(),
   ]);
 
-  // Use the first-created (primary) company
-  const company = companies.at(-1);
+  const company = companies[0];
   const totalAmount = expenses.reduce(
     (sum: number, e: any) => sum + Number(e.amount),
     0

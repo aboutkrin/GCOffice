@@ -10,8 +10,7 @@ export default async function StockReportRoute() {
     getCompanies(),
   ]);
 
-  // Use the first-created (primary) company
-  const company = companies.at(-1) ?? null;
+  const company = companies[0] ?? null;
 
   return <StockReportPage company={company} products={products} />;
 }
