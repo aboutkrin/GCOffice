@@ -209,98 +209,130 @@ export const StockReportPreview = forwardRef<
                 const activeVariants = product.colorVariants.filter(
                   (v) => v.stockQuantity > 0
                 );
-                return (
-                  <tr
-                    key={product.id}
-                    className="border-b border-gray-100 align-top"
-                  >
-                    <td className="py-1.5 pr-1 text-center text-gray-400">
-                      {rowIndex}
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      <div className="flex items-start gap-2">
-                        {product.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className="h-8 w-8 shrink-0 rounded object-cover mt-0.5"
-                          />
-                        ) : (
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100 mt-0.5">
-                            <Package className="h-4 w-4 text-gray-400" />
+                const variantCount = activeVariants.length;
+                const showVariants = hasVariants && variantCount > 0;
+
+                if (!showVariants) {
+                  return (
+                    <tr
+                      key={product.id}
+                      className="border-b border-gray-100 align-top"
+                    >
+                      <td className="py-1.5 pr-1 text-center text-gray-400">
+                        {rowIndex}
+                      </td>
+                      <td className="py-1.5 pr-1">
+                        <div className="flex items-start gap-2">
+                          {product.imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={product.imageUrl}
+                              alt={product.name}
+                              className="h-8 w-8 shrink-0 rounded object-cover mt-0.5"
+                            />
+                          ) : (
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100 mt-0.5">
+                              <Package className="h-4 w-4 text-gray-400" />
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-medium text-gray-800">
+                              {product.name}
+                            </span>
+                            <span className="block font-mono text-[9px] text-gray-400">
+                              {product.sku}
+                            </span>
                           </div>
-                        )}
-                        <div>
-                          <span className="font-medium text-gray-800">
-                            {product.name}
-                          </span>
-                          <span className="block font-mono text-[9px] text-gray-400">
-                            {product.sku}
-                          </span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-1.5 pr-1">
-                      {hasVariants && activeVariants.length > 0 ? (
-                        <div className="flex flex-col divide-y divide-gray-200">
-                          {activeVariants.map((variant) => (
-                            <div
-                              key={variant.id}
-                              className="flex items-center gap-2 min-h-[2rem] py-0.5"
-                            >
-                              {variant.imageUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
-                                  src={variant.imageUrl}
-                                  alt={variant.name}
-                                  className="h-8 w-8 shrink-0 rounded object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100">
-                                  <Package className="h-3 w-3 text-gray-400" />
-                                </div>
-                              )}
-                              {variant.colorHex && (
-                                <span
-                                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-gray-300"
-                                  style={{
-                                    backgroundColor: variant.colorHex,
-                                  }}
-                                />
-                              )}
-                              <span className="text-[10px] text-gray-600">
-                                {variant.name}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
+                      </td>
+                      <td className="py-1.5 pr-1">
                         <span className="text-[9px] text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="py-1.5 text-right">
-                      {hasVariants && activeVariants.length > 0 ? (
-                        <div className="flex flex-col divide-y divide-gray-200">
-                          {activeVariants.map((variant) => (
-                            <div
-                              key={variant.id}
-                              className="flex items-center justify-end min-h-[2rem] py-0.5"
-                            >
-                              <span className="text-sm font-bold text-gray-900">
-                                {variant.stockQuantity.toLocaleString()}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
+                      </td>
+                      <td className="py-1.5 text-right">
                         <span className="text-sm font-bold text-gray-900">
                           {product.stockQuantity.toLocaleString()}
                         </span>
-                      )}
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return activeVariants.map((variant, vIdx) => (
+                  <tr
+                    key={variant.id}
+                    className={`align-middle ${vIdx < variantCount - 1 ? "border-b border-gray-200" : "border-b border-gray-100"}`}
+                  >
+                    {vIdx === 0 && (
+                      <>
+                        <td
+                          className="py-1.5 pr-1 text-center text-gray-400 align-top"
+                          rowSpan={variantCount}
+                        >
+                          {rowIndex}
+                        </td>
+                        <td
+                          className="py-1.5 pr-1 align-top"
+                          rowSpan={variantCount}
+                        >
+                          <div className="flex items-start gap-2">
+                            {product.imageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={product.imageUrl}
+                                alt={product.name}
+                                className="h-8 w-8 shrink-0 rounded object-cover mt-0.5"
+                              />
+                            ) : (
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100 mt-0.5">
+                                <Package className="h-4 w-4 text-gray-400" />
+                              </div>
+                            )}
+                            <div>
+                              <span className="font-medium text-gray-800">
+                                {product.name}
+                              </span>
+                              <span className="block font-mono text-[9px] text-gray-400">
+                                {product.sku}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                      </>
+                    )}
+                    <td className="py-1.5 pr-1">
+                      <div className="flex items-center gap-2 min-h-[2rem]">
+                        {variant.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={variant.imageUrl}
+                            alt={variant.name}
+                            className="h-8 w-8 shrink-0 rounded object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100">
+                            <Package className="h-3 w-3 text-gray-400" />
+                          </div>
+                        )}
+                        {variant.colorHex && (
+                          <span
+                            className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-gray-300"
+                            style={{
+                              backgroundColor: variant.colorHex,
+                            }}
+                          />
+                        )}
+                        <span className="text-[10px] text-gray-600">
+                          {variant.name}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-1.5 text-right">
+                      <span className="text-sm font-bold text-gray-900">
+                        {variant.stockQuantity.toLocaleString()}
+                      </span>
                     </td>
                   </tr>
-                );
+                ));
               })}
             </tbody>
           </table>
