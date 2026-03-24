@@ -199,7 +199,7 @@ export const StockReportPreview = forwardRef<
                 <th className="py-1 pr-1 text-center">#</th>
                 <th className="py-1 pr-1">ชื่อสินค้า</th>
                 <th className="py-1 pr-1">รหัสสี</th>
-                <th className="py-1 text-right">คงเหลือ</th>
+                <th className="py-1 text-right">คงเหลือ (กล่อง)</th>
               </tr>
             </thead>
             <tbody>

@@ -199,7 +199,7 @@ export function StockTable({
     },
     {
       accessorKey: "stockQuantity",
-      header: "คงเหลือ",
+      header: "คงเหลือ (กล่อง)",
       cell: ({ row }) => (
         <span className="font-mono font-medium">
           {row.original.stockQuantity}
