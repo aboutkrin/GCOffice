@@ -183,6 +183,17 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                     }
                     className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent text-left transition-colors"
                   >
+                    {variant.imageUrl ? (
+                      <img
+                        src={variant.imageUrl}
+                        alt={variant.name}
+                        className="size-8 rounded object-cover border shrink-0"
+                      />
+                    ) : (
+                      <div className="size-8 rounded border bg-muted flex items-center justify-center shrink-0">
+                        <Package className="size-4 text-muted-foreground" />
+                      </div>
+                    )}
                     {variant.colorHex ? (
                       <div
                         className="size-8 rounded-full border shrink-0"
