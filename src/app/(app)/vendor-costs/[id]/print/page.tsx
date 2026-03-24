@@ -62,6 +62,17 @@ export default async function VendorCostPrintRoute({
     profit = { revenue, cost, profit: profitAmount, marginPercent };
   }
 
+  // Build a lookup map from invoice line items for product images
+  const invoiceImageMap = new Map<string, string>();
+  if (invoice) {
+    for (const li of invoice.lineItems) {
+      if (li.productImage) {
+        if (li.productSku) invoiceImageMap.set(li.productSku, li.productImage);
+        invoiceImageMap.set(li.productName, li.productImage);
+      }
+    }
+  }
+
   const data = {
     vendorCost: {
       id: vendorCost.id,
@@ -77,16 +88,23 @@ export default async function VendorCostPrintRoute({
       paymentMethod: vendorCost.paymentMethod,
       shippingPaymentMethod: vendorCost.shippingPaymentMethod,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      items: (vendorCost.items ?? []).map((item: any) => ({
-        sequence: item.sequence,
-        productName: item.productName,
-        productSku: item.productSku ?? undefined,
-        productImage: item.productImage ?? undefined,
-        quantity: Number(item.quantity),
-        unitCost: Number(item.unitCost),
-        unitCostCny: item.unitCostCny ? Number(item.unitCostCny) : undefined,
-        lineTotal: Number(item.lineTotal),
-      })),
+      items: (vendorCost.items ?? []).map((item: any) => {
+        const image =
+          item.productImage ??
+          (item.productSku ? invoiceImageMap.get(item.productSku) : undefined) ??
+          invoiceImageMap.get(item.productName) ??
+          undefined;
+        return {
+          sequence: item.sequence,
+          productName: item.productName,
+          productSku: item.productSku ?? undefined,
+          productImage: image,
+          quantity: Number(item.quantity),
+          unitCost: Number(item.unitCost),
+          unitCostCny: item.unitCostCny ? Number(item.unitCostCny) : undefined,
+          lineTotal: Number(item.lineTotal),
+        };
+      }),
       document: vendorCost.document
         ? {
             documentNumber: vendorCost.document.documentNumber,
