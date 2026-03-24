@@ -40,14 +40,14 @@ interface DeliveryScheduleProps {
 
 // Color palette for delivery bars
 const BAR_COLORS = [
-  "bg-blue-100 text-blue-800 border-blue-200",
-  "bg-green-100 text-green-800 border-green-200",
-  "bg-amber-100 text-amber-800 border-amber-200",
-  "bg-purple-100 text-purple-800 border-purple-200",
-  "bg-pink-100 text-pink-800 border-pink-200",
-  "bg-teal-100 text-teal-800 border-teal-200",
-  "bg-orange-100 text-orange-800 border-orange-200",
-  "bg-indigo-100 text-indigo-800 border-indigo-200",
+  "bg-blue-200 text-blue-900 border-blue-300",
+  "bg-green-200 text-green-900 border-green-300",
+  "bg-amber-200 text-amber-900 border-amber-300",
+  "bg-purple-200 text-purple-900 border-purple-300",
+  "bg-pink-200 text-pink-900 border-pink-300",
+  "bg-teal-200 text-teal-900 border-teal-300",
+  "bg-orange-200 text-orange-900 border-orange-300",
+  "bg-indigo-200 text-indigo-900 border-indigo-300",
 ];
 
 const SHIPPED_BAR_COLOR = "bg-gray-200 text-gray-500 border-gray-300";
@@ -353,7 +353,7 @@ export function DeliverySchedule({
                         <div
                           key={dayIdx}
                           className={cn(
-                            "text-center px-1 pt-1 pb-0 text-sm min-h-[28px] relative",
+                            "text-center px-1 pt-1 pb-0 text-sm min-h-[36px] relative",
                             dayIdx > 0 && "border-l border-gray-200",
                             !day.isCurrentMonth && "text-muted-foreground/40",
                             dayIdx === 0 && day.isCurrentMonth && "text-red-500",
@@ -371,7 +371,7 @@ export function DeliverySchedule({
                             {day.date}
                           </span>
                           {holiday && (
-                            <div className="text-[9px] text-red-500 leading-tight truncate px-0.5">
+                            <div className="text-[10px] text-red-500 font-medium leading-tight truncate px-0.5">
                               {holiday.name}
                             </div>
                           )}
@@ -380,7 +380,7 @@ export function DeliverySchedule({
                     })}
                   </div>
                   {/* Delivery bars */}
-                  <div className="relative min-h-[4px]">
+                  <div className="relative min-h-[6px]">
                     {lanes.map((lane, laneIdx) =>
                       lane.map((bar) => (
                         <div
@@ -396,21 +396,25 @@ export function DeliverySchedule({
                             onClick={() => setSelectedItem(bar.item)}
                             style={{ gridColumn: `span ${bar.span}` }}
                             className={cn(
-                              "flex items-center text-[8px] leading-none h-3.5 px-1 mb-px cursor-pointer border transition-colors hover:opacity-80",
+                              "flex items-center text-[11px] leading-tight h-[22px] px-1.5 mb-0.5 cursor-pointer border transition-colors hover:opacity-80",
                               bar.colorClass,
                               bar.isStart ? "rounded-l-md ml-0.5" : "",
                               bar.isEnd ? "rounded-r-md mr-0.5" : ""
                             )}
                             title={bar.item.customerName}
                           >
-                            <span className="truncate flex-1 text-left">
-                              {bar.isStart && bar.item.customerName}
-                            </span>
-                            {bar.isEnd && !bar.isStart && (
-                              <span className="truncate text-right ml-1 font-medium">
-                                {bar.item.customerName}
-                              </span>
+                            {bar.item.status === "SHIPPED" && (
+                              <Truck className="h-3 w-3 shrink-0 mr-0.5 opacity-70" />
                             )}
+                            <span className={cn(
+                              "truncate flex-1 text-left font-medium",
+                              bar.item.status === "SHIPPED" && "line-through"
+                            )}>
+                              {bar.item.customerName}
+                            </span>
+                            <span className="shrink-0 ml-1 text-[9px] opacity-60">
+                              {bar.item.lineItems.length}
+                            </span>
                           </button>
                         </div>
                       ))
@@ -430,6 +434,23 @@ export function DeliverySchedule({
           {data.length > 0 && (
             <div className="text-xs text-muted-foreground mt-2">
               รวม {data.length} รายการส่งสินค้าในเดือนนี้
+            </div>
+          )}
+          {data.length > 0 && (
+            <div className="flex items-center gap-4 mt-3 pt-2 border-t text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-4 h-3 rounded bg-blue-200 border border-blue-300" />
+                <span>ยืนยันแล้ว</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="inline-block w-4 h-3 rounded bg-gray-200 border border-gray-300" />
+                <Truck className="h-3 w-3 text-gray-500" />
+                <span>ส่งแล้ว</span>
+              </div>
+              <div className="flex items-center gap-1.5 ml-auto">
+                <span className="text-[10px] bg-muted px-1 rounded">2</span>
+                <span>= จำนวนรายการ</span>
+              </div>
             </div>
           )}
         </CardContent>
