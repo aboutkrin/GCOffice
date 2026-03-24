@@ -10,6 +10,12 @@ interface StockReportPageProps {
     logoUrl?: string | null;
     address: string;
     phone?: string | null;
+    taxId?: string | null;
+    email?: string | null;
+    lineOa?: string | null;
+    tiktok?: string | null;
+    instagram?: string | null;
+    facebook?: string | null;
   } | null;
   products: {
     id: string;
