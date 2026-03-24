@@ -89,7 +89,7 @@ export const StockReportPreview = forwardRef<
               </div>
             )}
             <h1 className="text-lg sm:text-2xl font-bold text-gray-900 break-words">
-              {company?.name ?? "บริษัท"}
+              บริษัท Goodchoice
             </h1>
           </div>
           <div className="text-right shrink-0">
@@ -217,20 +217,36 @@ export const StockReportPreview = forwardRef<
                       {rowIndex}
                     </td>
                     <td className="py-1.5 pr-1">
-                      <span className="font-medium text-gray-800">
-                        {product.name}
-                      </span>
-                      <span className="block font-mono text-[9px] text-gray-400">
-                        {product.sku}
-                      </span>
+                      <div className="flex items-start gap-2">
+                        {product.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className="h-8 w-8 shrink-0 rounded object-cover mt-0.5"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100 mt-0.5">
+                            <Package className="h-4 w-4 text-gray-400" />
+                          </div>
+                        )}
+                        <div>
+                          <span className="font-medium text-gray-800">
+                            {product.name}
+                          </span>
+                          <span className="block font-mono text-[9px] text-gray-400">
+                            {product.sku}
+                          </span>
+                        </div>
+                      </div>
                     </td>
                     <td className="py-1.5 pr-1">
                       {hasVariants && activeVariants.length > 0 ? (
-                        <div className="flex flex-col gap-1.5">
+                        <div className="flex flex-col">
                           {activeVariants.map((variant) => (
                             <div
                               key={variant.id}
-                              className="flex items-center gap-2"
+                              className="flex items-center gap-2 h-8"
                             >
                               {variant.imageUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
@@ -255,9 +271,6 @@ export const StockReportPreview = forwardRef<
                               <span className="text-[10px] text-gray-600">
                                 {variant.name}
                               </span>
-                              <span className="ml-auto text-xs font-bold text-gray-900">
-                                {variant.stockQuantity}
-                              </span>
                             </div>
                           ))}
                         </div>
@@ -265,8 +278,25 @@ export const StockReportPreview = forwardRef<
                         <span className="text-[9px] text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="py-1.5 text-right text-sm font-bold text-gray-900">
-                      {product.stockQuantity.toLocaleString()}
+                    <td className="py-1.5 text-right">
+                      {hasVariants && activeVariants.length > 0 ? (
+                        <div className="flex flex-col">
+                          {activeVariants.map((variant) => (
+                            <div
+                              key={variant.id}
+                              className="flex items-center justify-end h-8"
+                            >
+                              <span className="text-sm font-bold text-gray-900">
+                                {variant.stockQuantity.toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900">
+                          {product.stockQuantity.toLocaleString()}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -282,7 +312,7 @@ export const StockReportPreview = forwardRef<
           ทั้งหมด {products.length.toLocaleString()} รายการ | สต็อครวม{" "}
           {totalStock.toLocaleString()}
         </span>
-        <span>พิมพ์จากระบบ {company?.name ?? ""}</span>
+        <span>พิมพ์จากระบบ Goodchoice</span>
       </div>
     </div>
   );
