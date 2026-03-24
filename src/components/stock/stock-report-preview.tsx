@@ -2,7 +2,15 @@
 
 import { forwardRef } from "react";
 import { formatThaiDateTime } from "@/lib/thai-date";
-import { Package } from "lucide-react";
+import {
+  Package,
+  Phone,
+  Mail,
+  MessageCircle,
+  Facebook,
+  Instagram,
+  MapPin,
+} from "lucide-react";
 
 interface StockProduct {
   id: string;
@@ -25,6 +33,12 @@ interface Company {
   logoUrl?: string | null;
   address: string;
   phone?: string | null;
+  taxId?: string | null;
+  email?: string | null;
+  lineOa?: string | null;
+  tiktok?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
 }
 
 interface StockReportPreviewProps {
@@ -60,39 +74,91 @@ export const StockReportPreview = forwardRef<
       id="document-preview"
       className="mx-auto w-full max-w-[210mm] min-h-[297mm] bg-white p-6 sm:p-8 shadow-lg print:shadow-none print:p-6"
     >
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between border-b pb-3">
-        <div className="flex items-center gap-3">
-          {company?.logoUrl ? (
-            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={company.logoUrl}
-                alt={company.name}
-                className="h-full w-full object-contain"
-              />
-            </div>
-          ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded bg-primary/10">
-              <Package className="h-6 w-6 text-primary" />
-            </div>
-          )}
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">
+      {/* Header - Goodchoice Letterhead */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-2">
+            {company?.logoUrl && (
+              <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={company.logoUrl}
+                  alt={company.name}
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            )}
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 break-words">
               {company?.name ?? "บริษัท"}
             </h1>
-            {company?.phone && (
-              <p className="text-xs text-gray-500">โทร. {company.phone}</p>
-            )}
+          </div>
+          <div className="text-right shrink-0">
+            <h2 className="text-lg sm:text-2xl font-bold text-primary">
+              รายงานสต็อคสินค้า
+            </h2>
+            <p className="text-xs text-gray-500">
+              วันที่พิมพ์: {formatThaiDateTime(now)}
+            </p>
           </div>
         </div>
-        <div className="text-right">
-          <h2 className="text-lg font-bold text-primary">
-            รายงานสต็อคสินค้า
-          </h2>
-          <p className="text-xs text-gray-500">
-            วันที่พิมพ์: {formatThaiDateTime(now)}
-          </p>
+
+        {/* Company address & contact info */}
+        <div className="grid grid-cols-1 gap-0.5 text-[8px] text-gray-600">
+          {(company?.address || company?.taxId) && (
+            <div className="flex items-start gap-1.5">
+              <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
+              <span>
+                {company.address}
+                {company.address && company.taxId && "  "}
+                {company.taxId &&
+                  `เลขประจำตัวผู้เสียภาษี: ${company.taxId}`}
+              </span>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            {company?.phone && (
+              <div className="flex items-center gap-1.5">
+                <Phone className="h-3 w-3 shrink-0" />
+                <span>{company.phone}</span>
+              </div>
+            )}
+            {company?.email && (
+              <div className="flex items-center gap-1.5">
+                <Mail className="h-3 w-3 shrink-0" />
+                <span>{company.email}</span>
+              </div>
+            )}
+            {company?.lineOa && (
+              <div className="flex items-center gap-1.5">
+                <MessageCircle className="h-3 w-3 shrink-0" />
+                <span>LINE: {company.lineOa}</span>
+              </div>
+            )}
+            {company?.tiktok && (
+              <div className="flex items-center gap-1.5">
+                <svg
+                  className="h-3 w-3 shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1 0-5.78 2.92 2.92 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.57 6.33 6.33 0 0 0 9.37 22a6.33 6.33 0 0 0 6.37-6.23V9.06a8.16 8.16 0 0 0 3.85.92V6.69Z" />
+                </svg>
+                <span>{company.tiktok}</span>
+              </div>
+            )}
+            {company?.instagram && (
+              <div className="flex items-center gap-1.5">
+                <Instagram className="h-3 w-3 shrink-0" />
+                <span>{company.instagram}</span>
+              </div>
+            )}
+            {company?.facebook && (
+              <div className="flex items-center gap-1.5">
+                <Facebook className="h-3 w-3 shrink-0" />
+                <span>{company.facebook}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -130,9 +196,8 @@ export const StockReportPreview = forwardRef<
             <thead>
               <tr className="border-b text-left text-gray-500">
                 <th className="w-6 py-1 pr-1 text-center">#</th>
-                <th className="w-8 py-1 pr-1">รูป</th>
-                <th className="py-1 pr-1">รหัส</th>
                 <th className="py-1 pr-1">ชื่อสินค้า</th>
+                <th className="py-1 pr-1">รหัสสี</th>
                 <th className="w-16 py-1 text-right">คงเหลือ</th>
               </tr>
             </thead>
@@ -140,57 +205,67 @@ export const StockReportPreview = forwardRef<
               {items.map((product) => {
                 rowIndex++;
                 const hasVariants = product.colorVariants.length > 0;
+                const activeVariants = product.colorVariants.filter(
+                  (v) => v.stockQuantity > 0
+                );
                 return (
-                  <tr key={product.id} className="border-b border-gray-100">
-                    <td className="py-1 pr-1 text-center text-gray-400">
+                  <tr
+                    key={product.id}
+                    className="border-b border-gray-100 align-top"
+                  >
+                    <td className="py-1.5 pr-1 text-center text-gray-400">
                       {rowIndex}
                     </td>
-                    <td className="py-1 pr-1">
-                      {product.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={product.imageUrl}
-                          alt={product.name}
-                          className="h-7 w-7 rounded object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-7 w-7 items-center justify-center rounded bg-gray-100">
-                          <Package className="h-3 w-3 text-gray-400" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-1 pr-1 font-mono text-gray-600">
-                      {product.sku}
-                    </td>
-                    <td className="py-1 pr-1">
+                    <td className="py-1.5 pr-1">
                       <span className="font-medium text-gray-800">
                         {product.name}
                       </span>
-                      {/* Color Variants inline */}
-                      {hasVariants && (
-                        <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-                          {product.colorVariants
-                            .filter((v) => v.stockQuantity > 0)
-                            .map((variant) => (
-                              <span
-                                key={variant.id}
-                                className="inline-flex items-center gap-1 text-[9px] text-gray-500"
-                              >
-                                {variant.colorHex && (
-                                  <span
-                                    className="inline-block h-2 w-2 rounded-full border border-gray-300"
-                                    style={{
-                                      backgroundColor: variant.colorHex,
-                                    }}
-                                  />
-                                )}
-                                {variant.name}: {variant.stockQuantity}
+                      <span className="block font-mono text-[9px] text-gray-400">
+                        {product.sku}
+                      </span>
+                    </td>
+                    <td className="py-1.5 pr-1">
+                      {hasVariants && activeVariants.length > 0 ? (
+                        <div className="flex flex-col gap-1.5">
+                          {activeVariants.map((variant) => (
+                            <div
+                              key={variant.id}
+                              className="flex items-center gap-2"
+                            >
+                              {variant.imageUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={variant.imageUrl}
+                                  alt={variant.name}
+                                  className="h-7 w-7 shrink-0 rounded object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-gray-100">
+                                  <Package className="h-3 w-3 text-gray-400" />
+                                </div>
+                              )}
+                              {variant.colorHex && (
+                                <span
+                                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-gray-300"
+                                  style={{
+                                    backgroundColor: variant.colorHex,
+                                  }}
+                                />
+                              )}
+                              <span className="text-[10px] text-gray-600">
+                                {variant.name}
                               </span>
-                            ))}
+                              <span className="ml-auto text-xs font-bold text-gray-900">
+                                {variant.stockQuantity}
+                              </span>
+                            </div>
+                          ))}
                         </div>
+                      ) : (
+                        <span className="text-[9px] text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="py-1 text-right font-semibold text-gray-800">
+                    <td className="py-1.5 text-right text-sm font-bold text-gray-900">
                       {product.stockQuantity.toLocaleString()}
                     </td>
                   </tr>
