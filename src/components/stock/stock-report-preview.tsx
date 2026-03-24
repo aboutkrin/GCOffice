@@ -79,7 +79,7 @@ export const StockReportPreview = forwardRef<
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2">
             {company?.logoUrl && (
-              <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded">
+              <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded-full bg-gray-100">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={company.logoUrl}
@@ -89,7 +89,7 @@ export const StockReportPreview = forwardRef<
               </div>
             )}
             <h1 className="text-lg sm:text-2xl font-bold text-gray-900 break-words">
-              บริษัท Goodchoice
+              {company?.name ?? "Goodchoice"}
             </h1>
           </div>
           <div className="text-right shrink-0">
@@ -104,15 +104,10 @@ export const StockReportPreview = forwardRef<
 
         {/* Company address & contact info */}
         <div className="grid grid-cols-1 gap-0.5 text-[8px] text-gray-600">
-          {(company?.address || company?.taxId) && (
+          {company?.address && (
             <div className="flex items-start gap-1.5">
               <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
-              <span>
-                {company.address}
-                {company.address && company.taxId && "  "}
-                {company.taxId &&
-                  `เลขประจำตัวผู้เสียภาษี: ${company.taxId}`}
-              </span>
+              <span>{company.address}</span>
             </div>
           )}
           <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -242,21 +237,21 @@ export const StockReportPreview = forwardRef<
                     </td>
                     <td className="py-1.5 pr-1">
                       {hasVariants && activeVariants.length > 0 ? (
-                        <div className="flex flex-col">
+                        <div className="flex flex-col gap-1">
                           {activeVariants.map((variant) => (
                             <div
                               key={variant.id}
-                              className="flex items-center gap-2 h-8"
+                              className="flex items-center gap-2 min-h-[2rem]"
                             >
                               {variant.imageUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
                                   src={variant.imageUrl}
                                   alt={variant.name}
-                                  className="h-7 w-7 shrink-0 rounded object-cover"
+                                  className="h-8 w-8 shrink-0 rounded object-cover"
                                 />
                               ) : (
-                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-gray-100">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-gray-100">
                                   <Package className="h-3 w-3 text-gray-400" />
                                 </div>
                               )}
@@ -280,11 +275,11 @@ export const StockReportPreview = forwardRef<
                     </td>
                     <td className="py-1.5 text-right">
                       {hasVariants && activeVariants.length > 0 ? (
-                        <div className="flex flex-col">
+                        <div className="flex flex-col gap-1">
                           {activeVariants.map((variant) => (
                             <div
                               key={variant.id}
-                              className="flex items-center justify-end h-8"
+                              className="flex items-center justify-end min-h-[2rem]"
                             >
                               <span className="text-sm font-bold text-gray-900">
                                 {variant.stockQuantity.toLocaleString()}
