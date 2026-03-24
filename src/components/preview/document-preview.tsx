@@ -43,6 +43,7 @@ interface LineItem {
   productSku?: string;
   productName: string;
   productImage?: string;
+  colorVariantName?: string;
   showImage: boolean;
   details?: string;
   quantity: number;
