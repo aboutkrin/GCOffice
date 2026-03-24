@@ -243,11 +243,11 @@ export const StockReportPreview = forwardRef<
                     </td>
                     <td className="py-1.5 pr-1">
                       {hasVariants && activeVariants.length > 0 ? (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col divide-y divide-gray-200">
                           {activeVariants.map((variant) => (
                             <div
                               key={variant.id}
-                              className="flex items-center gap-2 min-h-[2rem]"
+                              className="flex items-center gap-2 min-h-[2rem] py-0.5"
                             >
                               {variant.imageUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
@@ -281,11 +281,11 @@ export const StockReportPreview = forwardRef<
                     </td>
                     <td className="py-1.5 text-right">
                       {hasVariants && activeVariants.length > 0 ? (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col divide-y divide-gray-200">
                           {activeVariants.map((variant) => (
                             <div
                               key={variant.id}
-                              className="flex items-center justify-end min-h-[2rem]"
+                              className="flex items-center justify-end min-h-[2rem] py-0.5"
                             >
                               <span className="text-sm font-bold text-gray-900">
                                 {variant.stockQuantity.toLocaleString()}
