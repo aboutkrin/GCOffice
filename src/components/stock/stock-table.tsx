@@ -396,7 +396,21 @@ export function StockTable({
                           : "IN_STOCK";
                       return (
                         <TableRow key={`variant-${variant.id}`} className="bg-muted/30">
-                          <TableCell className="hidden md:table-cell" />
+                          <TableCell className="hidden md:table-cell">
+                            {variant.imageUrl ? (
+                              <Image
+                                src={variant.imageUrl}
+                                alt={variant.name}
+                                width={40}
+                                height={40}
+                                className="rounded object-cover size-10"
+                              />
+                            ) : (
+                              <div className="size-10 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">
+                                N/A
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell />
                           <TableCell>
                             <div className="flex items-center gap-2 pl-6">
