@@ -191,6 +191,7 @@ export async function updateDocument(id: string, data: unknown) {
             productSku: item.productSku,
             productName: item.productName,
             productImage: item.productImage,
+            colorVariantName: item.colorVariantName,
             showImage: item.showImage,
             details: item.details,
             quantity: item.quantity,
