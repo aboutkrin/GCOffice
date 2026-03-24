@@ -187,13 +187,19 @@ export const StockReportPreview = forwardRef<
               {categoryName} ({items.length} รายการ)
             </h3>
           </div>
-          <table className="w-full text-[10px]">
+          <table className="w-full table-fixed text-[10px]">
+            <colgroup>
+              <col className="w-[5%]" />
+              <col className="w-[40%]" />
+              <col className="w-[40%]" />
+              <col className="w-[15%]" />
+            </colgroup>
             <thead>
               <tr className="border-b text-left text-gray-500">
-                <th className="w-6 py-1 pr-1 text-center">#</th>
+                <th className="py-1 pr-1 text-center">#</th>
                 <th className="py-1 pr-1">ชื่อสินค้า</th>
                 <th className="py-1 pr-1">รหัสสี</th>
-                <th className="w-16 py-1 text-right">คงเหลือ</th>
+                <th className="py-1 text-right">คงเหลือ</th>
               </tr>
             </thead>
             <tbody>
