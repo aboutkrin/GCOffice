@@ -496,9 +496,10 @@ model ProductColorVariant {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   name      String
-  colorHex  String? @map("color_hex")
-  imageUrl  String? @map("image_url")
-  sortOrder Int     @default(0) @map("sort_order")
+  colorHex  String?  @map("color_hex")
+  imageUrl  String?  @map("image_url")
+  price     Decimal? @db.Decimal(12, 2)
+  sortOrder Int      @default(0) @map("sort_order")
 
   stockQuantity     Int @default(0) @map("stock_quantity")
   lowStockThreshold Int @default(5) @map("low_stock_threshold")

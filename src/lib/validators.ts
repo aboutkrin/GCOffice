@@ -239,6 +239,7 @@ export const colorVariantSchema = z.object({
   name: z.string().min(1, "กรุณาระบุชื่อสี"),
   colorHex: z.string().optional(),
   imageUrl: z.string().optional(),
+  price: z.coerce.number().min(0, "ราคาต้องไม่ติดลบ").optional().nullable(),
   sortOrder: z.coerce.number().int().default(0),
 });
 
@@ -247,6 +248,7 @@ export const colorVariantInputSchema = z.object({
   name: z.string().min(1, "กรุณาระบุชื่อสี"),
   colorHex: z.string().optional(),
   imageUrl: z.string().optional(),
+  price: z.coerce.number().min(0, "ราคาต้องไม่ติดลบ").optional().nullable(),
   sortOrder: z.coerce.number().int().default(0),
 });
 

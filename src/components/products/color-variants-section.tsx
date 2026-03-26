@@ -14,6 +14,7 @@ export interface ColorVariantItem {
   name: string;
   colorHex?: string;
   imageUrl?: string;
+  price?: number | null;
   sortOrder: number;
 }
 
@@ -33,6 +34,7 @@ export function ColorVariantsSection({
       name: "",
       colorHex: "",
       imageUrl: "",
+      price: null,
       sortOrder: variants.length,
     };
     const updated = [...variants, newVariant];
@@ -96,6 +98,11 @@ export function ColorVariantsSection({
                   )}
                   <span className="text-sm font-medium flex-1">
                     {variant.name || "(ยังไม่ได้ตั้งชื่อ)"}
+                    {variant.price != null && variant.price > 0 && (
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ฿{variant.price.toLocaleString()}
+                      </span>
+                    )}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     #{index + 1}
@@ -117,7 +124,7 @@ export function ColorVariantsSection({
                 {/* Expanded detail */}
                 {expandedIndex === index && (
                   <div className="border-t p-3 space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div>
                         <Label className="mb-1.5 block text-xs">ชื่อสี</Label>
                         <Input
@@ -150,6 +157,21 @@ export function ColorVariantsSection({
                             className="flex-1"
                           />
                         </div>
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-xs">ราคา (บาท)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          placeholder="ราคาเฉพาะสีนี้ (ว่าง = ใช้ราคาตั้งต้น)"
+                          value={variant.price ?? ""}
+                          onChange={(e) =>
+                            updateVariant(index, {
+                              price: e.target.value === "" ? null : Number(e.target.value),
+                            })
+                          }
+                        />
                       </div>
                     </div>
                     <div>

@@ -166,6 +166,7 @@ async function saveColorVariantsInTransaction(
           name: variant.name,
           colorHex: variant.colorHex || null,
           imageUrl: variant.imageUrl || null,
+          price: variant.price ?? null,
           sortOrder: variant.sortOrder,
         },
       });
@@ -176,6 +177,7 @@ async function saveColorVariantsInTransaction(
           name: variant.name,
           colorHex: variant.colorHex || null,
           imageUrl: variant.imageUrl || null,
+          price: variant.price ?? null,
           sortOrder: variant.sortOrder,
         },
       });

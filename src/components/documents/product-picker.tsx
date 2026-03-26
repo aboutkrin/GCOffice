@@ -30,6 +30,7 @@ interface ColorVariant {
   name: string;
   colorHex?: string | null;
   imageUrl?: string | null;
+  price?: number | null;
   stockQuantity: number;
 }
 
@@ -105,13 +106,14 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
     }
   };
 
-  const finalizeSelect = (product: Product, variantName?: string, variantImageUrl?: string) => {
+  const finalizeSelect = (product: Product, variant?: ColorVariant) => {
+    const variantPrice = variant?.price != null ? Number(variant.price) : null;
     onSelect({
       sku: product.sku,
       name: product.name,
-      basePrice: Number(product.basePrice),
-      imageUrl: variantImageUrl || product.imageUrl || undefined,
-      colorVariantName: variantName,
+      basePrice: variantPrice ?? Number(product.basePrice),
+      imageUrl: variant?.imageUrl || product.imageUrl || undefined,
+      colorVariantName: variant?.name,
     });
     setOpen(false);
     resetState();
@@ -172,14 +174,19 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                   <div className="size-8 rounded-full border bg-muted flex items-center justify-center">
                     <Package className="size-4 text-muted-foreground" />
                   </div>
-                  <span className="text-sm">ไม่ระบุสี</span>
+                  <span className="text-sm flex-1">ไม่ระบุสี</span>
+                  <span className="text-sm text-muted-foreground shrink-0">
+                    {formatNumber(selectedProduct.basePrice)} บาท
+                  </span>
                 </button>
-                {selectedProduct.colorVariants!.map((variant) => (
+                {selectedProduct.colorVariants!.map((variant) => {
+                  const displayPrice = variant.price != null ? Number(variant.price) : Number(selectedProduct.basePrice);
+                  return (
                   <button
                     key={variant.id}
                     type="button"
                     onClick={() =>
-                      finalizeSelect(selectedProduct, variant.name, variant.imageUrl || undefined)
+                      finalizeSelect(selectedProduct, variant)
                     }
                     className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent text-left transition-colors"
                   >
@@ -208,8 +215,12 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                         สต็อค: {variant.stockQuantity}
                       </p>
                     </div>
+                    <span className="text-sm font-medium shrink-0">
+                      {formatNumber(displayPrice)} บาท
+                    </span>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           </div>
