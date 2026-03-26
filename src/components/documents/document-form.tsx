@@ -436,10 +436,14 @@ export function DocumentForm({
     try {
       const data = assembleData(formData);
 
-      if (isEditing) {
-        await updateDocument(initialData.id, data);
-      } else {
-        await createDocument(data);
+      const result = isEditing
+        ? await updateDocument(initialData.id, data)
+        : await createDocument(data);
+
+      if (!result.success) {
+        alert(result.error || "เกิดข้อผิดพลาดในการบันทึก");
+        setSaving(false);
+        return;
       }
 
       const basePathMap: Record<string, string> = {
