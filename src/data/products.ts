@@ -104,7 +104,7 @@ export async function searchProducts(query: string, categoryId?: string) {
       include: {
         colorVariants: {
           orderBy: { sortOrder: "asc" },
-          select: { id: true, name: true, colorHex: true, imageUrl: true, stockQuantity: true },
+          select: { id: true, name: true, colorHex: true, imageUrl: true, price: true, stockQuantity: true },
         },
       },
       take: 20,

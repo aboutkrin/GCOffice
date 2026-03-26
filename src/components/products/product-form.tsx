@@ -59,6 +59,7 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
       name: v.name,
       colorHex: v.colorHex ?? "",
       imageUrl: v.imageUrl ?? "",
+      price: v.price != null ? Number(v.price) : null,
       sortOrder: v.sortOrder ?? 0,
     })) ?? []
   );
