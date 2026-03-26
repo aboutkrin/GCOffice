@@ -10,167 +10,61 @@ import { serialize } from "@/lib/utils";
 import { toUTCNoon } from "@/lib/thai-date";
 
 export async function createDocument(data: unknown) {
-  const validated = documentSchema.parse(data);
-  validated.documentDate = toUTCNoon(validated.documentDate);
+  try {
+    const validated = documentSchema.parse(data);
+    validated.documentDate = toUTCNoon(validated.documentDate);
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("ไม่ได้เข้าสู่ระบบ");
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { success: false as const, error: "ไม่ได้เข้าสู่ระบบ" };
 
-  const documentNumber = await generateDocumentNumber(validated.type);
+    const documentNumber = await generateDocumentNumber(validated.type);
 
-  const company = await prisma.company.findUniqueOrThrow({
-    where: { id: validated.companyId },
-  });
-  const customer = await prisma.customer.findUniqueOrThrow({
-    where: { id: validated.customerId },
-  });
+    const company = await prisma.company.findUniqueOrThrow({
+      where: { id: validated.companyId },
+    });
+    const customer = await prisma.customer.findUniqueOrThrow({
+      where: { id: validated.customerId },
+    });
 
-  const subtotal = validated.lineItems.reduce(
-    (sum, item) => sum + item.quantity * Number(item.unitPrice),
-    0
-  );
+    const subtotal = validated.lineItems.reduce(
+      (sum, item) => sum + item.quantity * Number(item.unitPrice),
+      0
+    );
 
-  // Include shipping in subtotal before discount (same as frontend use-pricing.ts)
-  const shippingCost = validated.shippingCost || 0;
-  const subtotalWithShipping = subtotal + shippingCost;
+    // Include shipping in subtotal before discount (same as frontend use-pricing.ts)
+    const shippingCost = validated.shippingCost || 0;
+    const subtotalWithShipping = subtotal + shippingCost;
 
-  let discountAmount = 0;
-  if (validated.discountType === "PERCENTAGE" && validated.discountValue) {
-    discountAmount = subtotalWithShipping * (validated.discountValue / 100);
-  } else if (validated.discountType === "AMOUNT" && validated.discountValue) {
-    discountAmount = validated.discountValue;
-  }
+    let discountAmount = 0;
+    if (validated.discountType === "PERCENTAGE" && validated.discountValue) {
+      discountAmount = subtotalWithShipping * (validated.discountValue / 100);
+    } else if (validated.discountType === "AMOUNT" && validated.discountValue) {
+      discountAmount = validated.discountValue;
+    }
 
-  const afterDiscount = subtotalWithShipping - discountAmount;
-  // VAT is calculated on afterDiscount (which includes shipping)
-  const vatAmount = validated.vatEnabled
-    ? afterDiscount * (validated.vatRate / 100)
-    : 0;
-  const grandTotal = afterDiscount + vatAmount;
+    const afterDiscount = subtotalWithShipping - discountAmount;
+    // VAT is calculated on afterDiscount (which includes shipping)
+    const vatAmount = validated.vatEnabled
+      ? afterDiscount * (validated.vatRate / 100)
+      : 0;
+    const grandTotal = afterDiscount + vatAmount;
 
-  const document = await prisma.document.create({
-    data: {
-      type: validated.type,
-      status: validated.type === "QUOTATION" ? DocumentStatus.QUOTED : validated.type === "INVOICE" ? DocumentStatus.BILLED : undefined,
-      documentNumber,
-      documentDate: validated.documentDate,
-      companyId: validated.companyId,
-      companySnapshot: JSON.parse(JSON.stringify(company)),
-      customerId: validated.customerId,
-      customerSnapshot: JSON.parse(JSON.stringify(customer)),
-      subtotal,
-      discountType: validated.discountType ?? undefined,
-      discountValue: validated.discountValue,
-      discountAmount,
-      vatEnabled: validated.vatEnabled,
-      vatRate: validated.vatRate,
-      vatAmount,
-      shippingCost,
-      grandTotal,
-      footerNotes: validated.footerNotes,
-      productionDays: validated.productionDays,
-      productionDaysMin: validated.productionDaysMin ?? undefined,
-      productionDaysMax: validated.productionDaysMax ?? undefined,
-      skipWeekends: validated.skipWeekends,
-      skipHolidays: validated.skipHolidays,
-      deliveryDateStart: validated.deliveryDateStart ? toUTCNoon(validated.deliveryDateStart) : undefined,
-      deliveryDateEnd: validated.deliveryDateEnd ? toUTCNoon(validated.deliveryDateEnd) : undefined,
-      sourceQuotationId:
-        validated.type === "INVOICE" ? validated.sourceQuotationId : undefined,
-      sourceInvoiceId:
-        validated.type === "RECEIPT" ? validated.sourceInvoiceId : undefined,
-      createdById: user.id,
-      lineItems: {
-        create: validated.lineItems.map((item) => ({
-          sequence: item.sequence,
-          productSku: item.productSku,
-          productName: item.productName,
-          productImage: item.productImage,
-          colorVariantName: item.colorVariantName,
-          showImage: item.showImage,
-          details: item.details,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          lineTotal: item.quantity * Number(item.unitPrice),
-        })),
-      },
-      paymentTerms: validated.paymentTerms
-        ? {
-            create: validated.paymentTerms.map((term) => ({
-              sequence: term.sequence,
-              name: term.name,
-              type: term.type,
-              value: term.value,
-              calculatedAmount: term.calculatedAmount,
-              note: term.note,
-            })),
-          }
-        : undefined,
-    },
-    include: { lineItems: true, paymentTerms: true },
-  });
-
-  revalidatePath("/quotations");
-  revalidatePath("/invoices");
-  revalidatePath("/receipts");
-  return serialize(document);
-}
-
-export async function updateDocument(id: string, data: unknown) {
-  const validated = documentSchema.parse(data);
-  validated.documentDate = toUTCNoon(validated.documentDate);
-
-  // Calculate totals
-  const subtotal = validated.lineItems.reduce(
-    (sum, item) => sum + item.quantity * Number(item.unitPrice),
-    0
-  );
-
-  // Include shipping in subtotal before discount (same as frontend use-pricing.ts)
-  const shippingCost = validated.shippingCost || 0;
-  const subtotalWithShipping = subtotal + shippingCost;
-
-  let discountAmount = 0;
-  if (validated.discountType === "PERCENTAGE" && validated.discountValue) {
-    discountAmount = subtotalWithShipping * (validated.discountValue / 100);
-  } else if (validated.discountType === "AMOUNT" && validated.discountValue) {
-    discountAmount = validated.discountValue;
-  }
-
-  const afterDiscount = subtotalWithShipping - discountAmount;
-  // VAT is calculated on afterDiscount (which includes shipping)
-  const vatAmount = validated.vatEnabled
-    ? afterDiscount * (validated.vatRate / 100)
-    : 0;
-  const grandTotal = afterDiscount + vatAmount;
-
-  // Get fresh snapshots
-  const company = await prisma.company.findUniqueOrThrow({
-    where: { id: validated.companyId },
-  });
-  const customer = await prisma.customer.findUniqueOrThrow({
-    where: { id: validated.customerId },
-  });
-
-  const document = await prisma.$transaction(async (tx: any) => {
-    // Delete old items
-    await tx.documentLineItem.deleteMany({ where: { documentId: id } });
-    await tx.documentPaymentTerm.deleteMany({ where: { documentId: id } });
-
-    return tx.document.update({
-      where: { id },
+    const document = await prisma.document.create({
       data: {
+        type: validated.type,
+        status: validated.type === "QUOTATION" ? DocumentStatus.QUOTED : validated.type === "INVOICE" ? DocumentStatus.BILLED : undefined,
+        documentNumber,
         documentDate: validated.documentDate,
         companyId: validated.companyId,
-        companySnapshot: JSON.parse(JSON.stringify(company)),
+        companySnapshot: JSON.parse(JSON.stringify(serialize(company))),
         customerId: validated.customerId,
-        customerSnapshot: JSON.parse(JSON.stringify(customer)),
+        customerSnapshot: JSON.parse(JSON.stringify(serialize(customer))),
         subtotal,
-        discountType: validated.discountType ?? null,
-        discountValue: validated.discountValue ?? null,
+        discountType: validated.discountType ?? undefined,
+        discountValue: validated.discountValue,
         discountAmount,
         vatEnabled: validated.vatEnabled,
         vatRate: validated.vatRate,
@@ -179,12 +73,17 @@ export async function updateDocument(id: string, data: unknown) {
         grandTotal,
         footerNotes: validated.footerNotes,
         productionDays: validated.productionDays,
-        productionDaysMin: validated.productionDaysMin ?? null,
-        productionDaysMax: validated.productionDaysMax ?? null,
+        productionDaysMin: validated.productionDaysMin ?? undefined,
+        productionDaysMax: validated.productionDaysMax ?? undefined,
         skipWeekends: validated.skipWeekends,
         skipHolidays: validated.skipHolidays,
-        deliveryDateStart: validated.deliveryDateStart ? toUTCNoon(validated.deliveryDateStart) : null,
-        deliveryDateEnd: validated.deliveryDateEnd ? toUTCNoon(validated.deliveryDateEnd) : null,
+        deliveryDateStart: validated.deliveryDateStart ? toUTCNoon(validated.deliveryDateStart) : undefined,
+        deliveryDateEnd: validated.deliveryDateEnd ? toUTCNoon(validated.deliveryDateEnd) : undefined,
+        sourceQuotationId:
+          validated.type === "INVOICE" ? validated.sourceQuotationId : undefined,
+        sourceInvoiceId:
+          validated.type === "RECEIPT" ? validated.sourceInvoiceId : undefined,
+        createdById: user.id,
         lineItems: {
           create: validated.lineItems.map((item) => ({
             sequence: item.sequence,
@@ -214,12 +113,125 @@ export async function updateDocument(id: string, data: unknown) {
       },
       include: { lineItems: true, paymentTerms: true },
     });
-  });
 
-  revalidatePath("/quotations");
-  revalidatePath("/invoices");
-  revalidatePath("/receipts");
-  return serialize(document);
+    revalidatePath("/quotations");
+    revalidatePath("/invoices");
+    revalidatePath("/receipts");
+    return { success: true as const, data: serialize(document) };
+  } catch (error) {
+    console.error("createDocument error:", error);
+    const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการสร้างเอกสาร";
+    return { success: false as const, error: message };
+  }
+}
+
+export async function updateDocument(id: string, data: unknown) {
+  try {
+    const validated = documentSchema.parse(data);
+    validated.documentDate = toUTCNoon(validated.documentDate);
+
+    // Calculate totals
+    const subtotal = validated.lineItems.reduce(
+      (sum, item) => sum + item.quantity * Number(item.unitPrice),
+      0
+    );
+
+    // Include shipping in subtotal before discount (same as frontend use-pricing.ts)
+    const shippingCost = validated.shippingCost || 0;
+    const subtotalWithShipping = subtotal + shippingCost;
+
+    let discountAmount = 0;
+    if (validated.discountType === "PERCENTAGE" && validated.discountValue) {
+      discountAmount = subtotalWithShipping * (validated.discountValue / 100);
+    } else if (validated.discountType === "AMOUNT" && validated.discountValue) {
+      discountAmount = validated.discountValue;
+    }
+
+    const afterDiscount = subtotalWithShipping - discountAmount;
+    // VAT is calculated on afterDiscount (which includes shipping)
+    const vatAmount = validated.vatEnabled
+      ? afterDiscount * (validated.vatRate / 100)
+      : 0;
+    const grandTotal = afterDiscount + vatAmount;
+
+    // Get fresh snapshots
+    const company = await prisma.company.findUniqueOrThrow({
+      where: { id: validated.companyId },
+    });
+    const customer = await prisma.customer.findUniqueOrThrow({
+      where: { id: validated.customerId },
+    });
+
+    const document = await prisma.$transaction(async (tx: any) => {
+      // Delete old items
+      await tx.documentLineItem.deleteMany({ where: { documentId: id } });
+      await tx.documentPaymentTerm.deleteMany({ where: { documentId: id } });
+
+      return tx.document.update({
+        where: { id },
+        data: {
+          documentDate: validated.documentDate,
+          companyId: validated.companyId,
+          companySnapshot: JSON.parse(JSON.stringify(serialize(company))),
+          customerId: validated.customerId,
+          customerSnapshot: JSON.parse(JSON.stringify(serialize(customer))),
+          subtotal,
+          discountType: validated.discountType ?? null,
+          discountValue: validated.discountValue ?? null,
+          discountAmount,
+          vatEnabled: validated.vatEnabled,
+          vatRate: validated.vatRate,
+          vatAmount,
+          shippingCost,
+          grandTotal,
+          footerNotes: validated.footerNotes,
+          productionDays: validated.productionDays,
+          productionDaysMin: validated.productionDaysMin ?? null,
+          productionDaysMax: validated.productionDaysMax ?? null,
+          skipWeekends: validated.skipWeekends,
+          skipHolidays: validated.skipHolidays,
+          deliveryDateStart: validated.deliveryDateStart ? toUTCNoon(validated.deliveryDateStart) : null,
+          deliveryDateEnd: validated.deliveryDateEnd ? toUTCNoon(validated.deliveryDateEnd) : null,
+          lineItems: {
+            create: validated.lineItems.map((item) => ({
+              sequence: item.sequence,
+              productSku: item.productSku,
+              productName: item.productName,
+              productImage: item.productImage,
+              colorVariantName: item.colorVariantName,
+              showImage: item.showImage,
+              details: item.details,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              lineTotal: item.quantity * Number(item.unitPrice),
+            })),
+          },
+          paymentTerms: validated.paymentTerms
+            ? {
+                create: validated.paymentTerms.map((term) => ({
+                  sequence: term.sequence,
+                  name: term.name,
+                  type: term.type,
+                  value: term.value,
+                  calculatedAmount: term.calculatedAmount,
+                  note: term.note,
+                })),
+              }
+            : undefined,
+        },
+        include: { lineItems: true, paymentTerms: true },
+      });
+    }, { timeout: 15000 });
+
+    revalidatePath("/quotations");
+    revalidatePath("/invoices");
+    revalidatePath("/receipts");
+    return { success: true as const, data: serialize(document) };
+  } catch (error) {
+    console.error("updateDocument error:", error);
+    const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการบันทึกเอกสาร";
+    return { success: false as const, error: message };
+  }
 }
 
 export async function updateDocumentStatus(
