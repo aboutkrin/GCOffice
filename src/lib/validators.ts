@@ -119,8 +119,14 @@ export const documentSchema = z.object({
   productionDaysMax: z.coerce.number().int().min(1, "ต้องมากกว่า 0").optional().nullable(),
   skipWeekends: z.boolean().default(true),
   skipHolidays: z.boolean().default(true),
-  deliveryDateStart: z.coerce.date().optional().nullable(),
-  deliveryDateEnd: z.coerce.date().optional().nullable(),
+  deliveryDateStart: z.preprocess(
+    (val) => (val === null || val === undefined || val === "" ? null : val),
+    z.coerce.date().nullable()
+  ).optional(),
+  deliveryDateEnd: z.preprocess(
+    (val) => (val === null || val === undefined || val === "" ? null : val),
+    z.coerce.date().nullable()
+  ).optional(),
   lineItems: z.array(lineItemSchema).min(1, "กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ"),
   paymentTerms: z.array(paymentTermSchema).optional(),
 }).refine(

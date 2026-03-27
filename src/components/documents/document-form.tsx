@@ -436,11 +436,23 @@ export function DocumentForm({
     try {
       const data = assembleData(formData);
 
-      const result = isEditing
-        ? await updateDocument(initialData.id, data)
-        : await createDocument(data);
+      let result;
+      try {
+        result = isEditing
+          ? await updateDocument(initialData.id, data)
+          : await createDocument(data);
+      } catch (actionError: any) {
+        // Server action transport error (network, serialization, etc.)
+        console.error("Server action failed:", actionError);
+        alert(
+          `บันทึกไม่สำเร็จ (server action error): ${actionError?.message || "ไม่สามารถเชื่อมต่อ server ได้"}`
+        );
+        setSaving(false);
+        return;
+      }
 
       if (!result.success) {
+        console.error("Save failed:", result.error);
         alert(result.error || "เกิดข้อผิดพลาดในการบันทึก");
         setSaving(false);
         return;
