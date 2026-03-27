@@ -127,7 +127,7 @@ export const documentSchema = z.object({
     (val) => (val === null || val === undefined || val === "" ? null : val),
     z.coerce.date().nullable()
   ).optional(),
-  lineItems: z.array(lineItemSchema).min(1, "กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ"),
+  lineItems: z.array(lineItemSchema).min(1, "กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ").max(30, "รายการสินค้าต้องไม่เกิน 30 รายการ"),
   paymentTerms: z.array(paymentTermSchema).optional(),
 }).refine(
   (data) => data.type !== "INVOICE" || (data.sourceQuotationId && data.sourceQuotationId.length > 0),
