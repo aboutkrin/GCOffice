@@ -157,31 +157,34 @@ async function saveColorVariantsInTransaction(
     });
   }
 
-  // Upsert variants
-  for (const variant of validated) {
-    if (variant.id && existingIds.has(variant.id)) {
-      await tx.productColorVariant.update({
-        where: { id: variant.id },
-        data: {
-          name: variant.name,
-          colorHex: variant.colorHex || null,
-          imageUrl: variant.imageUrl || null,
-          price: variant.price ?? null,
-          sortOrder: variant.sortOrder,
-        },
-      });
-    } else {
-      await tx.productColorVariant.create({
-        data: {
-          productId,
-          name: variant.name,
-          colorHex: variant.colorHex || null,
-          imageUrl: variant.imageUrl || null,
-          price: variant.price ?? null,
-          sortOrder: variant.sortOrder,
-        },
-      });
-    }
+  // Update existing variants
+  const toUpdate = validated.filter((v) => v.id && existingIds.has(v.id));
+  for (const variant of toUpdate) {
+    await tx.productColorVariant.update({
+      where: { id: variant.id! },
+      data: {
+        name: variant.name,
+        colorHex: variant.colorHex || null,
+        imageUrl: variant.imageUrl || null,
+        price: variant.price ?? null,
+        sortOrder: variant.sortOrder,
+      },
+    });
+  }
+
+  // Batch create new variants
+  const toCreate = validated.filter((v) => !v.id || !existingIds.has(v.id));
+  if (toCreate.length > 0) {
+    await tx.productColorVariant.createMany({
+      data: toCreate.map((variant) => ({
+        productId,
+        name: variant.name,
+        colorHex: variant.colorHex || null,
+        imageUrl: variant.imageUrl || null,
+        price: variant.price ?? null,
+        sortOrder: variant.sortOrder,
+      })),
+    });
   }
 
   // Sync aggregate stock
@@ -203,7 +206,7 @@ export async function saveProductColorVariants(
 
   await prisma.$transaction(async (tx) => {
     await saveColorVariantsInTransaction(tx, productId, validated);
-  });
+  }, { timeout: 30000 });
 
   revalidatePath("/products");
   revalidatePath("/stock");
@@ -231,7 +234,7 @@ export async function updateProductWithColorVariants(
     });
     await saveColorVariantsInTransaction(tx, id, validatedVariants);
     return updated;
-  });
+  }, { timeout: 30000 });
 
   revalidatePath("/products");
   revalidatePath("/stock");
@@ -262,7 +265,7 @@ export async function createProductWithColorVariants(
       await saveColorVariantsInTransaction(tx, created.id, validatedVariants);
     }
     return created;
-  });
+  }, { timeout: 30000 });
 
   revalidatePath("/products");
   revalidatePath("/stock");
