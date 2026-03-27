@@ -209,6 +209,207 @@ export async function adjustStock(
   revalidatePath("/stock");
 }
 
+// ============================================================
+// Document-driven stock deduction & restore
+// ============================================================
+
+export interface StockShortage {
+  productSku: string;
+  productName: string;
+  colorVariantName: string | null;
+  requested: number;
+  available: number;
+  shortage: number;
+}
+
+/**
+ * Deduct stock for every line item in a document.
+ * If stock is insufficient, deducts what's available and tracks shortages.
+ */
+export async function deductStockForDocument(documentId: string) {
+  const document = await prisma.document.findUniqueOrThrow({
+    where: { id: documentId },
+    include: { lineItems: { orderBy: { sequence: "asc" } } },
+  });
+
+  const shortages: StockShortage[] = [];
+
+  await prisma.$transaction(async (tx) => {
+    for (const item of document.lineItems) {
+      if (!item.productSku) continue;
+
+      const product = await tx.product.findUnique({
+        where: { sku: item.productSku },
+        select: {
+          id: true,
+          stockQuantity: true,
+          colorVariants: {
+            select: { id: true, name: true, stockQuantity: true },
+          },
+        },
+      });
+      if (!product) continue;
+
+      const reason = `ตัดสต็อคจากเอกสาร ${document.documentNumber}`;
+      const reference = document.documentNumber;
+
+      if (item.colorVariantName) {
+        const variant = product.colorVariants.find(
+          (v) => v.name === item.colorVariantName
+        );
+        if (!variant) continue;
+
+        const deductQty = Math.min(item.quantity, variant.stockQuantity);
+        if (item.quantity > variant.stockQuantity) {
+          shortages.push({
+            productSku: item.productSku,
+            productName: item.productName,
+            colorVariantName: item.colorVariantName,
+            requested: item.quantity,
+            available: variant.stockQuantity,
+            shortage: item.quantity - variant.stockQuantity,
+          });
+        }
+
+        if (deductQty > 0) {
+          const newBalance = variant.stockQuantity - deductQty;
+          await tx.productColorVariant.update({
+            where: { id: variant.id },
+            data: { stockQuantity: newBalance },
+          });
+          await tx.stockMovement.create({
+            data: {
+              productId: product.id,
+              colorVariantId: variant.id,
+              type: "OUT",
+              quantity: deductQty,
+              reason,
+              reference,
+              balanceAfter: newBalance,
+            },
+          });
+          await syncProductStockFromVariants(tx, product.id);
+        }
+      } else {
+        const deductQty = Math.min(item.quantity, product.stockQuantity);
+        if (item.quantity > product.stockQuantity) {
+          shortages.push({
+            productSku: item.productSku,
+            productName: item.productName,
+            colorVariantName: null,
+            requested: item.quantity,
+            available: product.stockQuantity,
+            shortage: item.quantity - product.stockQuantity,
+          });
+        }
+
+        if (deductQty > 0) {
+          const newBalance = product.stockQuantity - deductQty;
+          await tx.product.update({
+            where: { id: product.id },
+            data: { stockQuantity: newBalance },
+          });
+          await tx.stockMovement.create({
+            data: {
+              productId: product.id,
+              type: "OUT",
+              quantity: deductQty,
+              reason,
+              reference,
+              balanceAfter: newBalance,
+            },
+          });
+        }
+      }
+    }
+  });
+
+  revalidatePath("/stock");
+  return { success: true, shortages };
+}
+
+/**
+ * Restore stock that was previously deducted for a document.
+ * Finds all OUT movements referencing the document number and reverses them.
+ */
+export async function restoreStockForDocument(documentId: string) {
+  const document = await prisma.document.findUniqueOrThrow({
+    where: { id: documentId },
+    select: { documentNumber: true },
+  });
+
+  const movements = await prisma.stockMovement.findMany({
+    where: {
+      reference: document.documentNumber,
+      type: "OUT",
+    },
+  });
+
+  if (movements.length === 0) return;
+
+  await prisma.$transaction(async (tx) => {
+    const syncProductIds = new Set<string>();
+
+    for (const movement of movements) {
+      const reason = `คืนสต็อคจากการยกเลิกเอกสาร ${document.documentNumber}`;
+
+      if (movement.colorVariantId) {
+        const variant = await tx.productColorVariant.findUnique({
+          where: { id: movement.colorVariantId },
+          select: { stockQuantity: true },
+        });
+        if (!variant) continue;
+
+        const newBalance = variant.stockQuantity + movement.quantity;
+        await tx.productColorVariant.update({
+          where: { id: movement.colorVariantId },
+          data: { stockQuantity: newBalance },
+        });
+        await tx.stockMovement.create({
+          data: {
+            productId: movement.productId,
+            colorVariantId: movement.colorVariantId,
+            type: "IN",
+            quantity: movement.quantity,
+            reason,
+            reference: document.documentNumber,
+            balanceAfter: newBalance,
+          },
+        });
+        syncProductIds.add(movement.productId);
+      } else {
+        const product = await tx.product.findUnique({
+          where: { id: movement.productId },
+          select: { stockQuantity: true },
+        });
+        if (!product) continue;
+
+        const newBalance = product.stockQuantity + movement.quantity;
+        await tx.product.update({
+          where: { id: movement.productId },
+          data: { stockQuantity: newBalance },
+        });
+        await tx.stockMovement.create({
+          data: {
+            productId: movement.productId,
+            type: "IN",
+            quantity: movement.quantity,
+            reason,
+            reference: document.documentNumber,
+            balanceAfter: newBalance,
+          },
+        });
+      }
+    }
+
+    for (const productId of syncProductIds) {
+      await syncProductStockFromVariants(tx, productId);
+    }
+  });
+
+  revalidatePath("/stock");
+}
+
 export async function updateStockThreshold(
   productId: string,
   threshold: number,

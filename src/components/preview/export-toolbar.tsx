@@ -293,9 +293,26 @@ export function ExportToolbar({
             throw new Error("Failed to update status");
           }
 
+          const data = await response.json();
+
           toast.success(
             `เปลี่ยนสถานะเป็น "${DOCUMENT_STATUS_LABELS[newStatus]}" สำเร็จ`
           );
+
+          // Show shortage warning if stock was insufficient
+          if (data.shortages && data.shortages.length > 0) {
+            const shortageLines = data.shortages
+              .map(
+                (s: { productSku: string; colorVariantName?: string; shortage: number }) =>
+                  `${s.productSku}${s.colorVariantName ? ` (${s.colorVariantName})` : ""} ขาดอีก ${s.shortage} กล่อง`
+              )
+              .join("\n");
+            toast.warning("สต็อคไม่เพียงพอ — ต้องสั่งเพิ่ม", {
+              description: shortageLines,
+              duration: 10000,
+            });
+          }
+
           router.refresh();
         } catch (error) {
           console.error("Status update failed:", error);

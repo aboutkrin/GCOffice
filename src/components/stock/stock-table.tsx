@@ -216,6 +216,23 @@ export function StockTable({
       ),
     },
     {
+      id: "reorderQuantity",
+      header: "ต้องสั่งเพิ่ม",
+      cell: ({ row }) => {
+        const qty = Math.max(
+          0,
+          row.original.lowStockThreshold - row.original.stockQuantity
+        );
+        return qty > 0 ? (
+          <span className="font-mono font-medium text-amber-600">
+            {qty} กล่อง
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        );
+      },
+    },
+    {
       id: "stockStatus",
       header: "สถานะสต็อค",
       cell: ({ row }) => {
@@ -352,7 +369,7 @@ export function StockTable({
                   <TableHead
                     key={header.id}
                     className={
-                      ["imageUrl", "lowStockThreshold", "category.name"].includes(header.id)
+                      ["imageUrl", "lowStockThreshold", "reorderQuantity", "category.name"].includes(header.id)
                         ? "hidden md:table-cell"
                         : ""
                     }
@@ -378,7 +395,7 @@ export function StockTable({
                         <TableCell
                           key={cell.id}
                           className={
-                            ["imageUrl", "lowStockThreshold", "category.name"].includes(cell.column.id)
+                            ["imageUrl", "lowStockThreshold", "reorderQuantity", "category.name"].includes(cell.column.id)
                               ? "hidden md:table-cell"
                               : ""
                           }
@@ -434,6 +451,21 @@ export function StockTable({
                             <span className="font-mono text-muted-foreground">
                               {variant.lowStockThreshold}
                             </span>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {(() => {
+                              const reorderQty = Math.max(
+                                0,
+                                variant.lowStockThreshold - variant.stockQuantity
+                              );
+                              return reorderQty > 0 ? (
+                                <span className="font-mono font-medium text-amber-600">
+                                  {reorderQty} กล่อง
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
                             <Badge className={STOCK_STATUS_COLORS[variantStatus]}>
