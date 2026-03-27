@@ -16,7 +16,7 @@ import { Plus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { ProductPicker } from "./product-picker";
 import { formatNumber } from "@/lib/thai-currency";
-import type { LineItem } from "@/hooks/use-line-items";
+import { type LineItem, MAX_LINE_ITEMS } from "@/hooks/use-line-items";
 
 interface LineItemTableProps {
   items: LineItem[];
@@ -281,9 +281,9 @@ export function LineItemTable({
         ))}
       </div>
 
-      <Button type="button" variant="outline" onClick={addItem} className="w-full">
+      <Button type="button" variant="outline" onClick={addItem} disabled={items.length >= MAX_LINE_ITEMS} className="w-full">
         <Plus className="h-4 w-4 mr-2" />
-        เพิ่มรายการ
+        เพิ่มรายการ ({items.length}/{MAX_LINE_ITEMS})
       </Button>
     </div>
   );

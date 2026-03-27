@@ -20,22 +20,27 @@ function generateId() {
   return Math.random().toString(36).substr(2, 9);
 }
 
+export const MAX_LINE_ITEMS = 30;
+
 export function useLineItems(initial: LineItem[] = []) {
   const [items, setItems] = useState<LineItem[]>(initial);
 
   const addItem = useCallback(() => {
-    setItems((prev) => [
-      ...prev,
-      {
-        id: generateId(),
-        sequence: prev.length + 1,
-        productName: "",
-        showImage: true,
-        quantity: 1,
-        unitPrice: 0,
-        lineTotal: 0,
-      },
-    ]);
+    setItems((prev) => {
+      if (prev.length >= MAX_LINE_ITEMS) return prev;
+      return [
+        ...prev,
+        {
+          id: generateId(),
+          sequence: prev.length + 1,
+          productName: "",
+          showImage: true,
+          quantity: 1,
+          unitPrice: 0,
+          lineTotal: 0,
+        },
+      ];
+    });
   }, []);
 
   const removeItem = useCallback((id: string) => {
@@ -87,6 +92,7 @@ export function useLineItems(initial: LineItem[] = []) {
   );
 
   const subtotal = items.reduce((sum, item) => sum + item.lineTotal, 0);
+  const canAddItem = items.length < MAX_LINE_ITEMS;
 
-  return { items, setItems, addItem, removeItem, updateItem, setFromProduct, subtotal };
+  return { items, setItems, addItem, removeItem, updateItem, setFromProduct, subtotal, canAddItem };
 }
