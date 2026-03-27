@@ -71,74 +71,88 @@ export async function createDocument(data: unknown) {
     // Normalize documentDate to UTC noon (client may have already done this, but ensure consistency)
     const documentDate = toUTCNoon(new Date(validated.documentDate));
 
-    const document = await prisma.document.create({
-      data: {
-        type: validated.type,
-        status: statusMap[validated.type],
-        documentNumber,
-        documentDate,
-        companyId: validated.companyId,
-        companySnapshot: serialize(company),
-        customerId: validated.customerId,
-        customerSnapshot: serialize(customer),
-        subtotal,
-        discountType: validated.discountType ?? undefined,
-        discountValue: validated.discountValue,
-        discountAmount,
-        vatEnabled: validated.vatEnabled,
-        vatRate: validated.vatRate,
-        vatAmount,
-        shippingCost,
-        grandTotal,
-        footerNotes: validated.footerNotes,
-        productionDays: validated.productionDays,
-        productionDaysMin: validated.productionDaysMin ?? undefined,
-        productionDaysMax: validated.productionDaysMax ?? undefined,
-        skipWeekends: validated.skipWeekends,
-        skipHolidays: validated.skipHolidays,
-        deliveryDateStart: validated.deliveryDateStart
-          ? toUTCNoon(new Date(validated.deliveryDateStart))
-          : undefined,
-        deliveryDateEnd: validated.deliveryDateEnd
-          ? toUTCNoon(new Date(validated.deliveryDateEnd))
-          : undefined,
-        sourceQuotationId:
-          validated.type === "INVOICE" ? validated.sourceQuotationId : undefined,
-        sourceInvoiceId:
-          validated.type === "RECEIPT" ? validated.sourceInvoiceId : undefined,
-        createdById: user.id,
-        lineItems: {
-          create: validated.lineItems.map(
-            (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
-              sequence: item.sequence,
-              productSku: item.productSku,
-              productName: item.productName,
-              productImage: item.productImage,
-              colorVariantName: item.colorVariantName,
-              showImage: item.showImage,
-              details: item.details,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              lineTotal: item.quantity * Number(item.unitPrice),
+    const document = await prisma.$transaction(async (tx: any) => {
+      // Create document first (without nested line items / payment terms)
+      const doc = await tx.document.create({
+        data: {
+          type: validated.type,
+          status: statusMap[validated.type],
+          documentNumber,
+          documentDate,
+          companyId: validated.companyId,
+          companySnapshot: serialize(company),
+          customerId: validated.customerId,
+          customerSnapshot: serialize(customer),
+          subtotal,
+          discountType: validated.discountType ?? undefined,
+          discountValue: validated.discountValue,
+          discountAmount,
+          vatEnabled: validated.vatEnabled,
+          vatRate: validated.vatRate,
+          vatAmount,
+          shippingCost,
+          grandTotal,
+          footerNotes: validated.footerNotes,
+          productionDays: validated.productionDays,
+          productionDaysMin: validated.productionDaysMin ?? undefined,
+          productionDaysMax: validated.productionDaysMax ?? undefined,
+          skipWeekends: validated.skipWeekends,
+          skipHolidays: validated.skipHolidays,
+          deliveryDateStart: validated.deliveryDateStart
+            ? toUTCNoon(new Date(validated.deliveryDateStart))
+            : undefined,
+          deliveryDateEnd: validated.deliveryDateEnd
+            ? toUTCNoon(new Date(validated.deliveryDateEnd))
+            : undefined,
+          sourceQuotationId:
+            validated.type === "INVOICE" ? validated.sourceQuotationId : undefined,
+          sourceInvoiceId:
+            validated.type === "RECEIPT" ? validated.sourceInvoiceId : undefined,
+          createdById: user.id,
+        },
+      });
+
+      // Bulk-insert line items with createMany (avoids oversized nested query)
+      await tx.documentLineItem.createMany({
+        data: validated.lineItems.map(
+          (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
+            documentId: doc.id,
+            sequence: item.sequence,
+            productSku: item.productSku,
+            productName: item.productName,
+            productImage: item.productImage,
+            colorVariantName: item.colorVariantName,
+            showImage: item.showImage,
+            details: item.details,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            lineTotal: item.quantity * Number(item.unitPrice),
+          })
+        ),
+      });
+
+      // Bulk-insert payment terms
+      if (validated.paymentTerms && validated.paymentTerms.length > 0) {
+        await tx.documentPaymentTerm.createMany({
+          data: validated.paymentTerms.map(
+            (term: { sequence: number; name: string; type: PaymentTermType; value: number; calculatedAmount: number; note?: string }) => ({
+              documentId: doc.id,
+              sequence: term.sequence,
+              name: term.name,
+              type: term.type,
+              value: term.value,
+              calculatedAmount: term.calculatedAmount,
+              note: term.note,
             })
           ),
-        },
-        paymentTerms: validated.paymentTerms
-          ? {
-              create: validated.paymentTerms.map(
-                (term: { sequence: number; name: string; type: PaymentTermType; value: number; calculatedAmount: number; note?: string }) => ({
-                  sequence: term.sequence,
-                  name: term.name,
-                  type: term.type,
-                  value: term.value,
-                  calculatedAmount: term.calculatedAmount,
-                  note: term.note,
-                })
-              ),
-            }
-          : undefined,
-      },
-      include: { lineItems: true, paymentTerms: true },
+        });
+      }
+
+      // Return full document with relations
+      return tx.document.findUniqueOrThrow({
+        where: { id: doc.id },
+        include: { lineItems: true, paymentTerms: true },
+      });
     });
 
     revalidatePath("/quotations");
@@ -198,7 +212,8 @@ export async function updateDocument(id: string, data: unknown) {
       await tx.documentLineItem.deleteMany({ where: { documentId: id } });
       await tx.documentPaymentTerm.deleteMany({ where: { documentId: id } });
 
-      return tx.document.update({
+      // Update document fields (without nested creates)
+      await tx.document.update({
         where: { id },
         data: {
           documentDate,
@@ -227,37 +242,48 @@ export async function updateDocument(id: string, data: unknown) {
           deliveryDateEnd: validated.deliveryDateEnd
             ? toUTCNoon(new Date(validated.deliveryDateEnd))
             : null,
-          lineItems: {
-            create: validated.lineItems.map(
-              (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
-                sequence: item.sequence,
-                productSku: item.productSku,
-                productName: item.productName,
-                productImage: item.productImage,
-                colorVariantName: item.colorVariantName,
-                showImage: item.showImage,
-                details: item.details,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                lineTotal: item.quantity * Number(item.unitPrice),
-              })
-            ),
-          },
-          paymentTerms: validated.paymentTerms
-            ? {
-                create: validated.paymentTerms.map(
-                  (term: { sequence: number; name: string; type: PaymentTermType; value: number; calculatedAmount: number; note?: string }) => ({
-                    sequence: term.sequence,
-                    name: term.name,
-                    type: term.type,
-                    value: term.value,
-                    calculatedAmount: term.calculatedAmount,
-                    note: term.note,
-                  })
-                ),
-              }
-            : undefined,
         },
+      });
+
+      // Bulk-insert line items with createMany (avoids oversized nested query)
+      await tx.documentLineItem.createMany({
+        data: validated.lineItems.map(
+          (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
+            documentId: id,
+            sequence: item.sequence,
+            productSku: item.productSku,
+            productName: item.productName,
+            productImage: item.productImage,
+            colorVariantName: item.colorVariantName,
+            showImage: item.showImage,
+            details: item.details,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            lineTotal: item.quantity * Number(item.unitPrice),
+          })
+        ),
+      });
+
+      // Bulk-insert payment terms
+      if (validated.paymentTerms && validated.paymentTerms.length > 0) {
+        await tx.documentPaymentTerm.createMany({
+          data: validated.paymentTerms.map(
+            (term: { sequence: number; name: string; type: PaymentTermType; value: number; calculatedAmount: number; note?: string }) => ({
+              documentId: id,
+              sequence: term.sequence,
+              name: term.name,
+              type: term.type,
+              value: term.value,
+              calculatedAmount: term.calculatedAmount,
+              note: term.note,
+            })
+          ),
+        });
+      }
+
+      // Return full document with relations
+      return tx.document.findUniqueOrThrow({
+        where: { id },
         include: { lineItems: true, paymentTerms: true },
       });
     });
