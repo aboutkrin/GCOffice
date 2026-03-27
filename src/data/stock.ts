@@ -98,11 +98,21 @@ export async function getStockStats() {
       (p) => p.stockQuantity <= p.lowStockThreshold
     ).length;
 
+    // Calculate total reorder quantity for all products below threshold
+    const allBelowThreshold = await prisma.product.findMany({
+      where: { status: "ACTIVE" },
+      select: { stockQuantity: true, lowStockThreshold: true },
+    });
+    const totalReorderQuantity = allBelowThreshold.reduce(
+      (sum, p) => sum + Math.max(0, p.lowStockThreshold - p.stockQuantity),
+      0
+    );
+
     const inStock = totalProducts - outOfStock - lowStock;
 
-    return { totalProducts, inStock, lowStock, outOfStock };
+    return { totalProducts, inStock, lowStock, outOfStock, totalReorderQuantity };
   } catch {
-    return { totalProducts: 0, inStock: 0, lowStock: 0, outOfStock: 0 };
+    return { totalProducts: 0, inStock: 0, lowStock: 0, outOfStock: 0, totalReorderQuantity: 0 };
   }
 }
 
