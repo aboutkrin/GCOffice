@@ -5,14 +5,23 @@ import { documentSchema } from "@/lib/validators";
 import { generateDocumentNumber } from "@/lib/document-number";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { DocumentStatus } from "@/generated/prisma/client";
+import { DocumentStatus, PaymentTermType } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { toUTCNoon } from "@/lib/thai-date";
+import { ZodError } from "zod";
+
+function formatZodError(error: ZodError): string {
+  return error.issues
+    .map((i) => {
+      const field = i.path.join(".");
+      return field ? `${field}: ${i.message}` : i.message;
+    })
+    .join(", ");
+}
 
 export async function createDocument(data: unknown) {
   try {
     const validated = documentSchema.parse(data);
-    validated.documentDate = toUTCNoon(validated.documentDate);
 
     const supabase = await createClient();
     const {
@@ -30,7 +39,8 @@ export async function createDocument(data: unknown) {
     });
 
     const subtotal = validated.lineItems.reduce(
-      (sum, item) => sum + item.quantity * Number(item.unitPrice),
+      (sum: number, item: { quantity: number; unitPrice: number }) =>
+        sum + item.quantity * Number(item.unitPrice),
       0
     );
 
@@ -46,22 +56,31 @@ export async function createDocument(data: unknown) {
     }
 
     const afterDiscount = subtotalWithShipping - discountAmount;
-    // VAT is calculated on afterDiscount (which includes shipping)
     const vatAmount = validated.vatEnabled
       ? afterDiscount * (validated.vatRate / 100)
       : 0;
     const grandTotal = afterDiscount + vatAmount;
 
+    // Determine initial status based on document type
+    const statusMap: Record<string, DocumentStatus> = {
+      QUOTATION: DocumentStatus.QUOTED,
+      INVOICE: DocumentStatus.BILLED,
+      RECEIPT: DocumentStatus.PAID,
+    };
+
+    // Normalize documentDate to UTC noon (client may have already done this, but ensure consistency)
+    const documentDate = toUTCNoon(new Date(validated.documentDate));
+
     const document = await prisma.document.create({
       data: {
         type: validated.type,
-        status: validated.type === "QUOTATION" ? DocumentStatus.QUOTED : validated.type === "INVOICE" ? DocumentStatus.BILLED : undefined,
+        status: statusMap[validated.type],
         documentNumber,
-        documentDate: validated.documentDate,
+        documentDate,
         companyId: validated.companyId,
-        companySnapshot: JSON.parse(JSON.stringify(serialize(company))),
+        companySnapshot: serialize(company),
         customerId: validated.customerId,
-        customerSnapshot: JSON.parse(JSON.stringify(serialize(customer))),
+        customerSnapshot: serialize(customer),
         subtotal,
         discountType: validated.discountType ?? undefined,
         discountValue: validated.discountValue,
@@ -77,37 +96,45 @@ export async function createDocument(data: unknown) {
         productionDaysMax: validated.productionDaysMax ?? undefined,
         skipWeekends: validated.skipWeekends,
         skipHolidays: validated.skipHolidays,
-        deliveryDateStart: validated.deliveryDateStart ? toUTCNoon(validated.deliveryDateStart) : undefined,
-        deliveryDateEnd: validated.deliveryDateEnd ? toUTCNoon(validated.deliveryDateEnd) : undefined,
+        deliveryDateStart: validated.deliveryDateStart
+          ? toUTCNoon(new Date(validated.deliveryDateStart))
+          : undefined,
+        deliveryDateEnd: validated.deliveryDateEnd
+          ? toUTCNoon(new Date(validated.deliveryDateEnd))
+          : undefined,
         sourceQuotationId:
           validated.type === "INVOICE" ? validated.sourceQuotationId : undefined,
         sourceInvoiceId:
           validated.type === "RECEIPT" ? validated.sourceInvoiceId : undefined,
         createdById: user.id,
         lineItems: {
-          create: validated.lineItems.map((item) => ({
-            sequence: item.sequence,
-            productSku: item.productSku,
-            productName: item.productName,
-            productImage: item.productImage,
-            colorVariantName: item.colorVariantName,
-            showImage: item.showImage,
-            details: item.details,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            lineTotal: item.quantity * Number(item.unitPrice),
-          })),
+          create: validated.lineItems.map(
+            (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
+              sequence: item.sequence,
+              productSku: item.productSku,
+              productName: item.productName,
+              productImage: item.productImage,
+              colorVariantName: item.colorVariantName,
+              showImage: item.showImage,
+              details: item.details,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              lineTotal: item.quantity * Number(item.unitPrice),
+            })
+          ),
         },
         paymentTerms: validated.paymentTerms
           ? {
-              create: validated.paymentTerms.map((term) => ({
-                sequence: term.sequence,
-                name: term.name,
-                type: term.type,
-                value: term.value,
-                calculatedAmount: term.calculatedAmount,
-                note: term.note,
-              })),
+              create: validated.paymentTerms.map(
+                (term: { sequence: number; name: string; type: PaymentTermType; value: number; calculatedAmount: number; note?: string }) => ({
+                  sequence: term.sequence,
+                  name: term.name,
+                  type: term.type,
+                  value: term.value,
+                  calculatedAmount: term.calculatedAmount,
+                  note: term.note,
+                })
+              ),
             }
           : undefined,
       },
@@ -120,6 +147,9 @@ export async function createDocument(data: unknown) {
     return { success: true as const, data: serialize(document) };
   } catch (error) {
     console.error("createDocument error:", error);
+    if (error instanceof ZodError) {
+      return { success: false as const, error: `ข้อมูลไม่ถูกต้อง: ${formatZodError(error)}` };
+    }
     const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการสร้างเอกสาร";
     return { success: false as const, error: message };
   }
@@ -128,15 +158,14 @@ export async function createDocument(data: unknown) {
 export async function updateDocument(id: string, data: unknown) {
   try {
     const validated = documentSchema.parse(data);
-    validated.documentDate = toUTCNoon(validated.documentDate);
 
     // Calculate totals
     const subtotal = validated.lineItems.reduce(
-      (sum, item) => sum + item.quantity * Number(item.unitPrice),
+      (sum: number, item: { quantity: number; unitPrice: number }) =>
+        sum + item.quantity * Number(item.unitPrice),
       0
     );
 
-    // Include shipping in subtotal before discount (same as frontend use-pricing.ts)
     const shippingCost = validated.shippingCost || 0;
     const subtotalWithShipping = subtotal + shippingCost;
 
@@ -148,11 +177,13 @@ export async function updateDocument(id: string, data: unknown) {
     }
 
     const afterDiscount = subtotalWithShipping - discountAmount;
-    // VAT is calculated on afterDiscount (which includes shipping)
     const vatAmount = validated.vatEnabled
       ? afterDiscount * (validated.vatRate / 100)
       : 0;
     const grandTotal = afterDiscount + vatAmount;
+
+    // Normalize documentDate to UTC noon
+    const documentDate = toUTCNoon(new Date(validated.documentDate));
 
     // Get fresh snapshots
     const company = await prisma.company.findUniqueOrThrow({
@@ -170,11 +201,11 @@ export async function updateDocument(id: string, data: unknown) {
       return tx.document.update({
         where: { id },
         data: {
-          documentDate: validated.documentDate,
+          documentDate,
           companyId: validated.companyId,
-          companySnapshot: JSON.parse(JSON.stringify(serialize(company))),
+          companySnapshot: serialize(company),
           customerId: validated.customerId,
-          customerSnapshot: JSON.parse(JSON.stringify(serialize(customer))),
+          customerSnapshot: serialize(customer),
           subtotal,
           discountType: validated.discountType ?? null,
           discountValue: validated.discountValue ?? null,
@@ -190,38 +221,46 @@ export async function updateDocument(id: string, data: unknown) {
           productionDaysMax: validated.productionDaysMax ?? null,
           skipWeekends: validated.skipWeekends,
           skipHolidays: validated.skipHolidays,
-          deliveryDateStart: validated.deliveryDateStart ? toUTCNoon(validated.deliveryDateStart) : null,
-          deliveryDateEnd: validated.deliveryDateEnd ? toUTCNoon(validated.deliveryDateEnd) : null,
+          deliveryDateStart: validated.deliveryDateStart
+            ? toUTCNoon(new Date(validated.deliveryDateStart))
+            : null,
+          deliveryDateEnd: validated.deliveryDateEnd
+            ? toUTCNoon(new Date(validated.deliveryDateEnd))
+            : null,
           lineItems: {
-            create: validated.lineItems.map((item) => ({
-              sequence: item.sequence,
-              productSku: item.productSku,
-              productName: item.productName,
-              productImage: item.productImage,
-              colorVariantName: item.colorVariantName,
-              showImage: item.showImage,
-              details: item.details,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              lineTotal: item.quantity * Number(item.unitPrice),
-            })),
+            create: validated.lineItems.map(
+              (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
+                sequence: item.sequence,
+                productSku: item.productSku,
+                productName: item.productName,
+                productImage: item.productImage,
+                colorVariantName: item.colorVariantName,
+                showImage: item.showImage,
+                details: item.details,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                lineTotal: item.quantity * Number(item.unitPrice),
+              })
+            ),
           },
           paymentTerms: validated.paymentTerms
             ? {
-                create: validated.paymentTerms.map((term) => ({
-                  sequence: term.sequence,
-                  name: term.name,
-                  type: term.type,
-                  value: term.value,
-                  calculatedAmount: term.calculatedAmount,
-                  note: term.note,
-                })),
+                create: validated.paymentTerms.map(
+                  (term: { sequence: number; name: string; type: PaymentTermType; value: number; calculatedAmount: number; note?: string }) => ({
+                    sequence: term.sequence,
+                    name: term.name,
+                    type: term.type,
+                    value: term.value,
+                    calculatedAmount: term.calculatedAmount,
+                    note: term.note,
+                  })
+                ),
               }
             : undefined,
         },
         include: { lineItems: true, paymentTerms: true },
       });
-    }, { timeout: 15000 });
+    });
 
     revalidatePath("/quotations");
     revalidatePath("/invoices");
@@ -229,6 +268,9 @@ export async function updateDocument(id: string, data: unknown) {
     return { success: true as const, data: serialize(document) };
   } catch (error) {
     console.error("updateDocument error:", error);
+    if (error instanceof ZodError) {
+      return { success: false as const, error: `ข้อมูลไม่ถูกต้อง: ${formatZodError(error)}` };
+    }
     const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการบันทึกเอกสาร";
     return { success: false as const, error: message };
   }
