@@ -509,7 +509,6 @@ model ProductColorVariant {
 
   stockMovements StockMovement[]
 
-  @@unique([productId, name])
   @@index([productId])
   @@map("product_color_variants")
 }
