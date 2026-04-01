@@ -11,7 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatNumber } from "@/lib/thai-currency";
-import { Trash2, AlertTriangle } from "lucide-react";
+import { formatThaiDate } from "@/lib/thai-date";
+import { Trash2, AlertTriangle, CalendarDays, Clock } from "lucide-react";
 import type { PaymentTerm } from "@/hooks/use-payment-terms";
 import { PaymentTermTemplateSelect } from "./payment-term-template-select";
 
@@ -23,6 +24,9 @@ interface PaymentTermsProps {
   grandTotal: number;
   paymentTermTemplates?: any[];
   onApplyTemplate?: (templateItems: any[]) => void;
+  productionDaysText?: string;
+  deliveryDateStart?: Date | null;
+  deliveryDateEnd?: Date | null;
 }
 
 export function PaymentTermsSection({
@@ -33,6 +37,9 @@ export function PaymentTermsSection({
   grandTotal,
   paymentTermTemplates,
   onApplyTemplate,
+  productionDaysText,
+  deliveryDateStart,
+  deliveryDateEnd,
 }: PaymentTermsProps) {
   const mismatch =
     terms.length > 0 && Math.abs(totalAmount - grandTotal) > 0.01;
@@ -157,6 +164,30 @@ export function PaymentTermsSection({
             <div className="flex items-center gap-1 text-sm text-amber-600">
               <AlertTriangle className="h-4 w-4" />
               <span>ยอดรวมงวดชำระไม่ตรงกับยอดสุทธิ</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {(productionDaysText || deliveryDateStart) && (
+        <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+          {productionDaysText && (
+            <div className="flex items-center gap-2 text-sm">
+              <Clock className="size-4 text-muted-foreground" />
+              <span className="font-medium">ระยะเวลาผลิต/จัดส่ง:</span>
+              <span>{productionDaysText}</span>
+            </div>
+          )}
+          {deliveryDateStart && (
+            <div className="flex items-center gap-2 text-sm">
+              <CalendarDays className="size-4 text-muted-foreground" />
+              <span className="font-medium">วันที่คาดว่าจะจัดส่ง:</span>
+              <span>
+                {formatThaiDate(deliveryDateStart, "short")}
+                {deliveryDateEnd &&
+                  deliveryDateStart.getTime() !== deliveryDateEnd.getTime() &&
+                  ` - ${formatThaiDate(deliveryDateEnd, "short")}`}
+              </span>
             </div>
           )}
         </div>
