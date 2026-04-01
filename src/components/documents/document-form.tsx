@@ -116,6 +116,9 @@ export function DocumentForm({
   const [productionDaysText, setProductionDaysText] = useState<string>("");
   const [deliveryDateStart, setDeliveryDateStart] = useState<Date | null>(null);
   const [deliveryDateEnd, setDeliveryDateEnd] = useState<Date | null>(null);
+  const [deliveryCompletedDate, setDeliveryCompletedDate] = useState<Date | null>(
+    initialData?.deliveryCompletedDate ? new Date(initialData.deliveryCompletedDate) : null
+  );
   const [sourceQuotationId, setSourceQuotationId] = useState<string | undefined>(
     initialData?.sourceQuotationId || undefined
   );
@@ -384,6 +387,7 @@ export function DocumentForm({
       skipHolidays,
       deliveryDateStart: deliveryDateStart || null,
       deliveryDateEnd: deliveryDateEnd || null,
+      deliveryCompletedDate: deliveryCompletedDate || null,
       lineItems: items.map((item) => ({
         sequence: item.sequence,
         productSku: item.productSku,
@@ -749,6 +753,7 @@ export function DocumentForm({
           </CardHeader>
           <CardContent>
             <DeliveryInfo
+              documentType={type}
               footerNotes={footerNotes}
               onFooterNotesChange={setFooterNotes}
               productionDaysMin={productionDaysMin}
@@ -762,6 +767,8 @@ export function DocumentForm({
               productionDaysText={productionDaysText}
               deliveryDateStart={deliveryDateStart}
               deliveryDateEnd={deliveryDateEnd}
+              deliveryCompletedDate={deliveryCompletedDate}
+              onDeliveryCompletedDateChange={setDeliveryCompletedDate}
             />
           </CardContent>
         </Card>

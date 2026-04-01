@@ -22,22 +22,29 @@ interface PreviewPaymentProps {
     bankLogoUrl?: string;
     promptpayQrUrl?: string;
   };
+  documentType?: "QUOTATION" | "INVOICE" | "RECEIPT";
   productionDays?: string;
   deliveryDateStart?: Date;
   deliveryDateEnd?: Date;
+  deliveryCompletedDate?: Date;
 }
 
 export function PreviewPayment({
   paymentTerms,
   company,
+  documentType,
   productionDays,
   deliveryDateStart,
   deliveryDateEnd,
+  deliveryCompletedDate,
 }: PreviewPaymentProps) {
+  const isReceipt = documentType === "RECEIPT";
   const hasPaymentTerms = paymentTerms.length > 0;
   const hasBankInfo =
     company.bankName || company.accountName || company.accountNumber;
-  const hasDeliveryInfo = productionDays || deliveryDateStart || deliveryDateEnd;
+  const hasDeliveryInfo = isReceipt
+    ? !!deliveryCompletedDate
+    : productionDays || deliveryDateStart || deliveryDateEnd;
 
   if (!hasPaymentTerms && !hasBankInfo && !hasDeliveryInfo) return null;
 
@@ -154,24 +161,36 @@ export function PreviewPayment({
               {hasDeliveryInfo && (
                 <div className="rounded border border-blue-200 p-2 mt-2">
                   <div className="grid grid-cols-[auto_auto_1fr] gap-x-1 gap-y-0.5 text-[10px] text-gray-700">
-                    {productionDays && (
+                    {isReceipt ? (
+                      deliveryCompletedDate && (
+                        <>
+                          <span className="font-bold">วันที่จัดส่งสินค้าสำเร็จ</span>
+                          <span className="font-bold">:</span>
+                          <span>{formatThaiDate(new Date(deliveryCompletedDate))}</span>
+                        </>
+                      )
+                    ) : (
                       <>
-                        <span className="font-bold">ระยะเวลาผลิต/จัดส่ง</span>
-                        <span className="font-bold">:</span>
-                        <span>{productionDays}</span>
-                      </>
-                    )}
-                    {(deliveryDateStart || deliveryDateEnd) && (
-                      <>
-                        <span className="font-bold">วันที่คาดว่าจะได้รับสินค้า</span>
-                        <span className="font-bold">:</span>
-                        <span>
-                          {deliveryDateStart &&
-                            formatThaiDate(new Date(deliveryDateStart))}
-                          {deliveryDateStart && deliveryDateEnd && " - "}
-                          {deliveryDateEnd &&
-                            formatThaiDate(new Date(deliveryDateEnd))}
-                        </span>
+                        {productionDays && (
+                          <>
+                            <span className="font-bold">ระยะเวลาผลิต/จัดส่ง</span>
+                            <span className="font-bold">:</span>
+                            <span>{productionDays}</span>
+                          </>
+                        )}
+                        {(deliveryDateStart || deliveryDateEnd) && (
+                          <>
+                            <span className="font-bold">วันที่คาดว่าจะได้รับสินค้า</span>
+                            <span className="font-bold">:</span>
+                            <span>
+                              {deliveryDateStart &&
+                                formatThaiDate(new Date(deliveryDateStart))}
+                              {deliveryDateStart && deliveryDateEnd && " - "}
+                              {deliveryDateEnd &&
+                                formatThaiDate(new Date(deliveryDateEnd))}
+                            </span>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
