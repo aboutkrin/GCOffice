@@ -11,7 +11,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatNumber } from "@/lib/thai-currency";
-import { Trash2, AlertTriangle } from "lucide-react";
+import { formatThaiDate } from "@/lib/thai-date";
+import { Trash2, AlertTriangle, CalendarDays } from "lucide-react";
 import type { PaymentTerm } from "@/hooks/use-payment-terms";
 import { PaymentTermTemplateSelect } from "./payment-term-template-select";
 
@@ -23,6 +24,7 @@ interface PaymentTermsProps {
   grandTotal: number;
   paymentTermTemplates?: any[];
   onApplyTemplate?: (templateItems: any[]) => void;
+  deliveryCompletedDate?: Date | null;
 }
 
 export function PaymentTermsSection({
@@ -33,6 +35,7 @@ export function PaymentTermsSection({
   grandTotal,
   paymentTermTemplates,
   onApplyTemplate,
+  deliveryCompletedDate,
 }: PaymentTermsProps) {
   const mismatch =
     terms.length > 0 && Math.abs(totalAmount - grandTotal) > 0.01;
@@ -159,6 +162,16 @@ export function PaymentTermsSection({
               <span>ยอดรวมงวดชำระไม่ตรงกับยอดสุทธิ</span>
             </div>
           )}
+        </div>
+      )}
+
+      {deliveryCompletedDate && (
+        <div className="rounded-lg border bg-muted/50 p-4">
+          <div className="flex items-center gap-2 text-sm">
+            <CalendarDays className="size-4 text-muted-foreground" />
+            <span className="font-medium">วันที่จัดส่งสินค้าสำเร็จ:</span>
+            <span>{formatThaiDate(deliveryCompletedDate, "short")}</span>
+          </div>
         </div>
       )}
     </div>

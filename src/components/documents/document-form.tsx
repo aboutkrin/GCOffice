@@ -89,6 +89,7 @@ export function DocumentForm({
 }: DocumentFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false);
   const [discountType, setDiscountType] = useState<
     "PERCENTAGE" | "AMOUNT" | null
   >(initialData?.discountType || null);
@@ -638,7 +639,7 @@ export function DocumentForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>วันที่เอกสาร</FormLabel>
-                    <Popover>
+                    <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -659,9 +660,10 @@ export function DocumentForm({
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={(date) =>
-                            field.onChange(date ? toUTCNoon(date) : undefined)
-                          }
+                          onSelect={(date) => {
+                            field.onChange(date ? toUTCNoon(date) : undefined);
+                            setDatePopoverOpen(false);
+                          }}
                         />
                       </PopoverContent>
                     </Popover>
@@ -742,6 +744,7 @@ export function DocumentForm({
               grandTotal={pricing.grandTotal}
               paymentTermTemplates={paymentTermTemplates}
               onApplyTemplate={handleApplyTemplate}
+              deliveryCompletedDate={deliveryCompletedDate}
             />
           </CardContent>
         </Card>

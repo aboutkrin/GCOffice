@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/popover";
 import { CalendarDays, CalendarIcon, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatThaiDate } from "@/lib/thai-date";
+import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
 
 interface DeliveryInfoProps {
   documentType: "QUOTATION" | "INVOICE" | "RECEIPT";
@@ -53,6 +54,7 @@ export function DeliveryInfo({
   onDeliveryCompletedDateChange,
 }: DeliveryInfoProps) {
   const isReceipt = documentType === "RECEIPT";
+  const [completedDatePopoverOpen, setCompletedDatePopoverOpen] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -69,7 +71,7 @@ export function DeliveryInfo({
       {isReceipt ? (
         <div className="space-y-2">
           <Label>วันที่จัดส่งสินค้าสำเร็จ</Label>
-          <Popover>
+          <Popover open={completedDatePopoverOpen} onOpenChange={setCompletedDatePopoverOpen}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
@@ -88,7 +90,10 @@ export function DeliveryInfo({
               <Calendar
                 mode="single"
                 selected={deliveryCompletedDate ?? undefined}
-                onSelect={(date) => onDeliveryCompletedDateChange(date ?? null)}
+                onSelect={(date) => {
+                  onDeliveryCompletedDateChange(date ? toUTCNoon(date) : null);
+                  setCompletedDatePopoverOpen(false);
+                }}
                 initialFocus
               />
             </PopoverContent>
