@@ -73,8 +73,10 @@ export function PreviewHeader({
           <h2 className="text-lg sm:text-2xl font-bold text-primary">
             {typeLabel}
           </h2>
-          {documentType === "RECEIPT" && copyLabel && (
-            <p className="text-xs sm:text-sm text-primary/80">({copyLabel})</p>
+          {documentType === "RECEIPT" && (
+            <p className="text-xs sm:text-sm text-primary/80">
+              ({copyLabel || "ต้นฉบับ"})
+            </p>
           )}
         </div>
       </div>

@@ -120,6 +120,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           documentNumber={doc.documentNumber}
           customInvoiceNumber={doc.customInvoiceNumber}
           documentType={doc.type}
+          vatEnabled={doc.vatEnabled}
         />
 
         {/* Line Items Table */}

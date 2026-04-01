@@ -21,6 +21,7 @@ interface PreviewCustomerProps {
   documentNumber: string;
   customInvoiceNumber?: string | null;
   documentType?: string;
+  vatEnabled?: boolean;
 }
 
 export function PreviewCustomer({
@@ -29,6 +30,7 @@ export function PreviewCustomer({
   documentNumber,
   customInvoiceNumber,
   documentType,
+  vatEnabled,
 }: PreviewCustomerProps) {
   const isCompany = customer.type === "COMPANY";
   const displayName = isCompany
@@ -100,7 +102,7 @@ export function PreviewCustomer({
           <span className="font-semibold text-right text-black">วันที่</span>
           <span className="text-black">:</span>
           <span>{formatThaiDate(new Date(documentDate))}</span>
-          {documentType === "RECEIPT" && customInvoiceNumber ? (
+          {documentType === "RECEIPT" && vatEnabled && customInvoiceNumber ? (
             <>
               <span className="font-semibold text-right text-black">เลขที่บิล</span>
               <span className="text-black">:</span>
