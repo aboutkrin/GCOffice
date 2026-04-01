@@ -243,6 +243,8 @@ export function DeliverySchedule({
 
   const gridCols = timelineDays.length;
   const gridWidth = gridCols * COL_WIDTH;
+  const todayLeftPercent = todayIndex >= 0 ? (todayIndex / gridCols) * 100 : 0;
+  const colWidthPercent = (1 / gridCols) * 100;
 
   return (
     <>
@@ -295,14 +297,14 @@ export function DeliverySchedule({
             ref={scrollRef}
             className="overflow-x-auto border rounded-md"
           >
-            <div style={{ width: `${gridWidth}px` }} className="relative">
+            <div style={{ minWidth: `${gridWidth}px` }} className="relative">
               {/* Today column highlight */}
               {todayIndex >= 0 && (
                 <div
                   className="absolute top-0 bottom-0 bg-blue-50/70 pointer-events-none z-[1]"
                   style={{
-                    left: `${todayIndex * COL_WIDTH}px`,
-                    width: `${COL_WIDTH}px`,
+                    left: `${todayLeftPercent}%`,
+                    width: `${colWidthPercent}%`,
                   }}
                 />
               )}
@@ -311,7 +313,7 @@ export function DeliverySchedule({
               <div
                 className="grid border-b sticky top-0 bg-background z-20"
                 style={{
-                  gridTemplateColumns: `repeat(${gridCols}, ${COL_WIDTH}px)`,
+                  gridTemplateColumns: `repeat(${gridCols}, minmax(${COL_WIDTH}px, 1fr))`,
                 }}
               >
                 {timelineDays.map((day) => (
@@ -357,13 +359,13 @@ export function DeliverySchedule({
                   key={row.item.id}
                   className="grid relative z-10 border-b border-gray-100"
                   style={{
-                    gridTemplateColumns: `repeat(${gridCols}, ${COL_WIDTH}px)`,
+                    gridTemplateColumns: `repeat(${gridCols}, minmax(${COL_WIDTH}px, 1fr))`,
                   }}
                 >
                   <button
                     onClick={() => setSelectedItem(row.item)}
                     className={cn(
-                      "flex items-center h-7 my-0.5 px-1.5 text-[11px] leading-tight border cursor-pointer transition-colors hover:opacity-80",
+                      "flex items-center h-5 my-px px-1 text-[10px] leading-tight border cursor-pointer transition-colors hover:opacity-80",
                       row.colorClass,
                       !row.isClippedStart && "rounded-l-md ml-0.5",
                       !row.isClippedEnd && "rounded-r-md mr-0.5"
