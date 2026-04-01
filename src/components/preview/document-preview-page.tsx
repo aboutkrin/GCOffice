@@ -11,12 +11,21 @@ interface DocumentPreviewPageProps {
 
 export function DocumentPreviewPage({ document }: DocumentPreviewPageProps) {
   const previewRef = useRef<HTMLDivElement>(null);
+  const isReceipt = document.type === "RECEIPT";
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
       {/* Preview Area */}
-      <div className="py-6 px-4 print:p-0 print:py-0">
-        <DocumentPreview ref={previewRef} document={document} />
+      <div ref={previewRef} className="py-6 px-4 print:p-0 print:py-0">
+        {isReceipt ? (
+          <>
+            <DocumentPreview document={document} copyLabel="ต้นฉบับ" />
+            <div className="h-6 print:hidden" style={{ breakAfter: "page" }} />
+            <DocumentPreview document={document} copyLabel="สำเนา" />
+          </>
+        ) : (
+          <DocumentPreview document={document} />
+        )}
       </div>
 
       {/* Bottom spacer for fixed toolbar + mobile nav */}
