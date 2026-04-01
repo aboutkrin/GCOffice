@@ -64,6 +64,7 @@ export interface DocumentData {
   id: string;
   type: "QUOTATION" | "INVOICE" | "RECEIPT";
   documentNumber: string;
+  customInvoiceNumber?: string | null;
   status: "DRAFT" | "QUOTED" | "CONFIRMED" | "SAMPLE" | "BILLED" | "PAID" | "CANCELLED";
   documentDate: Date;
   companySnapshot: CompanySnapshot;
@@ -115,6 +116,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           customer={doc.customerSnapshot}
           documentDate={doc.documentDate}
           documentNumber={doc.documentNumber}
+          customInvoiceNumber={doc.customInvoiceNumber}
         />
 
         {/* Line Items Table */}

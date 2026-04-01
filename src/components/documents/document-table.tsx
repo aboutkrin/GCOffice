@@ -217,7 +217,10 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
             {documents.map((doc) => (
               <TableRow key={doc.id}>
                 <TableCell className="font-medium">
-                  {doc.documentNumber}
+                  <div>{doc.documentNumber}</div>
+                  {doc.customInvoiceNumber && (
+                    <div className="text-xs text-muted-foreground">{doc.customInvoiceNumber}</div>
+                  )}
                 </TableCell>
                 <TableCell>
                   {formatThaiDate(new Date(doc.documentDate), "short")}
@@ -317,7 +320,12 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
             tabIndex={0}
           >
             <div className="flex items-center justify-between">
-              <span className="font-medium text-sm">{doc.documentNumber}</span>
+              <span className="font-medium text-sm">
+                {doc.documentNumber}
+                {doc.customInvoiceNumber && (
+                  <span className="text-xs text-muted-foreground ml-2">({doc.customInvoiceNumber})</span>
+                )}
+              </span>
               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

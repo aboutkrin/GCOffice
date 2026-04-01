@@ -106,6 +106,7 @@ export const documentSchema = z.object({
   documentDate: z.coerce.date(),
   companyId: z.string().min(1, "กรุณาเลือกบริษัท"),
   customerId: z.string().min(1, "กรุณาเลือกลูกค้า"),
+  customInvoiceNumber: z.string().optional(),
   sourceQuotationId: z.string().optional(),
   sourceInvoiceId: z.string().optional(),
   discountType: z.enum(["PERCENTAGE", "AMOUNT"]).optional().nullable(),

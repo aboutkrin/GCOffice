@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { documentSchema } from "@/lib/validators";
-import { generateDocumentNumber } from "@/lib/document-number";
+import { generateDocumentNumber, generateCustomInvoiceNumber } from "@/lib/document-number";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { DocumentStatus, PaymentTermType } from "@/generated/prisma/client";
@@ -30,6 +30,13 @@ export async function createDocument(data: unknown) {
     if (!user) return { success: false as const, error: "ไม่ได้เข้าสู่ระบบ" };
 
     const documentNumber = await generateDocumentNumber(validated.type);
+
+    // For RECEIPT type, generate custom invoice number if not provided
+    let customInvoiceNumber: string | undefined;
+    if (validated.type === "RECEIPT") {
+      customInvoiceNumber = validated.customInvoiceNumber?.trim() ||
+        await generateCustomInvoiceNumber(new Date(validated.documentDate));
+    }
 
     const company = await prisma.company.findUniqueOrThrow({
       where: { id: validated.companyId },
@@ -78,6 +85,7 @@ export async function createDocument(data: unknown) {
           type: validated.type,
           status: statusMap[validated.type],
           documentNumber,
+          customInvoiceNumber: customInvoiceNumber || undefined,
           documentDate,
           companyId: validated.companyId,
           companySnapshot: serialize(company),
@@ -220,6 +228,9 @@ export async function updateDocument(id: string, data: unknown) {
         where: { id },
         data: {
           documentDate,
+          customInvoiceNumber: validated.type === "RECEIPT"
+            ? (validated.customInvoiceNumber?.trim() || undefined)
+            : undefined,
           companyId: validated.companyId,
           companySnapshot: serialize(company),
           customerId: validated.customerId,
@@ -360,6 +371,11 @@ export async function getDocumentForShare(id: string) {
   };
 
   return serialize(result);
+}
+
+export async function getNextCustomInvoiceNumber(documentDate: Date) {
+  const number = await generateCustomInvoiceNumber(documentDate);
+  return number;
 }
 
 export async function deleteDocument(id: string) {

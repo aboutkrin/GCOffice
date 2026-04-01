@@ -28,6 +28,7 @@ export async function getDocuments(params?: {
   if (params?.search) {
     where.OR = [
       { documentNumber: { contains: params.search, mode: "insensitive" } },
+      { customInvoiceNumber: { contains: params.search, mode: "insensitive" } },
       {
         customerSnapshot: {
           path: ["customerName"],
@@ -59,6 +60,7 @@ export async function getDocuments(params?: {
         id: true,
         type: true,
         documentNumber: true,
+        customInvoiceNumber: true,
         status: true,
         documentDate: true,
         grandTotal: true,
