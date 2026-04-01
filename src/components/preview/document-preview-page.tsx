@@ -19,8 +19,8 @@ export function DocumentPreviewPage({ document }: DocumentPreviewPageProps) {
         <DocumentPreview ref={previewRef} document={document} />
       </div>
 
-      {/* Bottom spacer for fixed toolbar on mobile */}
-      <div className="h-20 md:h-0 print:hidden" />
+      {/* Bottom spacer for fixed toolbar + mobile nav */}
+      <div className="h-36 md:h-0 print:hidden" />
 
       {/* Export Toolbar */}
       <ExportToolbar

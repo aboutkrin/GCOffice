@@ -47,8 +47,8 @@ export function StockReportPage({ company, products }: StockReportPageProps) {
         />
       </div>
 
-      {/* Bottom spacer for fixed toolbar on mobile */}
-      <div className="h-20 md:h-0 print:hidden" />
+      {/* Bottom spacer for fixed toolbar + mobile nav */}
+      <div className="h-36 md:h-0 print:hidden" />
 
       <SummaryExportToolbar
         previewRef={previewRef}
