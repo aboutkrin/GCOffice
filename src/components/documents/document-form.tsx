@@ -744,8 +744,7 @@ export function DocumentForm({
               grandTotal={pricing.grandTotal}
               paymentTermTemplates={paymentTermTemplates}
               onApplyTemplate={handleApplyTemplate}
-              deliveryDateStart={type !== "RECEIPT" ? deliveryDateStart : undefined}
-              deliveryDateEnd={type !== "RECEIPT" ? deliveryDateEnd : undefined}
+              deliveryCompletedDate={deliveryCompletedDate}
             />
           </CardContent>
         </Card>
