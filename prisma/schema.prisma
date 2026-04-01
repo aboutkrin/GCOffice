@@ -166,9 +166,10 @@ model DocumentCounter {
 model Document {
   id             String         @id @default(cuid())
   type           DocumentType
-  documentNumber String         @unique @map("document_number")
-  status         DocumentStatus @default(DRAFT)
-  documentDate   DateTime       @map("document_date") @db.Date
+  documentNumber       String         @unique @map("document_number")
+  customInvoiceNumber  String?        @map("custom_invoice_number")
+  status               DocumentStatus @default(DRAFT)
+  documentDate         DateTime       @map("document_date") @db.Date
 
   companyId       String @map("company_id")
   company         Company @relation(fields: [companyId], references: [id])

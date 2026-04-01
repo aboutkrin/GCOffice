@@ -52,7 +52,8 @@ import { ShippingSection } from "./shipping-section";
 import { PaymentTermsSection } from "./payment-terms";
 import { DeliveryInfo } from "./delivery-info";
 
-import { createDocument, updateDocument } from "@/actions/document-actions";
+import { Input } from "@/components/ui/input";
+import { createDocument, updateDocument, getNextCustomInvoiceNumber } from "@/actions/document-actions";
 import { calculateDeliveryDates, type Holiday } from "@/lib/delivery-date";
 
 // Form schema for top-level fields only (line items & payment terms handled by hooks)
@@ -126,6 +127,9 @@ export function DocumentForm({
   const [sourceInvoiceId, setSourceInvoiceId] = useState<string | undefined>(
     initialData?.sourceInvoiceId || undefined
   );
+  const [customInvoiceNumber, setCustomInvoiceNumber] = useState<string>(
+    initialData?.customInvoiceNumber || ""
+  );
 
   const isEditing = !!initialData;
 
@@ -188,6 +192,16 @@ export function DocumentForm({
   const vatEnabled = form.watch("vatEnabled");
   const vatRate = form.watch("vatRate");
   const selectedCompanyId = form.watch("companyId");
+
+  // Auto-generate custom invoice number for new RECEIPT documents
+  useEffect(() => {
+    if (type === "RECEIPT" && !isEditing && !customInvoiceNumber) {
+      const docDate = form.getValues("documentDate");
+      getNextCustomInvoiceNumber(docDate).then((num) => {
+        setCustomInvoiceNumber(num);
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-fill footerNotes from company defaults when creating a new document
   useEffect(() => {
@@ -373,6 +387,7 @@ export function DocumentForm({
       documentDate: formData.documentDate,
       companyId: formData.companyId,
       customerId: formData.customerId,
+      customInvoiceNumber: type === "RECEIPT" ? customInvoiceNumber || undefined : undefined,
       sourceQuotationId: type === "INVOICE" ? sourceQuotationId : undefined,
       sourceInvoiceId: type === "RECEIPT" ? sourceInvoiceId : undefined,
       discountType,
@@ -563,6 +578,22 @@ export function DocumentForm({
                   </div>
                 )}
                 <Separator className="mt-4" />
+              </div>
+            )}
+
+            {/* Custom Invoice Number - RECEIPT only */}
+            {type === "RECEIPT" && (
+              <div className="mb-4">
+                <Label>เลขที่ใบเสร็จ (กำหนดเอง)</Label>
+                <Input
+                  className="mt-1.5 max-w-xs"
+                  value={customInvoiceNumber}
+                  onChange={(e) => setCustomInvoiceNumber(e.target.value)}
+                  placeholder="เช่น A 6903-001"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  ระบบจะสร้างเลขอัตโนมัติ หรือแก้ไขเลขเองได้
+                </p>
               </div>
             )}
 
