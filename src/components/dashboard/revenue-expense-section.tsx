@@ -81,6 +81,12 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
                 </p>
               </div>
               <div>
+                <span className="text-sm text-muted-foreground">VAT</span>
+                <p className="text-lg font-bold text-muted-foreground">
+                  {formatBaht(data.totalVat)}
+                </p>
+              </div>
+              <div>
                 <span className="text-sm text-muted-foreground">ต้นทุน</span>
                 <p className="text-lg font-bold text-[oklch(0.55_0.2_25)]">
                   {formatBaht(data.totalExpense)}
