@@ -744,7 +744,6 @@ export function DocumentForm({
               grandTotal={pricing.grandTotal}
               paymentTermTemplates={paymentTermTemplates}
               onApplyTemplate={handleApplyTemplate}
-              productionDaysText={type !== "RECEIPT" ? productionDaysText : undefined}
               deliveryDateStart={type !== "RECEIPT" ? deliveryDateStart : undefined}
               deliveryDateEnd={type !== "RECEIPT" ? deliveryDateEnd : undefined}
             />

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { formatNumber } from "@/lib/thai-currency";
 import { formatThaiDate } from "@/lib/thai-date";
-import { Trash2, AlertTriangle, CalendarDays, Clock } from "lucide-react";
+import { Trash2, AlertTriangle, CalendarDays } from "lucide-react";
 import type { PaymentTerm } from "@/hooks/use-payment-terms";
 import { PaymentTermTemplateSelect } from "./payment-term-template-select";
 
@@ -24,7 +24,6 @@ interface PaymentTermsProps {
   grandTotal: number;
   paymentTermTemplates?: any[];
   onApplyTemplate?: (templateItems: any[]) => void;
-  productionDaysText?: string;
   deliveryDateStart?: Date | null;
   deliveryDateEnd?: Date | null;
 }
@@ -37,7 +36,6 @@ export function PaymentTermsSection({
   grandTotal,
   paymentTermTemplates,
   onApplyTemplate,
-  productionDaysText,
   deliveryDateStart,
   deliveryDateEnd,
 }: PaymentTermsProps) {
@@ -169,27 +167,18 @@ export function PaymentTermsSection({
         </div>
       )}
 
-      {(productionDaysText || deliveryDateStart) && (
-        <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-          {productionDaysText && (
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className="size-4 text-muted-foreground" />
-              <span className="font-medium">ระยะเวลาผลิต/จัดส่ง:</span>
-              <span>{productionDaysText}</span>
-            </div>
-          )}
-          {deliveryDateStart && (
-            <div className="flex items-center gap-2 text-sm">
-              <CalendarDays className="size-4 text-muted-foreground" />
-              <span className="font-medium">วันที่คาดว่าจะจัดส่ง:</span>
-              <span>
-                {formatThaiDate(deliveryDateStart, "short")}
-                {deliveryDateEnd &&
-                  deliveryDateStart.getTime() !== deliveryDateEnd.getTime() &&
-                  ` - ${formatThaiDate(deliveryDateEnd, "short")}`}
-              </span>
-            </div>
-          )}
+      {deliveryDateStart && (
+        <div className="rounded-lg border bg-muted/50 p-4">
+          <div className="flex items-center gap-2 text-sm">
+            <CalendarDays className="size-4 text-muted-foreground" />
+            <span className="font-medium">วันจัดส่งสินค้า:</span>
+            <span>
+              {formatThaiDate(deliveryDateStart, "short")}
+              {deliveryDateEnd &&
+                deliveryDateStart.getTime() !== deliveryDateEnd.getTime() &&
+                ` - ${formatThaiDate(deliveryDateEnd, "short")}`}
+            </span>
+          </div>
         </div>
       )}
     </div>
