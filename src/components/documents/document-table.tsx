@@ -208,6 +208,7 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
               <TableHead>เลขที่</TableHead>
               <TableHead>วันที่</TableHead>
               <TableHead>ลูกค้า</TableHead>
+              <TableHead className="text-center">ออกบิล Vat</TableHead>
               <TableHead className="text-right">ยอดรวม</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
               <TableHead className="w-[160px] text-center">จัดการ</TableHead>
@@ -226,6 +227,13 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
                   {formatThaiDate(new Date(doc.documentDate), "short")}
                 </TableCell>
                 <TableCell>{getCustomerName(doc)}</TableCell>
+                <TableCell className="text-center">
+                  {doc.vatEnabled && (
+                    <span className="inline-block rounded-full bg-foreground text-background px-3 py-0.5 text-xs font-medium">
+                      นิติบุคคล
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">
                   {formatBaht(doc.grandTotal)}
                 </TableCell>
@@ -417,9 +425,16 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
                 {formatBaht(doc.grandTotal)}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {getCustomerName(doc)}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">
+                {getCustomerName(doc)}
+              </p>
+              {doc.vatEnabled && (
+                <span className="inline-block rounded-full bg-foreground text-background px-2 py-0.5 text-[10px] font-medium">
+                  นิติบุคคล
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>

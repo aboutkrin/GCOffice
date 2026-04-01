@@ -64,6 +64,7 @@ export async function getDocuments(params?: {
         status: true,
         documentDate: true,
         grandTotal: true,
+        vatEnabled: true,
         customerSnapshot: true,
         createdAt: true,
       },
