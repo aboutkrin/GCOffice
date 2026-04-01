@@ -269,6 +269,7 @@ export const stockAdjustmentSchema = z.object({
   quantity: z.coerce.number().int().min(1, "จำนวนต้องมากกว่า 0"),
   reason: z.string().optional(),
   reference: z.string().optional(),
+  lotNumber: z.string().optional(),
 });
 
 export const stockThresholdSchema = z.object({

@@ -45,6 +45,7 @@ export async function addStock(data: unknown) {
           quantity: validated.quantity,
           reason: validated.reason || null,
           reference: validated.reference || null,
+          lotNumber: validated.lotNumber || null,
           balanceAfter: newBalance,
         },
       });
@@ -71,6 +72,7 @@ export async function addStock(data: unknown) {
           quantity: validated.quantity,
           reason: validated.reason || null,
           reference: validated.reference || null,
+          lotNumber: validated.lotNumber || null,
           balanceAfter: newBalance,
         },
       });

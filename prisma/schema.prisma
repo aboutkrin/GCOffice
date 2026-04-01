@@ -528,6 +528,7 @@ model StockMovement {
   quantity     Int
   reason       String?           @db.Text
   reference    String?
+  lotNumber    String?           @map("lot_number")
   balanceAfter Int               @map("balance_after")
 
   createdAt DateTime @default(now()) @map("created_at")
