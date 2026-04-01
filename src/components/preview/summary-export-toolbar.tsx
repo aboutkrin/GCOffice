@@ -214,7 +214,7 @@ export function SummaryExportToolbar({
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white/95 backdrop-blur-sm shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:sticky md:bottom-0 print:hidden">
+      <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom,0px)+0.5rem)] left-0 right-0 z-40 border-t bg-white/95 backdrop-blur-sm shadow-[0_-2px_10px_rgba(0,0,0,0.1)] md:sticky md:bottom-0 print:hidden">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-2 px-4 py-3">
           <div className="flex items-center gap-1.5 overflow-x-auto">
             <Button
@@ -225,7 +225,7 @@ export function SummaryExportToolbar({
               className="shrink-0"
             >
               <FileDown className="h-4 w-4" />
-              <span className="hidden sm:inline">PDF</span>
+              <span className="text-xs sm:text-sm">PDF</span>
             </Button>
 
             <Button
@@ -236,7 +236,7 @@ export function SummaryExportToolbar({
               className="shrink-0"
             >
               <ImageIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">รูปภาพ</span>
+              <span className="text-xs sm:text-sm">รูปภาพ</span>
             </Button>
 
             <Button
@@ -247,7 +247,7 @@ export function SummaryExportToolbar({
               className="shrink-0"
             >
               <Share2 className="h-4 w-4" />
-              <span className="hidden sm:inline">แชร์</span>
+              <span className="text-xs sm:text-sm">แชร์</span>
             </Button>
 
             <Button
@@ -258,7 +258,7 @@ export function SummaryExportToolbar({
               className="shrink-0"
             >
               <Printer className="h-4 w-4" />
-              <span className="hidden sm:inline">พิมพ์</span>
+              <span className="text-xs sm:text-sm">พิมพ์</span>
             </Button>
           </div>
 
@@ -269,7 +269,7 @@ export function SummaryExportToolbar({
             className="shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">กลับ</span>
+            <span className="text-xs sm:text-sm">กลับ</span>
           </Button>
         </div>
       </div>

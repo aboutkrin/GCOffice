@@ -26,7 +26,7 @@ export function VendorCostSummaryPage({
         <VendorCostSummaryPreview ref={previewRef} data={data} />
       </div>
 
-      <div className="h-20 md:h-0 print:hidden" />
+      <div className="h-36 md:h-0 print:hidden" />
 
       <SummaryExportToolbar
         previewRef={previewRef}
