@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Package, FileText, Truck } from "lucide-react";
@@ -57,136 +57,91 @@ function getBarColor(index: number, status: string) {
   return BAR_COLORS[index % BAR_COLORS.length];
 }
 
-interface CalendarDay {
+const COL_WIDTH = 44; // px per day column
+
+// --- Timeline helpers ---
+
+interface TimelineDay {
   date: number;
-  isCurrentMonth: boolean;
+  dow: number; // 0=Sun … 6=Sat
   isToday: boolean;
+  isWeekend: boolean;
   dateObj: Date;
+  holiday?: HolidayItem;
 }
 
-function buildCalendarDays(year: number, month: number): CalendarDay[] {
-  const firstDay = new Date(Date.UTC(year, month - 1, 1));
-  const lastDay = new Date(Date.UTC(year, month, 0));
-  const startDow = firstDay.getUTCDay();
-  const daysInMonth = lastDay.getUTCDate();
-
+function buildTimelineDays(
+  year: number,
+  month: number,
+  holidays: HolidayItem[]
+): TimelineDay[] {
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   const now = new Date();
   const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
 
-  const days: CalendarDay[] = [];
-
-  // Previous month padding
-  const prevMonthLastDay = new Date(Date.UTC(year, month - 1, 0)).getUTCDate();
-  for (let i = startDow - 1; i >= 0; i--) {
-    const d = prevMonthLastDay - i;
-    days.push({
-      date: d,
-      isCurrentMonth: false,
-      isToday: false,
-      dateObj: new Date(Date.UTC(year, month - 2, d)),
-    });
-  }
-
-  // Current month
+  const days: TimelineDay[] = [];
   for (let d = 1; d <= daysInMonth; d++) {
     const dateObj = new Date(Date.UTC(year, month - 1, d));
+    const dow = dateObj.getUTCDay();
+    const dateStr = dateObj.toISOString().slice(0, 10);
     days.push({
       date: d,
-      isCurrentMonth: true,
+      dow,
       isToday: dateObj.getTime() === todayUTC,
+      isWeekend: dow === 0 || dow === 6,
       dateObj,
+      holiday: holidays.find((h) => h.date.slice(0, 10) === dateStr),
     });
   }
-
-  // Next month padding
-  const remaining = 7 - (days.length % 7);
-  if (remaining < 7) {
-    for (let d = 1; d <= remaining; d++) {
-      days.push({
-        date: d,
-        isCurrentMonth: false,
-        isToday: false,
-        dateObj: new Date(Date.UTC(year, month, d)),
-      });
-    }
-  }
-
   return days;
 }
 
-interface DeliveryBar {
+interface GanttRow {
   item: DeliveryScheduleItem;
   colorClass: string;
-  startCol: number; // 0-6 within the week row
-  span: number; // how many cells to span
-  isStart: boolean; // shows name
-  isEnd: boolean;
+  startDay: number; // 1-based, clamped
+  endDay: number; // 1-based, clamped
+  isClippedStart: boolean;
+  isClippedEnd: boolean;
 }
 
-function computeDeliveryBars(
+function computeGanttRows(
   items: DeliveryScheduleItem[],
-  weekDays: CalendarDay[]
-): DeliveryBar[][] {
-  // weekDays is a 7-day array for one week row
-  const weekStart = weekDays[0].dateObj.getTime();
-  const weekEnd = weekDays[6].dateObj.getTime();
-  const lanes: DeliveryBar[][] = [];
+  daysInMonth: number,
+  year: number,
+  month: number
+): GanttRow[] {
+  const monthStart = Date.UTC(year, month - 1, 1);
+  const monthEnd = Date.UTC(year, month - 1, daysInMonth);
 
-  items.forEach((item, idx) => {
+  // Sort by start date
+  const sorted = [...items].sort(
+    (a, b) =>
+      new Date(a.deliveryDateStart).getTime() -
+      new Date(b.deliveryDateStart).getTime()
+  );
+
+  return sorted.map((item, idx) => {
     const itemStart = new Date(item.deliveryDateStart).getTime();
     const itemEnd = item.deliveryDateEnd
       ? new Date(item.deliveryDateEnd).getTime()
       : itemStart;
 
-    // Check overlap with this week
-    if (itemEnd < weekStart || itemStart > weekEnd) return;
+    const clampedStart = Math.max(itemStart, monthStart);
+    const clampedEnd = Math.min(itemEnd, monthEnd);
 
-    const clampedStart = Math.max(itemStart, weekStart);
-    const clampedEnd = Math.min(itemEnd, weekEnd);
+    const startDay = new Date(clampedStart).getUTCDate();
+    const endDay = new Date(clampedEnd).getUTCDate();
 
-    const startCol = weekDays.findIndex(
-      (d) => d.dateObj.getTime() >= clampedStart
-    );
-    const endCol =
-      weekDays.length -
-      1 -
-      [...weekDays].reverse().findIndex((d) => d.dateObj.getTime() <= clampedEnd);
-
-    if (startCol < 0 || endCol < 0) return;
-
-    const bar: DeliveryBar = {
+    return {
       item,
       colorClass: getBarColor(idx, item.status),
-      startCol,
-      span: endCol - startCol + 1,
-      isStart: itemStart >= weekStart,
-      isEnd: itemEnd <= weekEnd,
+      startDay,
+      endDay,
+      isClippedStart: itemStart < monthStart,
+      isClippedEnd: itemEnd > monthEnd,
     };
-
-    // Find available lane
-    let placed = false;
-    for (const lane of lanes) {
-      const conflict = lane.some(
-        (b) =>
-          !(bar.startCol >= b.startCol + b.span || bar.startCol + bar.span <= b.startCol)
-      );
-      if (!conflict) {
-        lane.push(bar);
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) {
-      lanes.push([bar]);
-    }
   });
-
-  return lanes;
-}
-
-function isHolidayDate(dateObj: Date, holidays: HolidayItem[]): HolidayItem | undefined {
-  const dateStr = dateObj.toISOString().slice(0, 10);
-  return holidays.find((h) => h.date.slice(0, 10) === dateStr);
 }
 
 export function DeliverySchedule({
@@ -204,17 +159,30 @@ export function DeliverySchedule({
   const [selectedItem, setSelectedItem] = useState<DeliveryScheduleItem | null>(
     null
   );
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const calendarDays = useMemo(() => buildCalendarDays(year, month), [year, month]);
+  const timelineDays = useMemo(
+    () => buildTimelineDays(year, month, holidays),
+    [year, month, holidays]
+  );
 
-  // Group days into weeks
-  const weeks = useMemo(() => {
-    const result: CalendarDay[][] = [];
-    for (let i = 0; i < calendarDays.length; i += 7) {
-      result.push(calendarDays.slice(i, i + 7));
+  const ganttRows = useMemo(
+    () => computeGanttRows(data, timelineDays.length, year, month),
+    [data, timelineDays.length, year, month]
+  );
+
+  const todayIndex = useMemo(
+    () => timelineDays.findIndex((d) => d.isToday),
+    [timelineDays]
+  );
+
+  // Auto-scroll to today column on mount and when navigating to a month with today
+  useEffect(() => {
+    if (todayIndex >= 0 && scrollRef.current) {
+      const scrollLeft = todayIndex * COL_WIDTH - scrollRef.current.clientWidth / 2 + COL_WIDTH / 2;
+      scrollRef.current.scrollLeft = Math.max(0, scrollLeft);
     }
-    return result;
-  }, [calendarDays]);
+  }, [todayIndex]);
 
   function navigate(direction: -1 | 1) {
     let newMonth = month + direction;
@@ -258,13 +226,11 @@ export function DeliverySchedule({
     setIsShipping(true);
     try {
       await markDocumentShippedAction(id);
-      // Update local state
       setData((prev) =>
         prev.map((item) =>
           item.id === id ? { ...item, status: "SHIPPED" } : item
         )
       );
-      // Update selected item too
       setSelectedItem((prev) =>
         prev && prev.id === id ? { ...prev, status: "SHIPPED" } : prev
       );
@@ -274,6 +240,9 @@ export function DeliverySchedule({
       setIsShipping(false);
     }
   }
+
+  const gridCols = timelineDays.length;
+  const gridWidth = gridCols * COL_WIDTH;
 
   return (
     <>
@@ -321,116 +290,117 @@ export function DeliverySchedule({
             </h3>
           </div>
 
-          {/* Day of week headers */}
-          <div className="grid grid-cols-7">
-            {DAY_LABELS.map((label, i) => (
-              <div
-                key={label}
-                className={cn(
-                  "text-center text-xs font-medium py-1",
-                  i === 0 ? "text-red-500" : "text-muted-foreground",
-                  i > 0 && "border-l border-gray-200"
-                )}
-              >
-                {label}
-              </div>
-            ))}
-          </div>
+          {/* Gantt timeline */}
+          <div
+            ref={scrollRef}
+            className="overflow-x-auto border rounded-md"
+          >
+            <div style={{ width: `${gridWidth}px` }} className="relative">
+              {/* Today column highlight */}
+              {todayIndex >= 0 && (
+                <div
+                  className="absolute top-0 bottom-0 bg-blue-50/70 pointer-events-none z-[1]"
+                  style={{
+                    left: `${todayIndex * COL_WIDTH}px`,
+                    width: `${COL_WIDTH}px`,
+                  }}
+                />
+              )}
 
-          {/* Calendar grid */}
-          <div className="border-t">
-            {weeks.map((week, weekIdx) => {
-              const lanes = computeDeliveryBars(data, week);
-              return (
-                <div key={weekIdx} className="border-b">
-                  {/* Date number row */}
-                  <div className="grid grid-cols-7">
-                    {week.map((day, dayIdx) => {
-                      const holiday = day.isCurrentMonth
-                        ? isHolidayDate(day.dateObj, holidays)
-                        : undefined;
-                      return (
-                        <div
-                          key={dayIdx}
-                          className={cn(
-                            "text-center px-1 pt-1 pb-0 text-sm min-h-[36px] relative",
-                            dayIdx > 0 && "border-l border-gray-200",
-                            !day.isCurrentMonth && "text-muted-foreground/40",
-                            dayIdx === 0 && day.isCurrentMonth && "text-red-500",
-                            holiday && "bg-red-50"
-                          )}
-                          title={holiday?.name}
-                        >
-                          <span
-                            className={cn(
-                              "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs",
-                              day.isToday &&
-                                "bg-red-500 text-white font-bold"
-                            )}
-                          >
-                            {day.date}
-                          </span>
-                          {holiday && (
-                            <div className="text-[10px] text-red-500 font-medium leading-tight truncate px-0.5">
-                              {holiday.name}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Delivery bars */}
-                  <div className="relative min-h-[6px]">
-                    {lanes.map((lane, laneIdx) =>
-                      lane.map((bar) => (
-                        <div
-                          key={`${bar.item.id}-${weekIdx}-${laneIdx}`}
-                          className="grid grid-cols-7"
-                        >
-                          {bar.startCol > 0 && (
-                            <div
-                              style={{ gridColumn: `span ${bar.startCol}` }}
-                            />
-                          )}
-                          <button
-                            onClick={() => setSelectedItem(bar.item)}
-                            style={{ gridColumn: `span ${bar.span}` }}
-                            className={cn(
-                              "flex items-center text-[11px] leading-tight h-[22px] px-1.5 mb-0.5 cursor-pointer border transition-colors hover:opacity-80",
-                              bar.colorClass,
-                              bar.isStart ? "rounded-l-md ml-0.5" : "",
-                              bar.isEnd ? "rounded-r-md mr-0.5" : ""
-                            )}
-                            title={bar.item.customerName}
-                          >
-                            {bar.item.status === "SHIPPED" && (
-                              <Truck className="h-3 w-3 shrink-0 mr-0.5 opacity-70" />
-                            )}
-                            <span className={cn(
-                              "truncate flex-1 text-left font-medium",
-                              bar.item.status === "SHIPPED" && "line-through"
-                            )}>
-                              {bar.item.customerName}
-                            </span>
-                            <span className="shrink-0 ml-1 text-[9px] opacity-60">
-                              {bar.item.lineItems.length}
-                            </span>
-                          </button>
-                        </div>
-                      ))
+              {/* Day header row */}
+              <div
+                className="grid border-b sticky top-0 bg-background z-20"
+                style={{
+                  gridTemplateColumns: `repeat(${gridCols}, ${COL_WIDTH}px)`,
+                }}
+              >
+                {timelineDays.map((day) => (
+                  <div
+                    key={day.date}
+                    className={cn(
+                      "text-center py-1 border-r border-gray-200 last:border-r-0",
+                      day.isWeekend && "bg-gray-50",
+                      day.holiday && "bg-red-50"
+                    )}
+                    title={day.holiday?.name}
+                  >
+                    <div
+                      className={cn(
+                        "inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium",
+                        day.isToday && "bg-red-500 text-white font-bold",
+                        !day.isToday && day.dow === 0 && "text-red-500"
+                      )}
+                    >
+                      {day.date}
+                    </div>
+                    <div
+                      className={cn(
+                        "text-[10px] leading-tight text-muted-foreground",
+                        day.dow === 0 && "text-red-500"
+                      )}
+                    >
+                      {DAY_LABELS[day.dow]}
+                    </div>
+                    {day.holiday && (
+                      <div
+                        className="w-1.5 h-1.5 rounded-full bg-red-400 mx-auto mt-0.5"
+                        title={day.holiday.name}
+                      />
                     )}
                   </div>
+                ))}
+              </div>
+
+              {/* Delivery rows */}
+              {ganttRows.map((row) => (
+                <div
+                  key={row.item.id}
+                  className="grid relative z-10 border-b border-gray-100"
+                  style={{
+                    gridTemplateColumns: `repeat(${gridCols}, ${COL_WIDTH}px)`,
+                  }}
+                >
+                  <button
+                    onClick={() => setSelectedItem(row.item)}
+                    className={cn(
+                      "flex items-center h-7 my-0.5 px-1.5 text-[11px] leading-tight border cursor-pointer transition-colors hover:opacity-80",
+                      row.colorClass,
+                      !row.isClippedStart && "rounded-l-md ml-0.5",
+                      !row.isClippedEnd && "rounded-r-md mr-0.5"
+                    )}
+                    style={{
+                      gridColumn: `${row.startDay} / ${row.endDay + 1}`,
+                    }}
+                    title={row.item.customerName}
+                  >
+                    {row.item.status === "SHIPPED" && (
+                      <Truck className="h-3 w-3 shrink-0 mr-0.5 opacity-70" />
+                    )}
+                    <span
+                      className={cn(
+                        "truncate flex-1 text-left font-medium",
+                        row.item.status === "SHIPPED" && "line-through"
+                      )}
+                    >
+                      {row.item.customerName}
+                    </span>
+                    <span className="shrink-0 ml-1 text-[9px] opacity-60">
+                      {row.item.lineItems.length}
+                    </span>
+                  </button>
                 </div>
-              );
-            })}
+              ))}
+
+              {/* Empty state */}
+              {data.length === 0 && (
+                <div className="text-center py-6 text-muted-foreground text-sm">
+                  ไม่มีกำหนดส่งสินค้าในเดือนนี้
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Summary */}
-          {data.length === 0 && (
-            <div className="text-center py-6 text-muted-foreground text-sm">
-              ไม่มีกำหนดส่งสินค้าในเดือนนี้
-            </div>
-          )}
           {data.length > 0 && (
             <div className="text-xs text-muted-foreground mt-2">
               รวม {data.length} รายการส่งสินค้าในเดือนนี้
