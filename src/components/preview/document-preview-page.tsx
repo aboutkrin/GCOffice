@@ -24,6 +24,8 @@ export function DocumentPreviewPage({ document }: DocumentPreviewPageProps) {
             <div className="h-6 print:hidden" style={{ breakAfter: "page" }} />
             <DocumentPreview document={document} copyLabel="สำเนา" />
           </>
+        ) : isReceipt ? (
+          <DocumentPreview document={document} copyLabel="ต้นฉบับ" />
         ) : (
           <DocumentPreview document={document} />
         )}
