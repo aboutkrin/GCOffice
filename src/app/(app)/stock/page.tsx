@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { History, FileText } from "lucide-react";
+import { History, FileText, ClipboardList } from "lucide-react";
 
 import { getStockOverview, getStockStats } from "@/data/stock";
 import { getProductCategories } from "@/data/products";
@@ -46,6 +46,12 @@ export default async function StockPage({ searchParams }: StockPageProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/stock/summary">
+              <ClipboardList className="size-4" />
+              สรุปคำสั่งซื้อ
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href="/stock/report">
               <FileText className="size-4" />

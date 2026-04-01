@@ -144,6 +144,11 @@ export function StockMovementTable({
       header: "อ้างอิง",
       cell: ({ row }) => row.original.reference ?? "-",
     },
+    {
+      accessorKey: "lotNumber",
+      header: "Lot",
+      cell: ({ row }) => row.original.lotNumber ?? "-",
+    },
   ];
 
   const table = useReactTable({
@@ -188,7 +193,7 @@ export function StockMovementTable({
                   <TableHead
                     key={header.id}
                     className={
-                      ["reason", "reference"].includes(header.id)
+                      ["reason", "reference", "lotNumber"].includes(header.id)
                         ? "hidden md:table-cell"
                         : ""
                     }
@@ -209,7 +214,7 @@ export function StockMovementTable({
                     <TableCell
                       key={cell.id}
                       className={
-                        ["reason", "reference"].includes(cell.column.id)
+                        ["reason", "reference", "lotNumber"].includes(cell.column.id)
                           ? "hidden md:table-cell"
                           : ""
                       }

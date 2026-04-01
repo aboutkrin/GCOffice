@@ -57,6 +57,7 @@ export function StockAdjustmentDialog({
       quantity: 1,
       reason: "",
       reference: "",
+      lotNumber: "",
     },
   });
 
@@ -70,6 +71,7 @@ export function StockAdjustmentDialog({
       quantity: 1,
       reason: "",
       reference: "",
+      lotNumber: "",
     });
   }
 
@@ -137,6 +139,15 @@ export function StockAdjustmentDialog({
               {...form.register("reference")}
             />
           </div>
+          {mode === "in" && (
+            <div className="space-y-2">
+              <Label>เลขที่ Lot</Label>
+              <Input
+                placeholder="เลขที่ Lot สินค้านำเข้า (ไม่บังคับ)"
+                {...form.register("lotNumber")}
+              />
+            </div>
+          )}
           <DialogFooter>
             <Button
               type="button"

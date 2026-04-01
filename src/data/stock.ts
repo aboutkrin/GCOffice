@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/utils";
+import { DocumentStatus, DocumentType } from "@/generated/prisma/client";
 
 export async function getStockOverview(params?: {
   search?: string;
@@ -181,6 +182,168 @@ export async function getInStockProducts() {
     return serialize(data);
   } catch {
     return [];
+  }
+}
+
+export async function getInventorySummary() {
+  try {
+    // 1. Fetch all confirmed/shipped quotations with line items
+    const documents = await prisma.document.findMany({
+      where: {
+        type: DocumentType.QUOTATION,
+        status: { in: [DocumentStatus.CONFIRMED, DocumentStatus.SHIPPED] },
+      },
+      select: {
+        id: true,
+        documentNumber: true,
+        documentDate: true,
+        customerSnapshot: true,
+        lineItems: {
+          select: {
+            productSku: true,
+            productName: true,
+            productImage: true,
+            colorVariantName: true,
+            quantity: true,
+          },
+        },
+      },
+    });
+
+    // 2. Collect all unique product SKUs from line items
+    const skuSet = new Set<string>();
+    for (const doc of documents) {
+      for (const item of doc.lineItems) {
+        if (item.productSku) skuSet.add(item.productSku);
+      }
+    }
+
+    // 3. Fetch current stock for these products
+    const products = await prisma.product.findMany({
+      where: { sku: { in: Array.from(skuSet) } },
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        imageUrl: true,
+        stockQuantity: true,
+        colorVariants: {
+          select: {
+            id: true,
+            name: true,
+            stockQuantity: true,
+          },
+        },
+      },
+    });
+
+    const productBySku = new Map(products.map((p) => [p.sku, p]));
+
+    // 4. Aggregate demand per product+variant
+    const aggregateKey = (sku: string, variant: string | null) =>
+      variant ? `${sku}::${variant}` : sku;
+
+    const demandMap = new Map<
+      string,
+      {
+        productId: string;
+        productSku: string;
+        productName: string;
+        productImage: string | null;
+        colorVariantId: string | null;
+        colorVariantName: string | null;
+        currentStock: number;
+        totalOrdered: number;
+        orders: {
+          documentId: string;
+          documentNumber: string;
+          customerName: string;
+          quantity: number;
+          documentDate: string;
+        }[];
+      }
+    >();
+
+    for (const doc of documents) {
+      const snapshot = doc.customerSnapshot as Record<string, unknown>;
+      const customerName =
+        (snapshot?.customerName as string) ||
+        (snapshot?.companyName as string) ||
+        "-";
+
+      for (const item of doc.lineItems) {
+        if (!item.productSku) continue;
+        const product = productBySku.get(item.productSku);
+        if (!product) continue;
+
+        const key = aggregateKey(item.productSku, item.colorVariantName);
+
+        if (!demandMap.has(key)) {
+          // Determine current stock for this product/variant
+          let currentStock = product.stockQuantity;
+          let colorVariantId: string | null = null;
+          if (item.colorVariantName) {
+            const variant = product.colorVariants.find(
+              (v) => v.name === item.colorVariantName
+            );
+            currentStock = variant?.stockQuantity ?? 0;
+            colorVariantId = variant?.id ?? null;
+          }
+
+          demandMap.set(key, {
+            productId: product.id,
+            productSku: item.productSku,
+            productName: item.productName,
+            productImage: item.productImage || product.imageUrl,
+            colorVariantId,
+            colorVariantName: item.colorVariantName,
+            currentStock,
+            totalOrdered: 0,
+            orders: [],
+          });
+        }
+
+        const entry = demandMap.get(key)!;
+        entry.totalOrdered += item.quantity;
+        entry.orders.push({
+          documentId: doc.id,
+          documentNumber: doc.documentNumber,
+          customerName,
+          quantity: item.quantity,
+          documentDate: doc.documentDate.toISOString(),
+        });
+      }
+    }
+
+    // 5. Compute shortages and stats
+    const items = Array.from(demandMap.values()).map((item) => ({
+      ...item,
+      shortage: Math.max(0, item.totalOrdered - item.currentStock),
+    }));
+
+    // Sort: shortages first, then by product name
+    items.sort((a, b) => {
+      if (a.shortage > 0 && b.shortage === 0) return -1;
+      if (a.shortage === 0 && b.shortage > 0) return 1;
+      return a.productName.localeCompare(b.productName);
+    });
+
+    const stats = {
+      totalProductsWithOrders: items.length,
+      totalShortageItems: items.filter((i) => i.shortage > 0).length,
+      totalShortageQuantity: items.reduce((sum, i) => sum + i.shortage, 0),
+    };
+
+    return { items: serialize(items), stats };
+  } catch {
+    return {
+      items: [],
+      stats: {
+        totalProductsWithOrders: 0,
+        totalShortageItems: 0,
+        totalShortageQuantity: 0,
+      },
+    };
   }
 }
 
