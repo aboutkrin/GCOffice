@@ -94,10 +94,11 @@ export interface DocumentData {
 
 interface DocumentPreviewProps {
   document: DocumentData;
+  copyLabel?: string;
 }
 
 export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
-  function DocumentPreview({ document: doc }, ref) {
+  function DocumentPreview({ document: doc, copyLabel }, ref) {
     return (
       <div
         id="document-preview"
@@ -109,6 +110,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           company={doc.companySnapshot}
           documentType={doc.type}
           vatEnabled={doc.vatEnabled}
+          copyLabel={copyLabel}
         />
 
         {/* Customer Info + Document Date/Number */}
@@ -117,6 +119,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           documentDate={doc.documentDate}
           documentNumber={doc.documentNumber}
           customInvoiceNumber={doc.customInvoiceNumber}
+          documentType={doc.type}
         />
 
         {/* Line Items Table */}

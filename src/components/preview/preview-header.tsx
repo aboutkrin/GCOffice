@@ -32,12 +32,14 @@ interface PreviewHeaderProps {
   company: CompanySnapshot;
   documentType: string;
   vatEnabled?: boolean;
+  copyLabel?: string;
 }
 
 export function PreviewHeader({
   company,
   documentType,
   vatEnabled,
+  copyLabel,
 }: PreviewHeaderProps) {
   let typeLabel: string;
   if (documentType === "RECEIPT") {
@@ -71,8 +73,8 @@ export function PreviewHeader({
           <h2 className="text-lg sm:text-2xl font-bold text-primary">
             {typeLabel}
           </h2>
-          {documentType === "RECEIPT" && (
-            <p className="text-xs sm:text-sm text-primary/80">(ต้นฉบับ)</p>
+          {documentType === "RECEIPT" && copyLabel && (
+            <p className="text-xs sm:text-sm text-primary/80">({copyLabel})</p>
           )}
         </div>
       </div>
