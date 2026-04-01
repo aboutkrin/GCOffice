@@ -387,7 +387,7 @@ export function DeliverySchedule({
                       {row.item.customerName}
                     </span>
                     <span className="shrink-0 ml-1 text-[9px] opacity-60">
-                      {row.item.lineItems.length}
+                      {row.item.lineItems.reduce((sum, li) => sum + li.quantity, 0)}
                     </span>
                   </button>
                 </div>
@@ -421,7 +421,7 @@ export function DeliverySchedule({
               </div>
               <div className="flex items-center gap-1.5 ml-auto">
                 <span className="text-[10px] bg-muted px-1 rounded">2</span>
-                <span>= จำนวนรายการ</span>
+                <span>= จำนวนกล่อง</span>
               </div>
             </div>
           )}
