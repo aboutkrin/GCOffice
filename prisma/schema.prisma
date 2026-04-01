@@ -194,8 +194,9 @@ model Document {
   productionDaysMax Int?      @map("production_days_max")
   skipWeekends      Boolean   @default(false) @map("skip_weekends")
   skipHolidays      Boolean   @default(false) @map("skip_holidays")
-  deliveryDateStart DateTime? @map("delivery_date_start") @db.Date
-  deliveryDateEnd   DateTime? @map("delivery_date_end") @db.Date
+  deliveryDateStart      DateTime? @map("delivery_date_start") @db.Date
+  deliveryDateEnd        DateTime? @map("delivery_date_end") @db.Date
+  deliveryCompletedDate  DateTime? @map("delivery_completed_date") @db.Date
 
   createdById String  @map("created_by_id") @db.Uuid
   createdBy   Profile @relation(fields: [createdById], references: [id])

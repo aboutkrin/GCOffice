@@ -81,6 +81,7 @@ export interface DocumentData {
   productionDays?: string;
   deliveryDateStart?: Date;
   deliveryDateEnd?: Date;
+  deliveryCompletedDate?: Date;
   lineItems: LineItem[];
   paymentTerms: PaymentTerm[];
   createdBy?: {
@@ -145,9 +146,11 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
             bankLogoUrl: doc.companySnapshot.bankLogoUrl,
             promptpayQrUrl: doc.companySnapshot.promptpayQrUrl,
           }}
+          documentType={doc.type}
           productionDays={doc.productionDays}
           deliveryDateStart={doc.deliveryDateStart}
           deliveryDateEnd={doc.deliveryDateEnd}
+          deliveryCompletedDate={doc.deliveryCompletedDate}
         />
 
         {/* Footer: Notes, Signatures */}
