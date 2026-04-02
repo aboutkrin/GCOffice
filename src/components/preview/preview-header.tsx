@@ -72,7 +72,7 @@ export function PreviewHeader({
           </h1>
         </div>
         <div className="text-right shrink-0">
-          <h2 className="text-lg sm:text-2xl font-bold text-primary">
+          <h2 className="text-xs sm:text-base font-bold text-primary">
             {typeLabel}
           </h2>
           {documentType === "RECEIPT" && copyLabel && (
