@@ -34,7 +34,13 @@ export default async function DashboardPage() {
 
   const monthParams = `year=${currentYear}&month=${currentMonth}`;
 
-  const thisMonthCards = [
+  const thisMonthCards: {
+    title: string;
+    value: string;
+    subtitle?: string;
+    icon: typeof FileText;
+    href: string;
+  }[] = [
     {
       title: "ใบเสนอราคาเดือนนี้",
       value: stats.thisMonthQuotations.toLocaleString(),
@@ -60,8 +66,9 @@ export default async function DashboardPage() {
       href: `/invoices?${monthParams}&status=PAID`,
     },
     {
-      title: "ยอดรวมเดือนนี้",
+      title: "ยอดขายเดือนนี้",
       value: formatBaht(stats.thisMonthConfirmedTotal),
+      subtitle: `VAT ${formatBaht(stats.thisMonthVatTotal)}`,
       icon: Banknote,
       href: `/invoices?${monthParams}&status=PAID,DEPOSITED`,
     },
@@ -93,6 +100,9 @@ export default async function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-lg md:text-2xl font-bold">{card.value}</p>
+                  {card.subtitle && (
+                    <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>
+                  )}
                 </CardContent>
               </Card>
             </Link>

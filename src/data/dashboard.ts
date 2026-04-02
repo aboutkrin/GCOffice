@@ -17,6 +17,7 @@ export interface DashboardStats {
   thisMonthPendingDocuments: number;
   thisMonthPendingCollection: number;
   thisMonthConfirmedTotal: number;
+  thisMonthVatTotal: number;
   // Recent documents
   recentDocuments: RecentDocument[];
 }
@@ -65,6 +66,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     thisMonthPendingCollection,
     thisMonthPaidTotal,
     thisMonthDepositedTotal,
+    thisMonthPaidVat,
+    thisMonthDepositedVatRaw,
     recentDocuments,
   ] = await Promise.all([
     safeCount({
@@ -113,6 +116,27 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
     }).catch(() => null),
 
+    // Sum vatAmount for PAID invoices
+    prisma.document.aggregate({
+      _sum: { vatAmount: true },
+      where: {
+        type: DocumentType.INVOICE,
+        status: DocumentStatus.PAID,
+        ...thisMonthFilter,
+      },
+    }).catch(() => null),
+
+    // Sum proportional VAT for DEPOSITED invoices (first payment term)
+    prisma.$queryRaw<{ total: number }[]>`
+      SELECT COALESCE(SUM(dpt.calculated_amount * d.vat_amount / NULLIF(d.grand_total, 0)), 0)::float8 AS total
+      FROM documents d
+      INNER JOIN document_payment_terms dpt ON dpt.document_id = d.id AND dpt.sequence = 1
+      WHERE d.type = 'INVOICE'
+        AND d.status = 'DEPOSITED'
+        AND d.document_date >= ${startOfMonth}
+        AND d.document_date <= ${endOfMonth}
+    `.catch(() => [] as { total: number }[]),
+
     prisma.document.findMany({
       where: { status: { not: DocumentStatus.DRAFT } },
       select: {
@@ -130,14 +154,21 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }).catch(() => [] as any[]),
   ]);
 
+  const paidVat = thisMonthPaidVat?._sum.vatAmount?.toNumber() ?? 0;
+  const depositedVat = thisMonthDepositedVatRaw?.[0]?.total ?? 0;
+  const totalVat = paidVat + depositedVat;
+
+  const grossTotal =
+    (thisMonthPaidTotal?._sum.grandTotal?.toNumber() ?? 0) +
+    (thisMonthDepositedTotal?._sum.calculatedAmount?.toNumber() ?? 0);
+
   return {
     thisMonthQuotations,
     thisMonthInvoices,
     thisMonthPendingDocuments,
     thisMonthPendingCollection,
-    thisMonthConfirmedTotal:
-      (thisMonthPaidTotal?._sum.grandTotal?.toNumber() ?? 0) +
-      (thisMonthDepositedTotal?._sum.calculatedAmount?.toNumber() ?? 0),
+    thisMonthConfirmedTotal: grossTotal - totalVat,
+    thisMonthVatTotal: totalVat,
     recentDocuments: serialize(recentDocuments) as RecentDocument[],
   };
 }
@@ -152,6 +183,7 @@ export interface YearlyStats {
   pendingDocuments: number;
   pendingCollection: number;
   confirmedTotal: number;
+  vatTotal: number;
   availableYears: number[];
 }
 
@@ -178,7 +210,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     }
   }
 
-  const [quotations, invoices, pendingDocuments, pendingCollection, paidTotal, depositedTotal, yearsData] = await Promise.all([
+  const [quotations, invoices, pendingDocuments, pendingCollection, paidTotal, depositedTotal, paidVat, depositedVatRaw, yearsData] = await Promise.all([
     safeCount({
       where: { type: DocumentType.QUOTATION, ...excludeDraft, ...yearFilter },
     }),
@@ -216,12 +248,39 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
         },
       },
     }).catch(() => null),
+    // Sum vatAmount for PAID invoices
+    prisma.document.aggregate({
+      _sum: { vatAmount: true },
+      where: {
+        type: DocumentType.INVOICE,
+        status: DocumentStatus.PAID,
+        ...yearFilter,
+      },
+    }).catch(() => null),
+    // Sum proportional VAT for DEPOSITED invoices (first payment term)
+    prisma.$queryRaw<{ total: number }[]>`
+      SELECT COALESCE(SUM(dpt.calculated_amount * d.vat_amount / NULLIF(d.grand_total, 0)), 0)::float8 AS total
+      FROM documents d
+      INNER JOIN document_payment_terms dpt ON dpt.document_id = d.id AND dpt.sequence = 1
+      WHERE d.type = 'INVOICE'
+        AND d.status = 'DEPOSITED'
+        AND d.document_date >= ${startOfYear}
+        AND d.document_date <= ${endOfYear}
+    `.catch(() => [] as { total: number }[]),
     prisma.$queryRaw<{ year: number }[]>`
       SELECT DISTINCT EXTRACT(YEAR FROM document_date)::int AS year
       FROM documents
       ORDER BY year DESC
     `.catch(() => [] as { year: number }[]),
   ]);
+
+  const yearPaidVat = paidVat?._sum.vatAmount?.toNumber() ?? 0;
+  const yearDepositedVat = depositedVatRaw?.[0]?.total ?? 0;
+  const totalVat = yearPaidVat + yearDepositedVat;
+
+  const grossTotal =
+    (paidTotal?._sum.grandTotal?.toNumber() ?? 0) +
+    (depositedTotal?._sum.calculatedAmount?.toNumber() ?? 0);
 
   const availableYears = yearsData.map((d) => d.year);
   if (!availableYears.includes(year)) {
@@ -236,9 +295,8 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     invoices,
     pendingDocuments,
     pendingCollection,
-    confirmedTotal:
-      (paidTotal?._sum.grandTotal?.toNumber() ?? 0) +
-      (depositedTotal?._sum.calculatedAmount?.toNumber() ?? 0),
+    confirmedTotal: grossTotal - totalVat,
+    vatTotal: totalVat,
     availableYears,
   };
 }
@@ -254,6 +312,7 @@ export interface MonthlyRevenueExpenseData {
   month: number;
   monthLabel: string;
   revenue: number;
+  vat: number;
   expense: number;
   profit: number;
 }
@@ -262,6 +321,7 @@ export interface MonthlyRevenueExpenseResult {
   year: number;
   yearBE: number;
   totalRevenue: number;
+  totalVat: number;
   totalExpense: number;
   totalProfit: number;
   monthlyData: MonthlyRevenueExpenseData[];
@@ -360,30 +420,70 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
-  const [revenueData, expenseData, yearsData] = await Promise.all([
+  // VAT from INVOICE documents:
+  // - PAID: full vatAmount
+  // - DEPOSITED: proportional VAT for first payment term
+  async function fetchInvoiceVatData() {
+    try {
+      return await prisma.$queryRaw<{ month: number; total: number }[]>`
+        SELECT month, COALESCE(SUM(total), 0)::float8 AS total
+        FROM (
+          SELECT
+            EXTRACT(MONTH FROM document_date)::int AS month,
+            vat_amount AS total
+          FROM documents
+          WHERE type = 'INVOICE'
+            AND status = 'PAID'
+            AND EXTRACT(YEAR FROM document_date) = ${year}
+          UNION ALL
+          SELECT
+            EXTRACT(MONTH FROM d.document_date)::int AS month,
+            dpt.calculated_amount * d.vat_amount / NULLIF(d.grand_total, 0) AS total
+          FROM documents d
+          INNER JOIN document_payment_terms dpt ON dpt.document_id = d.id AND dpt.sequence = 1
+          WHERE d.type = 'INVOICE'
+            AND d.status = 'DEPOSITED'
+            AND EXTRACT(YEAR FROM d.document_date) = ${year}
+        ) sub
+        GROUP BY month
+        ORDER BY month
+      `;
+    } catch {
+      return [] as { month: number; total: number }[];
+    }
+  }
+
+  const [revenueData, vatData, expenseData, yearsData] = await Promise.all([
     fetchInvoiceRevenueData(),
+    fetchInvoiceVatData(),
     fetchExpenseData(),
     fetchAvailableYears(),
   ]);
 
   // Build full 12-month array
+  // Revenue = gross revenue minus VAT
   // Expense = monthly operating expenses + vendor costs (purchase order costs)
   const monthlyData: MonthlyRevenueExpenseData[] = Array.from({ length: 12 }, (_, i) => {
     const monthNum = i + 1;
     const rev = revenueData.find((d) => d.month === monthNum);
+    const vat = vatData.find((d) => d.month === monthNum);
     const exp = expenseData.find((d) => d.month === monthNum);
-    const revenue = rev?.total ?? 0;
+    const grossRevenue = rev?.total ?? 0;
+    const vatAmount = vat?.total ?? 0;
+    const revenue = grossRevenue - vatAmount;
     const expense = exp?.total ?? 0;
     return {
       month: monthNum,
       monthLabel: THAI_MONTHS_SHORT[i],
       revenue,
+      vat: vatAmount,
       expense,
       profit: revenue - expense,
     };
   });
 
   const totalRevenue = monthlyData.reduce((sum, m) => sum + m.revenue, 0);
+  const totalVat = monthlyData.reduce((sum, m) => sum + m.vat, 0);
   const totalExpense = monthlyData.reduce((sum, m) => sum + m.expense, 0);
   const availableYears = yearsData.map((d) => d.year);
 
@@ -396,6 +496,7 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     year,
     yearBE: year + 543,
     totalRevenue,
+    totalVat,
     totalExpense,
     totalProfit: totalRevenue - totalExpense,
     monthlyData,

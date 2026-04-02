@@ -33,7 +33,13 @@ export function YearlyStatsCards({ initialData }: YearlyStatsCardsProps) {
 
   const yearParam = `year=${data.year}`;
 
-  const cards = [
+  const cards: {
+    title: string;
+    value: string;
+    subtitle?: string;
+    icon: typeof FileText;
+    href: string;
+  }[] = [
     {
       title: "ใบเสนอราคา",
       value: data.quotations.toLocaleString(),
@@ -59,8 +65,9 @@ export function YearlyStatsCards({ initialData }: YearlyStatsCardsProps) {
       href: `/invoices?${yearParam}&status=PAID`,
     },
     {
-      title: "ยอดรวม",
+      title: "ยอดขาย",
       value: formatBaht(data.confirmedTotal),
+      subtitle: `VAT ${formatBaht(data.vatTotal)}`,
       icon: Banknote,
       href: `/invoices?${yearParam}&status=PAID,DEPOSITED`,
     },
@@ -103,6 +110,9 @@ export function YearlyStatsCards({ initialData }: YearlyStatsCardsProps) {
               </CardHeader>
               <CardContent>
                 <p className="text-lg md:text-2xl font-bold">{card.value}</p>
+                {card.subtitle && (
+                  <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>
+                )}
               </CardContent>
             </Card>
           </Link>
