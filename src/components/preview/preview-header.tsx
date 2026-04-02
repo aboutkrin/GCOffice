@@ -50,6 +50,8 @@ export function PreviewHeader({
     typeLabel = DOCUMENT_TYPE_LABELS[documentType] || documentType;
   }
 
+  const isLongName = company.name.length > 25;
+
   return (
     <div className="mb-3">
       {/* Top row: Logo + Company Name on left, Document Type on right */}
@@ -65,7 +67,7 @@ export function PreviewHeader({
               />
             </div>
           )}
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 break-words">
+          <h1 className={`font-bold text-gray-900 break-words ${isLongName ? "text-xs sm:text-base" : "text-lg sm:text-2xl"}`}>
             {company.name}
           </h1>
         </div>
