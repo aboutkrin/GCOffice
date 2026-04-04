@@ -101,28 +101,49 @@ export function PaymentTermsSection({
               </Select>
             </div>
 
-            <div className="w-full sm:w-[100px] space-y-1">
-              <Label className="text-xs text-muted-foreground">ค่า</Label>
-              <Input
-                type="number"
-                min={0}
-                value={term.value || ""}
-                onChange={(e) =>
-                  updateTerm(term.id, { value: Number(e.target.value) })
-                }
-                placeholder={term.type === "PERCENTAGE" ? "%" : "฿"}
-                className="h-9"
-              />
-            </div>
+            {term.type === "PERCENTAGE" ? (
+              <>
+                <div className="w-full sm:w-[100px] space-y-1">
+                  <Label className="text-xs text-muted-foreground">ค่า</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={term.value || ""}
+                    onChange={(e) =>
+                      updateTerm(term.id, { value: Number(e.target.value) })
+                    }
+                    placeholder="%"
+                    className="h-9"
+                  />
+                </div>
 
-            <div className="w-full sm:w-[130px] space-y-1">
-              <Label className="text-xs text-muted-foreground">
-                ยอดชำระ
-              </Label>
-              <div className="h-9 flex items-center px-3 rounded-md border bg-muted text-sm">
-                {formatNumber(term.calculatedAmount)}
+                <div className="w-full sm:w-[130px] space-y-1">
+                  <Label className="text-xs text-muted-foreground">
+                    ยอดชำระ
+                  </Label>
+                  <div className="h-9 flex items-center px-3 rounded-md border bg-muted text-sm">
+                    {formatNumber(term.calculatedAmount)}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="w-full sm:w-[160px] space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  จำนวนเงิน (฿)
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={term.value || ""}
+                  onChange={(e) => {
+                    const amount = Number(e.target.value);
+                    updateTerm(term.id, { value: amount, calculatedAmount: amount });
+                  }}
+                  placeholder="กรอกจำนวนเงิน"
+                  className="h-9"
+                />
               </div>
-            </div>
+            )}
 
             <div className="flex-1 w-full sm:w-auto space-y-1">
               <Label className="text-xs text-muted-foreground">
