@@ -89,25 +89,57 @@ export function ExportToolbar({
   }, [getIsIOS]);
 
   // Force A4 width for export, then revert after capture
+  // For PDF: styles are applied per-page inside exportToPdf, so just run the function
+  // For other exports (JPG, share): apply A4 styles to each page element
   const withA4Width = useCallback(
     async <T,>(el: HTMLElement, fn: () => Promise<T>): Promise<T> => {
-      const origWidth = el.style.width;
-      const origMaxWidth = el.style.maxWidth;
-      const origMinHeight = el.style.minHeight;
-      const origPadding = el.style.padding;
-      el.style.width = "210mm";
-      el.style.maxWidth = "none";
-      el.style.minHeight = "297mm";
-      el.style.padding = "2rem";
+      const pages = el.querySelectorAll<HTMLElement>("[data-document-page]");
+      const origStyles: Array<{ width: string; maxWidth: string; minHeight: string; padding: string }> = [];
+
+      if (pages.length > 0) {
+        pages.forEach((page) => {
+          origStyles.push({
+            width: page.style.width,
+            maxWidth: page.style.maxWidth,
+            minHeight: page.style.minHeight,
+            padding: page.style.padding,
+          });
+          page.style.width = "210mm";
+          page.style.maxWidth = "none";
+          page.style.minHeight = "297mm";
+          page.style.padding = "2rem";
+        });
+      } else {
+        origStyles.push({
+          width: el.style.width,
+          maxWidth: el.style.maxWidth,
+          minHeight: el.style.minHeight,
+          padding: el.style.padding,
+        });
+        el.style.width = "210mm";
+        el.style.maxWidth = "none";
+        el.style.minHeight = "297mm";
+        el.style.padding = "2rem";
+      }
+
       // Wait for reflow
       await new Promise((r) => setTimeout(r, 100));
       try {
         return await fn();
       } finally {
-        el.style.width = origWidth;
-        el.style.maxWidth = origMaxWidth;
-        el.style.minHeight = origMinHeight;
-        el.style.padding = origPadding;
+        if (pages.length > 0) {
+          pages.forEach((page, i) => {
+            page.style.width = origStyles[i].width;
+            page.style.maxWidth = origStyles[i].maxWidth;
+            page.style.minHeight = origStyles[i].minHeight;
+            page.style.padding = origStyles[i].padding;
+          });
+        } else {
+          el.style.width = origStyles[0].width;
+          el.style.maxWidth = origStyles[0].maxWidth;
+          el.style.minHeight = origStyles[0].minHeight;
+          el.style.padding = origStyles[0].padding;
+        }
       }
     },
     []

@@ -42,40 +42,97 @@ export async function exportToPdf(
   // Preload images and convert to data URLs
   await preloadImages(element);
 
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    logging: false,
-    backgroundColor: "#ffffff",
-  });
-
-  const imgData = canvas.toDataURL("image/jpeg", 0.95);
   const pdf = new jsPDF("p", "mm", "a4");
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
 
-  const imgWidth = canvas.width;
-  const imgHeight = canvas.height;
-  const ratio = pdfWidth / imgWidth;
-  const scaledHeight = imgHeight * ratio;
+  // Find individual document pages within the container
+  const pages = element.querySelectorAll<HTMLElement>("[data-document-page]");
 
-  // Multi-page support
-  let position = 0;
-  let heightLeft = scaledHeight;
+  if (pages.length > 0) {
+    // Render each document page as a separate PDF page
+    for (let i = 0; i < pages.length; i++) {
+      const page = pages[i];
 
-  pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, scaledHeight);
-  heightLeft -= pdfHeight;
+      // Force A4 dimensions on each page for capture
+      const origWidth = page.style.width;
+      const origMaxWidth = page.style.maxWidth;
+      const origMinHeight = page.style.minHeight;
+      const origPadding = page.style.padding;
+      page.style.width = "210mm";
+      page.style.maxWidth = "none";
+      page.style.minHeight = "297mm";
+      page.style.padding = "2rem";
 
-  while (heightLeft > 0) {
-    position -= pdfHeight;
-    pdf.addPage();
+      // Wait for reflow
+      await new Promise((r) => setTimeout(r, 100));
+
+      const canvas = await html2canvas(page, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      // Restore original styles
+      page.style.width = origWidth;
+      page.style.maxWidth = origMaxWidth;
+      page.style.minHeight = origMinHeight;
+      page.style.padding = origPadding;
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = pdfWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
+
+      if (i > 0) {
+        pdf.addPage();
+      }
+
+      // If the page content fits in one A4 page, render it as-is
+      // Otherwise, scale it to fit within one A4 page
+      if (scaledHeight <= pdfHeight) {
+        pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, scaledHeight);
+      } else {
+        // Scale down to fit within one A4 page
+        const fitRatio = pdfHeight / scaledHeight;
+        const fitWidth = pdfWidth * fitRatio;
+        const offsetX = (pdfWidth - fitWidth) / 2;
+        pdf.addImage(imgData, "JPEG", offsetX, 0, fitWidth, pdfHeight);
+      }
+    }
+  } else {
+    // Fallback: no data-document-page found, use legacy single-canvas approach
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+    });
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = pdfWidth / imgWidth;
+    const scaledHeight = imgHeight * ratio;
+
+    let position = 0;
+    let heightLeft = scaledHeight;
+
     pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, scaledHeight);
     heightLeft -= pdfHeight;
+
+    while (heightLeft > 0) {
+      position -= pdfHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, scaledHeight);
+      heightLeft -= pdfHeight;
+    }
   }
 
   if (preOpenedWindow) {
     // iOS Safari: open PDF blob in pre-opened window
-    // iOS doesn't support <a download>, so we open in native PDF viewer instead
     const pdfBlob = pdf.output("blob");
     const url = URL.createObjectURL(pdfBlob);
     preOpenedWindow.location.href = url;

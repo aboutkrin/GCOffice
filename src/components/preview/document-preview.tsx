@@ -104,6 +104,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
       <div
         id="document-preview"
         ref={ref}
+        data-document-page
         className="w-full max-w-[210mm] min-h-[297mm] mx-auto bg-white p-4 sm:p-6 shadow-lg flex flex-col print:shadow-none print:p-0 print:w-[210mm] print:max-w-none print:min-h-[297mm]"
       >
         {/* Header: Company + Document Type */}
