@@ -147,7 +147,9 @@ export function PreviewPayment({
                         </div>
                         {term.note && (
                           <div className="text-[10px] text-gray-400 mt-0.5">
-                            {term.note}
+                            {isReceipt && !isNaN(new Date(term.note).getTime())
+                              ? `วันที่ชำระเงิน: ${formatThaiDate(new Date(term.note), "short")}`
+                              : term.note}
                           </div>
                         )}
                       </td>
@@ -238,7 +240,9 @@ export function PreviewPayment({
                         </div>
                         {term.note && (
                           <div className="text-[10px] text-gray-400 mt-0.5">
-                            {term.note}
+                            {isReceipt && !isNaN(new Date(term.note).getTime())
+                              ? `วันที่ชำระเงิน: ${formatThaiDate(new Date(term.note), "short")}`
+                              : term.note}
                           </div>
                         )}
                       </td>
