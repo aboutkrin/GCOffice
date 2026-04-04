@@ -99,6 +99,8 @@ export function ExportToolbar({
         width: t.style.width,
         maxWidth: t.style.maxWidth,
         minHeight: t.style.minHeight,
+        height: t.style.height,
+        overflow: t.style.overflow,
         padding: t.style.padding,
       }));
 
@@ -106,6 +108,8 @@ export function ExportToolbar({
         t.style.width = "210mm";
         t.style.maxWidth = "none";
         t.style.minHeight = "297mm";
+        t.style.height = "297mm";
+        t.style.overflow = "hidden";
         t.style.padding = "2rem";
       });
 
@@ -118,6 +122,8 @@ export function ExportToolbar({
           t.style.width = origStyles[i].width;
           t.style.maxWidth = origStyles[i].maxWidth;
           t.style.minHeight = origStyles[i].minHeight;
+          t.style.height = origStyles[i].height;
+          t.style.overflow = origStyles[i].overflow;
           t.style.padding = origStyles[i].padding;
         });
       }
