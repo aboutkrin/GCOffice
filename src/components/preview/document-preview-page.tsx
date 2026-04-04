@@ -12,20 +12,17 @@ interface DocumentPreviewPageProps {
 export function DocumentPreviewPage({ document }: DocumentPreviewPageProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const isReceipt = document.type === "RECEIPT";
-  const isVatReceipt = isReceipt && document.vatEnabled;
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">
       {/* Preview Area */}
       <div ref={previewRef} className="py-6 px-4 print:p-0 print:py-0">
-        {isVatReceipt ? (
+        {isReceipt ? (
           <>
             <DocumentPreview document={document} copyLabel="ต้นฉบับ" />
             <div className="h-6 print:hidden" style={{ breakAfter: "page" }} />
             <DocumentPreview document={document} copyLabel="สำเนา" />
           </>
-        ) : isReceipt ? (
-          <DocumentPreview document={document} copyLabel="ต้นฉบับ" />
         ) : (
           <DocumentPreview document={document} />
         )}

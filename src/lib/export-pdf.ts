@@ -42,40 +42,77 @@ export async function exportToPdf(
   // Preload images and convert to data URLs
   await preloadImages(element);
 
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    logging: false,
-    backgroundColor: "#ffffff",
-  });
-
-  const imgData = canvas.toDataURL("image/jpeg", 0.95);
   const pdf = new jsPDF("p", "mm", "a4");
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = pdf.internal.pageSize.getHeight();
 
-  const imgWidth = canvas.width;
-  const imgHeight = canvas.height;
-  const ratio = pdfWidth / imgWidth;
-  const scaledHeight = imgHeight * ratio;
+  // Check for multiple document-preview pages (e.g. ต้นฉบับ + สำเนา)
+  const pages = element.querySelectorAll<HTMLElement>('[id="document-preview"]');
 
-  // Multi-page support
-  let position = 0;
-  let heightLeft = scaledHeight;
+  if (pages.length > 1) {
+    // Multi-page: capture each page separately as its own A4 page
+    for (let i = 0; i < pages.length; i++) {
+      if (i > 0) pdf.addPage();
 
-  pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, scaledHeight);
-  heightLeft -= pdfHeight;
+      const canvas = await html2canvas(pages[i], {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
 
-  while (heightLeft > 0) {
-    position -= pdfHeight;
-    pdf.addPage();
+      const imgData = canvas.toDataURL("image/jpeg", 0.95);
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = pdfWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
+
+      // If the page content fits in one A4 page, just add it
+      // If it overflows, handle multi-page for that single document
+      let position = 0;
+      let heightLeft = scaledHeight;
+
+      pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, scaledHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft > 0) {
+        position -= pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, scaledHeight);
+        heightLeft -= pdfHeight;
+      }
+    }
+  } else {
+    // Single page: original behavior
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+    });
+
+    const imgData = canvas.toDataURL("image/jpeg", 0.95);
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = pdfWidth / imgWidth;
+    const scaledHeight = imgHeight * ratio;
+
+    let position = 0;
+    let heightLeft = scaledHeight;
+
     pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, scaledHeight);
     heightLeft -= pdfHeight;
+
+    while (heightLeft > 0) {
+      position -= pdfHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, scaledHeight);
+      heightLeft -= pdfHeight;
+    }
   }
 
   if (preOpenedWindow) {
     // iOS Safari: open PDF blob in pre-opened window
-    // iOS doesn't support <a download>, so we open in native PDF viewer instead
     const pdfBlob = pdf.output("blob");
     const url = URL.createObjectURL(pdfBlob);
     preOpenedWindow.location.href = url;
