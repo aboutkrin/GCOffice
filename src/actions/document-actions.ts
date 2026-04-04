@@ -115,6 +115,9 @@ export async function createDocument(data: unknown) {
           deliveryCompletedDate: validated.deliveryCompletedDate
             ? toUTCNoon(new Date(validated.deliveryCompletedDate))
             : undefined,
+          paymentDate: validated.paymentDate
+            ? toUTCNoon(new Date(validated.paymentDate))
+            : undefined,
           sourceQuotationId:
             validated.type === "INVOICE" ? validated.sourceQuotationId : undefined,
           sourceInvoiceId:
@@ -258,6 +261,9 @@ export async function updateDocument(id: string, data: unknown) {
             : null,
           deliveryCompletedDate: validated.deliveryCompletedDate
             ? toUTCNoon(new Date(validated.deliveryCompletedDate))
+            : null,
+          paymentDate: validated.paymentDate
+            ? toUTCNoon(new Date(validated.paymentDate))
             : null,
         },
       });
