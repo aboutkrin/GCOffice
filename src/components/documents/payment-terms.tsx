@@ -52,7 +52,7 @@ function PaymentDatePicker({
 
   return (
     <div className="w-full sm:w-[200px] space-y-1">
-      <Label className="text-xs text-muted-foreground">วันที่ชำระเงิน</Label>
+      <Label className="text-xs text-muted-foreground">วันที่การชำระ</Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -201,7 +201,7 @@ export function PaymentTermsSection({
               </div>
             )}
 
-            {documentType === "RECEIPT" ? (
+            {documentType === "RECEIPT" || documentType === "INVOICE" ? (
               <PaymentDatePicker
                 value={term.note || ""}
                 onChange={(val) => updateTerm(term.id, { note: val })}
