@@ -198,6 +198,7 @@ model Document {
   deliveryDateStart      DateTime? @map("delivery_date_start") @db.Date
   deliveryDateEnd        DateTime? @map("delivery_date_end") @db.Date
   deliveryCompletedDate  DateTime? @map("delivery_completed_date") @db.Date
+  paymentDate            DateTime? @map("payment_date") @db.Date
 
   createdById String  @map("created_by_id") @db.Uuid
   createdBy   Profile @relation(fields: [createdById], references: [id])

@@ -23,6 +23,7 @@ interface PreviewPaymentProps {
     promptpayQrUrl?: string;
   };
   documentType?: "QUOTATION" | "INVOICE" | "RECEIPT";
+  paymentDate?: Date;
   productionDays?: string;
   deliveryDateStart?: Date;
   deliveryDateEnd?: Date;
@@ -33,6 +34,7 @@ export function PreviewPayment({
   paymentTerms,
   company,
   documentType,
+  paymentDate,
   productionDays,
   deliveryDateStart,
   deliveryDateEnd,
@@ -43,7 +45,7 @@ export function PreviewPayment({
   const hasBankInfo =
     company.bankName || company.accountName || company.accountNumber;
   const hasDeliveryInfo = isReceipt
-    ? !!deliveryCompletedDate
+    ? !!(deliveryCompletedDate || paymentDate)
     : productionDays || deliveryDateStart || deliveryDateEnd;
 
   if (!hasPaymentTerms && !hasBankInfo && !hasDeliveryInfo) return null;
@@ -164,13 +166,22 @@ export function PreviewPayment({
                 <div className="rounded border border-blue-200 p-2 mt-2">
                   <div className="grid grid-cols-[auto_auto_1fr] gap-x-1 gap-y-0.5 text-[10px] text-gray-700">
                     {isReceipt ? (
-                      deliveryCompletedDate && (
-                        <>
-                          <span className="font-bold">วันที่จัดส่งสินค้าสำเร็จ</span>
-                          <span className="font-bold">:</span>
-                          <span>{formatThaiDate(new Date(deliveryCompletedDate))}</span>
-                        </>
-                      )
+                      <>
+                        {paymentDate && (
+                          <>
+                            <span className="font-bold">วันที่ชำระเงิน</span>
+                            <span className="font-bold">:</span>
+                            <span>{formatThaiDate(new Date(paymentDate))}</span>
+                          </>
+                        )}
+                        {deliveryCompletedDate && (
+                          <>
+                            <span className="font-bold">วันที่จัดส่งสินค้าสำเร็จ</span>
+                            <span className="font-bold">:</span>
+                            <span>{formatThaiDate(new Date(deliveryCompletedDate))}</span>
+                          </>
+                        )}
+                      </>
                     ) : (
                       <>
                         {productionDays && (
