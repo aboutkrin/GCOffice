@@ -1,7 +1,6 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { DecimalInput } from "@/components/ui/decimal-input";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -86,12 +85,9 @@ export function PricingSummary({
             </SelectContent>
           </Select>
           {discountType && (
-            <Input
-              type="number"
-              step="any"
-              min={0}
+            <DecimalInput
               value={discountValue || ""}
-              onChange={(e) => onDiscountValueChange(Number(e.target.value))}
+              onChange={onDiscountValueChange}
               placeholder={discountType === "PERCENTAGE" ? "%" : "฿"}
               className="w-[120px]"
             />

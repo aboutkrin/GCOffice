@@ -1,6 +1,6 @@
 "use client";
 
-import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/ui/decimal-input";
 import { Label } from "@/components/ui/label";
 import { Truck } from "lucide-react";
 import { formatNumber } from "@/lib/thai-currency";
@@ -21,12 +21,9 @@ export function ShippingSection({
         <Label className="text-sm font-medium">ค่าจัดส่ง</Label>
       </div>
       <div className="flex items-center gap-3">
-        <Input
-          type="number"
-          min={0}
-          step="0.01"
+        <DecimalInput
           value={shippingCost || ""}
-          onChange={(e) => onShippingCostChange(Number(e.target.value) || 0)}
+          onChange={onShippingCostChange}
           placeholder="0.00"
           className="w-[200px]"
         />

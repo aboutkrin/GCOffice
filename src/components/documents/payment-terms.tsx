@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/ui/decimal-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -165,13 +166,10 @@ export function PaymentTermsSection({
               <>
                 <div className="w-full sm:w-[100px] space-y-1">
                   <Label className="text-xs text-muted-foreground">ค่า</Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    min={0}
+                  <DecimalInput
                     value={term.value || ""}
-                    onChange={(e) =>
-                      updateTerm(term.id, { value: Number(e.target.value) })
+                    onChange={(val) =>
+                      updateTerm(term.id, { value: val })
                     }
                     placeholder="%"
                     className="h-9"
@@ -192,14 +190,10 @@ export function PaymentTermsSection({
                 <Label className="text-xs text-muted-foreground">
                   จำนวนเงิน (฿)
                 </Label>
-                <Input
-                  type="number"
-                  step="any"
-                  min={0}
+                <DecimalInput
                   value={term.value || ""}
-                  onChange={(e) => {
-                    const amount = Number(e.target.value);
-                    updateTerm(term.id, { value: amount, calculatedAmount: amount });
+                  onChange={(val) => {
+                    updateTerm(term.id, { value: val, calculatedAmount: val });
                   }}
                   placeholder="กรอกจำนวนเงิน"
                   className="h-9"
