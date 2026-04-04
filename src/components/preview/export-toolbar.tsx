@@ -88,26 +88,38 @@ export function ExportToolbar({
     return win;
   }, [getIsIOS]);
 
-  // Force A4 width for export, then revert after capture
+  // Force A4 width for export on all document preview pages, then revert after capture
   const withA4Width = useCallback(
     async <T,>(el: HTMLElement, fn: () => Promise<T>): Promise<T> => {
-      const origWidth = el.style.width;
-      const origMaxWidth = el.style.maxWidth;
-      const origMinHeight = el.style.minHeight;
-      const origPadding = el.style.padding;
-      el.style.width = "210mm";
-      el.style.maxWidth = "none";
-      el.style.minHeight = "297mm";
-      el.style.padding = "2rem";
+      // Apply A4 sizing to each individual page within the container
+      const pages = el.querySelectorAll<HTMLElement>('[id="document-preview"]');
+      const targets = pages.length > 0 ? Array.from(pages) : [el];
+
+      const origStyles = targets.map((t) => ({
+        width: t.style.width,
+        maxWidth: t.style.maxWidth,
+        minHeight: t.style.minHeight,
+        padding: t.style.padding,
+      }));
+
+      targets.forEach((t) => {
+        t.style.width = "210mm";
+        t.style.maxWidth = "none";
+        t.style.minHeight = "297mm";
+        t.style.padding = "2rem";
+      });
+
       // Wait for reflow
       await new Promise((r) => setTimeout(r, 100));
       try {
         return await fn();
       } finally {
-        el.style.width = origWidth;
-        el.style.maxWidth = origMaxWidth;
-        el.style.minHeight = origMinHeight;
-        el.style.padding = origPadding;
+        targets.forEach((t, i) => {
+          t.style.width = origStyles[i].width;
+          t.style.maxWidth = origStyles[i].maxWidth;
+          t.style.minHeight = origStyles[i].minHeight;
+          t.style.padding = origStyles[i].padding;
+        });
       }
     },
     []
@@ -203,30 +215,42 @@ export function ExportToolbar({
       // Preload images first
       await preloadImages(el);
 
-      const canvas = await html2canvas(el, {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      });
+      // Find individual pages for multi-page documents
+      const pages = el.querySelectorAll<HTMLElement>('[id="document-preview"]');
+      const targets = pages.length > 1 ? Array.from(pages) : [el];
+      const suffixes = pages.length > 1 ? ["-ต้นฉบับ", "-สำเนา"] : [""];
 
-      const blob = await new Promise<Blob | null>((resolve) => {
-        canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92);
-      });
+      const files: File[] = [];
+      for (let i = 0; i < targets.length; i++) {
+        const canvas = await html2canvas(targets[i], {
+          scale: 3,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        });
 
-      if (!blob) {
+        const blob = await new Promise<Blob | null>((resolve) => {
+          canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92);
+        });
+
+        if (blob) {
+          files.push(
+            new File([blob], `${filename}${suffixes[i]}.jpg`, {
+              type: "image/jpeg",
+            })
+          );
+        }
+      }
+
+      if (files.length === 0) {
         toast.error("ไม่สามารถสร้างไฟล์สำหรับแชร์ได้");
         return;
       }
 
-      const file = new File([blob], `${filename}.jpg`, {
-        type: "image/jpeg",
-      });
-
       const shared = await shareFile({
         title: filename,
         text: `เอกสาร ${filename}`,
-        files: [file],
+        files,
       });
 
       if (!shared) {
