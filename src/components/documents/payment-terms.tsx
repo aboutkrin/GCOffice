@@ -107,6 +107,7 @@ export function PaymentTermsSection({
                   <Label className="text-xs text-muted-foreground">ค่า</Label>
                   <Input
                     type="number"
+                    step="any"
                     min={0}
                     value={term.value || ""}
                     onChange={(e) =>
@@ -133,6 +134,7 @@ export function PaymentTermsSection({
                 </Label>
                 <Input
                   type="number"
+                  step="any"
                   min={0}
                   value={term.value || ""}
                   onChange={(e) => {
