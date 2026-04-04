@@ -18,6 +18,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/ui/decimal-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -212,13 +213,10 @@ export function PaymentTermTemplateForm({ initialData }: PaymentTermTemplateForm
 
                 <div className="w-full sm:w-[100px] space-y-1">
                   <Label className="text-xs text-muted-foreground">ค่า</Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    min={0}
+                  <DecimalInput
                     value={item.value || ""}
-                    onChange={(e) =>
-                      updateItem(index, { value: Number(e.target.value) })
+                    onChange={(val) =>
+                      updateItem(index, { value: val })
                     }
                     placeholder={item.type === "PERCENTAGE" ? "%" : "฿"}
                     className="h-9"
