@@ -214,6 +214,7 @@ export function PaymentTermTemplateForm({ initialData }: PaymentTermTemplateForm
                   <Label className="text-xs text-muted-foreground">ค่า</Label>
                   <Input
                     type="number"
+                    step="any"
                     min={0}
                     value={item.value || ""}
                     onChange={(e) =>

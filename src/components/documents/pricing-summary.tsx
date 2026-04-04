@@ -88,6 +88,7 @@ export function PricingSummary({
           {discountType && (
             <Input
               type="number"
+              step="any"
               min={0}
               value={discountValue || ""}
               onChange={(e) => onDiscountValueChange(Number(e.target.value))}
