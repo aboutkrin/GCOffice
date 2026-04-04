@@ -64,23 +64,17 @@ export async function exportToPdf(
       const imgData = canvas.toDataURL("image/jpeg", 0.95);
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      const ratio = pdfWidth / imgWidth;
+
+      // Scale to fit exactly one A4 page (each document-preview is one A4 page)
+      const widthRatio = pdfWidth / imgWidth;
+      const heightRatio = pdfHeight / imgHeight;
+      const ratio = Math.min(widthRatio, heightRatio);
+      const scaledWidth = imgWidth * ratio;
       const scaledHeight = imgHeight * ratio;
 
-      // If the page content fits in one A4 page, just add it
-      // If it overflows, handle multi-page for that single document
-      let position = 0;
-      let heightLeft = scaledHeight;
-
-      pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, scaledHeight);
-      heightLeft -= pdfHeight;
-
-      while (heightLeft > 0) {
-        position -= pdfHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "JPEG", 0, position, pdfWidth, scaledHeight);
-        heightLeft -= pdfHeight;
-      }
+      // Center on the page
+      const xOffset = (pdfWidth - scaledWidth) / 2;
+      pdf.addImage(imgData, "JPEG", xOffset, 0, scaledWidth, scaledHeight);
     }
   } else {
     // Single page: original behavior
