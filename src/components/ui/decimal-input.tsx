@@ -19,9 +19,11 @@ function DecimalInput({ value, onChange, ...props }: DecimalInputProps) {
   React.useEffect(() => {
     if (value !== prevValueRef.current) {
       prevValueRef.current = value;
+      const numericValue = value === "" ? NaN : Number(value);
       const newStr = value === "" || value === 0 ? "" : String(value);
       // Only update if the numeric values differ (preserve intermediate states like "5575.")
-      if (Number(localValue) !== value || localValue === "") {
+      const localNum = Number(localValue);
+      if (localValue === "" || (!isNaN(numericValue) && localNum !== numericValue)) {
         setLocalValue(newStr);
       }
     }
