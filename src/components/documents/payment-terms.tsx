@@ -201,7 +201,7 @@ export function PaymentTermsSection({
               </div>
             )}
 
-            {documentType === "RECEIPT" || documentType === "INVOICE" ? (
+            {documentType === "RECEIPT" ? (
               <PaymentDatePicker
                 value={term.note || ""}
                 onChange={(val) => updateTerm(term.id, { note: val })}
