@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,9 +11,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { formatNumber } from "@/lib/thai-currency";
-import { formatThaiDate } from "@/lib/thai-date";
-import { Trash2, AlertTriangle, CalendarDays } from "lucide-react";
+import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
+import { Trash2, AlertTriangle, CalendarDays, CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { PaymentTerm } from "@/hooks/use-payment-terms";
 import { PaymentTermTemplateSelect } from "./payment-term-template-select";
 
@@ -25,6 +33,57 @@ interface PaymentTermsProps {
   paymentTermTemplates?: any[];
   onApplyTemplate?: (templateItems: any[]) => void;
   deliveryCompletedDate?: Date | null;
+  documentType?: "QUOTATION" | "INVOICE" | "RECEIPT";
+}
+
+function PaymentDatePicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Parse stored date string back to Date object
+  const dateValue = value ? new Date(value) : undefined;
+  const isValidDate = dateValue && !isNaN(dateValue.getTime());
+
+  return (
+    <div className="w-full sm:w-[200px] space-y-1">
+      <Label className="text-xs text-muted-foreground">วันที่ชำระเงิน</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal h-9",
+              !isValidDate && "text-muted-foreground"
+            )}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {isValidDate
+              ? formatThaiDate(dateValue, "short")
+              : "เลือกวันที่"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={isValidDate ? dateValue : undefined}
+            onSelect={(date) => {
+              if (date) {
+                onChange(toUTCNoon(date).toISOString());
+              }
+              setOpen(false);
+            }}
+            initialFocus
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
 }
 
 export function PaymentTermsSection({
@@ -36,6 +95,7 @@ export function PaymentTermsSection({
   paymentTermTemplates,
   onApplyTemplate,
   deliveryCompletedDate,
+  documentType,
 }: PaymentTermsProps) {
   const mismatch =
     terms.length > 0 && Math.abs(totalAmount - grandTotal) > 0.01;
@@ -147,19 +207,26 @@ export function PaymentTermsSection({
               </div>
             )}
 
-            <div className="flex-1 w-full sm:w-auto space-y-1">
-              <Label className="text-xs text-muted-foreground">
-                หมายเหตุ
-              </Label>
-              <Input
+            {documentType === "RECEIPT" ? (
+              <PaymentDatePicker
                 value={term.note || ""}
-                onChange={(e) =>
-                  updateTerm(term.id, { note: e.target.value })
-                }
-                placeholder="หมายเหตุ"
-                className="h-9"
+                onChange={(val) => updateTerm(term.id, { note: val })}
               />
-            </div>
+            ) : (
+              <div className="flex-1 w-full sm:w-auto space-y-1">
+                <Label className="text-xs text-muted-foreground">
+                  หมายเหตุ
+                </Label>
+                <Input
+                  value={term.note || ""}
+                  onChange={(e) =>
+                    updateTerm(term.id, { note: e.target.value })
+                  }
+                  placeholder="หมายเหตุ"
+                  className="h-9"
+                />
+              </div>
+            )}
 
             <Button
               type="button"

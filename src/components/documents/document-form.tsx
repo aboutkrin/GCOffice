@@ -776,6 +776,7 @@ export function DocumentForm({
               paymentTermTemplates={paymentTermTemplates}
               onApplyTemplate={handleApplyTemplate}
               deliveryCompletedDate={deliveryCompletedDate}
+              documentType={type}
             />
           </CardContent>
         </Card>
