@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DecimalInput } from "@/components/ui/decimal-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -134,14 +135,11 @@ export function LineItemTable({
                   />
                 </TableCell>
                 <TableCell>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
+                  <DecimalInput
                     value={item.unitPrice || ""}
-                    onChange={(e) =>
+                    onChange={(val) =>
                       updateItem(item.id, {
-                        unitPrice: parseFloat(e.target.value) || 0,
+                        unitPrice: val,
                       })
                     }
                     className="h-9 text-right"
@@ -257,14 +255,11 @@ export function LineItemTable({
                 <Label className="text-xs text-muted-foreground">
                   ราคาต่อหน่วย
                 </Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
+                <DecimalInput
                   value={item.unitPrice || ""}
-                  onChange={(e) =>
+                  onChange={(val) =>
                     updateItem(item.id, {
-                      unitPrice: parseFloat(e.target.value) || 0,
+                      unitPrice: val,
                     })
                   }
                   className="h-9"
