@@ -21,7 +21,6 @@ import {
   Plus,
   Minus,
   History,
-  Settings2,
   Palette,
 } from "lucide-react";
 
@@ -56,7 +55,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { StockAdjustmentDialog } from "./stock-adjustment-dialog";
-import { StockThresholdDialog } from "./stock-threshold-dialog";
 
 interface StockTableProps {
   products: any[];
@@ -73,7 +71,6 @@ interface StockTableProps {
 
 function getStockStatus(product: any): string {
   if (product.stockQuantity === 0) return "OUT_OF_STOCK";
-  if (product.stockQuantity <= product.lowStockThreshold) return "LOW_STOCK";
   return "IN_STOCK";
 }
 
@@ -94,8 +91,6 @@ export function StockTable({
   const [adjustMode, setAdjustMode] = useState<"in" | "out">("in");
   const [adjustProduct, setAdjustProduct] = useState<any>(null);
   const [adjustVariant, setAdjustVariant] = useState<any>(null);
-  const [thresholdProduct, setThresholdProduct] = useState<any>(null);
-  const [thresholdVariant, setThresholdVariant] = useState<any>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const updateParams = useCallback(
@@ -207,32 +202,6 @@ export function StockTable({
       ),
     },
     {
-      accessorKey: "lowStockThreshold",
-      header: "จุดแจ้งเตือน",
-      cell: ({ row }) => (
-        <span className="font-mono text-muted-foreground">
-          {row.original.lowStockThreshold}
-        </span>
-      ),
-    },
-    {
-      id: "reorderQuantity",
-      header: "ต้องสั่งเพิ่ม",
-      cell: ({ row }) => {
-        const qty = Math.max(
-          0,
-          row.original.lowStockThreshold - row.original.stockQuantity
-        );
-        return qty > 0 ? (
-          <span className="font-mono font-medium text-amber-600">
-            {qty} กล่อง
-          </span>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        );
-      },
-    },
-    {
       id: "stockStatus",
       header: "สถานะสต็อค",
       cell: ({ row }) => {
@@ -274,15 +243,6 @@ export function StockTable({
             >
               <Minus className="size-4" />
               ลดสต็อค
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                setThresholdProduct(row.original);
-                setThresholdVariant(null);
-              }}
-            >
-              <Settings2 className="size-4" />
-              ตั้งค่าจุดแจ้งเตือน
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href={`/stock/${row.original.id}`}>
@@ -329,7 +289,6 @@ export function StockTable({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">ทั้งหมด</SelectItem>
-            <SelectItem value="low_stock">สินค้าใกล้หมด</SelectItem>
             <SelectItem value="out_of_stock">สินค้าหมด</SelectItem>
           </SelectContent>
         </Select>
@@ -369,7 +328,7 @@ export function StockTable({
                   <TableHead
                     key={header.id}
                     className={
-                      ["imageUrl", "lowStockThreshold", "reorderQuantity", "category.name"].includes(header.id)
+                      ["imageUrl", "category.name"].includes(header.id)
                         ? "hidden md:table-cell"
                         : ""
                     }
@@ -395,7 +354,7 @@ export function StockTable({
                         <TableCell
                           key={cell.id}
                           className={
-                            ["imageUrl", "lowStockThreshold", "reorderQuantity", "category.name"].includes(cell.column.id)
+                            ["imageUrl", "category.name"].includes(cell.column.id)
                               ? "hidden md:table-cell"
                               : ""
                           }
@@ -408,8 +367,6 @@ export function StockTable({
                       const variantStatus =
                         variant.stockQuantity === 0
                           ? "OUT_OF_STOCK"
-                          : variant.stockQuantity <= variant.lowStockThreshold
-                          ? "LOW_STOCK"
                           : "IN_STOCK";
                       return (
                         <TableRow key={`variant-${variant.id}`} className="bg-muted/30">
@@ -447,26 +404,6 @@ export function StockTable({
                               {variant.stockQuantity}
                             </span>
                           </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            <span className="font-mono text-muted-foreground">
-                              {variant.lowStockThreshold}
-                            </span>
-                          </TableCell>
-                          <TableCell className="hidden md:table-cell">
-                            {(() => {
-                              const reorderQty = Math.max(
-                                0,
-                                variant.lowStockThreshold - variant.stockQuantity
-                              );
-                              return reorderQty > 0 ? (
-                                <span className="font-mono font-medium text-amber-600">
-                                  {reorderQty} กล่อง
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              );
-                            })()}
-                          </TableCell>
                           <TableCell>
                             <Badge className={STOCK_STATUS_COLORS[variantStatus]}>
                               {STOCK_STATUS_LABELS[variantStatus]}
@@ -499,15 +436,6 @@ export function StockTable({
                                 >
                                   <Minus className="size-4" />
                                   ลดสต็อค
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setThresholdProduct(product);
-                                    setThresholdVariant(variant);
-                                  }}
-                                >
-                                  <Settings2 className="size-4" />
-                                  ตั้งค่าจุดแจ้งเตือน
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -575,18 +503,6 @@ export function StockTable({
         colorVariant={adjustVariant}
       />
 
-      {/* Threshold Dialog */}
-      <StockThresholdDialog
-        open={!!thresholdProduct}
-        onOpenChange={(open) => {
-          if (!open) {
-            setThresholdProduct(null);
-            setThresholdVariant(null);
-          }
-        }}
-        product={thresholdProduct}
-        colorVariant={thresholdVariant}
-      />
     </div>
   );
 }
