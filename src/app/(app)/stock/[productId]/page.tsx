@@ -21,7 +21,6 @@ interface ProductStockPageProps {
 
 function getStockStatus(product: any): string {
   if (product.stockQuantity === 0) return "OUT_OF_STOCK";
-  if (product.stockQuantity <= product.lowStockThreshold) return "LOW_STOCK";
   return "IN_STOCK";
 }
 
@@ -62,7 +61,7 @@ export default async function ProductStockPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -71,16 +70,6 @@ export default async function ProductStockPage({
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{product.stockQuantity}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              จุดแจ้งเตือน
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{product.lowStockThreshold}</p>
           </CardContent>
         </Card>
         <Card>
@@ -105,8 +94,6 @@ export default async function ProductStockPage({
               const variantStatus =
                 variant.stockQuantity === 0
                   ? "OUT_OF_STOCK"
-                  : variant.stockQuantity <= variant.lowStockThreshold
-                  ? "LOW_STOCK"
                   : "IN_STOCK";
               return (
                 <Card key={variant.id}>
@@ -130,9 +117,6 @@ export default async function ProductStockPage({
                         {STOCK_STATUS_LABELS[variantStatus]}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      แจ้งเตือน: {variant.lowStockThreshold}
-                    </p>
                   </CardContent>
                 </Card>
               );

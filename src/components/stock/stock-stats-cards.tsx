@@ -1,6 +1,6 @@
 "use client";
 
-import { Package, PackageCheck, AlertTriangle, PackageX, ShoppingCart } from "lucide-react";
+import { Package, PackageCheck, PackageX } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface StockStatsCardsProps {
@@ -30,30 +30,16 @@ export function StockStatsCards({ stats }: StockStatsCardsProps) {
       bg: "bg-green-50",
     },
     {
-      label: "สินค้าใกล้หมด",
-      value: stats.lowStock,
-      icon: AlertTriangle,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
-    },
-    {
       label: "สินค้าหมด",
       value: stats.outOfStock,
       icon: PackageX,
       color: "text-red-600",
       bg: "bg-red-50",
     },
-    {
-      label: "ต้องสั่งเพิ่ม (กล่อง)",
-      value: stats.totalReorderQuantity,
-      icon: ShoppingCart,
-      color: "text-orange-600",
-      bg: "bg-orange-50",
-    },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
       {cards.map((card) => (
         <Card key={card.label}>
           <CardContent className="flex items-center gap-3 p-4">
