@@ -34,8 +34,7 @@ export async function createDocument(data: unknown) {
     // For RECEIPT type, generate custom invoice number if not provided
     let customInvoiceNumber: string | undefined;
     if (validated.type === "RECEIPT") {
-      customInvoiceNumber = validated.customInvoiceNumber?.trim() ||
-        await generateCustomInvoiceNumber(new Date(validated.documentDate));
+      customInvoiceNumber = validated.customInvoiceNumber?.trim() || undefined;
     }
 
     const company = await prisma.company.findUniqueOrThrow({

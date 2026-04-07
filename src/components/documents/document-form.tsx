@@ -53,7 +53,7 @@ import { PaymentTermsSection } from "./payment-terms";
 import { DeliveryInfo } from "./delivery-info";
 
 import { Input } from "@/components/ui/input";
-import { createDocument, updateDocument, getNextCustomInvoiceNumber } from "@/actions/document-actions";
+import { createDocument, updateDocument } from "@/actions/document-actions";
 import { calculateDeliveryDates, type Holiday } from "@/lib/delivery-date";
 
 // Form schema for top-level fields only (line items & payment terms handled by hooks)
@@ -197,15 +197,6 @@ export function DocumentForm({
   const selectedCompanyId = form.watch("companyId");
 
 
-  // Auto-generate custom invoice number for new RECEIPT documents
-  useEffect(() => {
-    if (type === "RECEIPT" && !isEditing && !customInvoiceNumber) {
-      const docDate = form.getValues("documentDate");
-      getNextCustomInvoiceNumber(docDate).then((num) => {
-        setCustomInvoiceNumber(num);
-      });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pre-fill footerNotes from company defaults when creating a new document
   useEffect(() => {
@@ -597,7 +588,7 @@ export function DocumentForm({
                   placeholder="เช่น A 6903-001"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  ระบบจะสร้างเลขอัตโนมัติ หรือแก้ไขเลขเองได้
+                  ถ้าไม่ระบุ ระบบจะใช้เลขที่เอกสารอัตโนมัติ
                 </p>
               </div>
             )}
