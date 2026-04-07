@@ -223,7 +223,7 @@ export function ExportToolbar({
 
       // Find individual pages for multi-page documents
       const pages = el.querySelectorAll<HTMLElement>('[id="document-preview"]');
-      const targets = pages.length > 1 ? Array.from(pages) : [el];
+      const targets = pages.length > 1 ? Array.from(pages) : pages.length === 1 ? [pages[0]] : [el];
       const suffixes = pages.length > 1 ? ["-ต้นฉบับ", "-สำเนา"] : [""];
 
       const files: File[] = [];

@@ -77,8 +77,9 @@ export async function exportToPdf(
       pdf.addImage(imgData, "JPEG", xOffset, 0, scaledWidth, scaledHeight);
     }
   } else {
-    // Single page: original behavior
-    const canvas = await html2canvas(element, {
+    // Single page: capture the document-preview element (A4 sized) instead of the outer container
+    const target = pages.length === 1 ? pages[0] : element;
+    const canvas = await html2canvas(target, {
       scale: 2,
       useCORS: true,
       logging: false,
