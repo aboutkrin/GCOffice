@@ -89,8 +89,9 @@ export async function exportToJpg(
     return firstBlob;
   }
 
-  // Single page: export as before
-  const canvas = await captureElement(element);
+  // Single page: capture the document-preview element (A4 sized) instead of the outer container
+  const target = pages.length === 1 ? pages[0] : element;
+  const canvas = await captureElement(target);
 
   return new Promise((resolve) => {
     canvas.toBlob(
