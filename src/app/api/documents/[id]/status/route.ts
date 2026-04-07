@@ -1,13 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma";
 import { DocumentStatus } from "@/generated/prisma/client";
-import {
-  deductStockForDocument,
-  restoreStockForDocument,
-  type StockShortage,
-} from "@/actions/stock-actions";
-import { revalidatePath } from "next/cache";
+import { updateDocumentStatus } from "@/actions/document-actions";
 
 const VALID_STATUSES: string[] = [
   DocumentStatus.DRAFT,
@@ -18,11 +12,6 @@ const VALID_STATUSES: string[] = [
   DocumentStatus.PAID,
   DocumentStatus.DEPOSITED,
   DocumentStatus.CANCELLED,
-];
-
-const STOCK_DEDUCTED_STATUSES: DocumentStatus[] = [
-  DocumentStatus.CONFIRMED,
-  DocumentStatus.SHIPPED,
 ];
 
 export async function PATCH(
@@ -57,41 +46,9 @@ export async function PATCH(
     }
 
     const { id } = await params;
+    const result = await updateDocumentStatus(id, status as DocumentStatus);
 
-    // Get current document status before updating
-    const currentDocument = await prisma.document.findUniqueOrThrow({
-      where: { id },
-      select: { status: true },
-    });
-    const oldStatus = currentDocument.status;
-    const newStatus = status as DocumentStatus;
-
-    // Update document status
-    const updatedDocument = await prisma.document.update({
-      where: { id },
-      data: { status: newStatus },
-    });
-
-    // Stock deduction/restore logic
-    let shortages: StockShortage[] = [];
-
-    const wasDeducted = STOCK_DEDUCTED_STATUSES.includes(oldStatus);
-    const shouldDeduct = newStatus === DocumentStatus.CONFIRMED && !wasDeducted;
-    const shouldRestore =
-      newStatus === DocumentStatus.CANCELLED && wasDeducted;
-
-    if (shouldDeduct) {
-      const result = await deductStockForDocument(id);
-      shortages = result.shortages;
-    } else if (shouldRestore) {
-      await restoreStockForDocument(id);
-    }
-
-    if (shouldDeduct || shouldRestore) {
-      revalidatePath("/stock");
-    }
-
-    return NextResponse.json({ ...updatedDocument, shortages });
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Status update error:", error);
     return NextResponse.json(

@@ -9,6 +9,16 @@ import { DocumentStatus, PaymentTermType } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { toUTCNoon } from "@/lib/thai-date";
 import { ZodError } from "zod";
+import {
+  deductStockForDocument,
+  restoreStockForDocument,
+  type StockShortage,
+} from "@/actions/stock-actions";
+
+const STOCK_DEDUCTED_STATUSES: DocumentStatus[] = [
+  DocumentStatus.CONFIRMED,
+  DocumentStatus.SHIPPED,
+];
 
 function formatZodError(error: ZodError): string {
   return error.issues
@@ -329,14 +339,43 @@ export async function updateDocumentStatus(
   id: string,
   status: DocumentStatus
 ) {
+  // Fetch current status to determine stock actions
+  const currentDocument = await prisma.document.findUniqueOrThrow({
+    where: { id },
+    select: { status: true },
+  });
+
+  const oldStatus = currentDocument.status;
+  const newStatus = status;
+
+  // Update the status
   const document = await prisma.document.update({
     where: { id },
-    data: { status },
+    data: { status: newStatus },
   });
+
+  // Stock deduction/restore logic
+  let shortages: StockShortage[] = [];
+
+  const wasDeducted = STOCK_DEDUCTED_STATUSES.includes(oldStatus);
+  const shouldDeduct = newStatus === DocumentStatus.CONFIRMED && !wasDeducted;
+  const shouldRestore = newStatus === DocumentStatus.CANCELLED && wasDeducted;
+
+  if (shouldDeduct) {
+    const result = await deductStockForDocument(id);
+    shortages = result.shortages;
+  } else if (shouldRestore) {
+    await restoreStockForDocument(id);
+  }
+
+  if (shouldDeduct || shouldRestore) {
+    revalidatePath("/stock");
+  }
+
   revalidatePath("/quotations");
   revalidatePath("/invoices");
   revalidatePath("/receipts");
-  return serialize(document);
+  return serialize({ ...document, shortages });
 }
 
 export async function getDocumentForShare(id: string) {
@@ -385,10 +424,24 @@ export async function getNextCustomInvoiceNumber(documentDate: Date) {
 }
 
 export async function deleteDocument(id: string) {
+  // Fetch current status to check if stock needs restoring
+  const currentDocument = await prisma.document.findUniqueOrThrow({
+    where: { id },
+    select: { status: true },
+  });
+
   await prisma.document.update({
     where: { id },
     data: { status: "CANCELLED" },
   });
+
+  // Restore stock if the document had stock deducted
+  const wasDeducted = STOCK_DEDUCTED_STATUSES.includes(currentDocument.status);
+  if (wasDeducted) {
+    await restoreStockForDocument(id);
+    revalidatePath("/stock");
+  }
+
   revalidatePath("/quotations");
   revalidatePath("/invoices");
   revalidatePath("/receipts");
