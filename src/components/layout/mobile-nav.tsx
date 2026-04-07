@@ -8,6 +8,7 @@ import {
   FilePlus,
   Users,
   FileText,
+  Warehouse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,9 +35,9 @@ const mobileNavItems = [
     icon: Package,
   },
   {
-    href: "/customers",
-    label: "ลูกค้า",
-    icon: Users,
+    href: "/stock",
+    label: "สต็อค",
+    icon: Warehouse,
   },
 ];
 

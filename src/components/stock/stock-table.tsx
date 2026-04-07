@@ -11,7 +11,6 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import {
-  MoreHorizontal,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -47,12 +46,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 import { StockAdjustmentDialog } from "./stock-adjustment-dialog";
 
@@ -71,6 +64,7 @@ interface StockTableProps {
 
 function getStockStatus(product: any): string {
   if (product.stockQuantity === 0) return "OUT_OF_STOCK";
+  if (product.stockQuantity <= product.lowStockThreshold) return "LOW_STOCK";
   return "IN_STOCK";
 }
 
@@ -217,41 +211,42 @@ export function StockTable({
       id: "actions",
       header: "จัดการ",
       cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-xs">
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={() => {
-                setAdjustMode("in");
-                setAdjustProduct(row.original);
-                setAdjustVariant(null);
-              }}
-            >
-              <Plus className="size-4" />
-              เพิ่มสต็อค
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => {
-                setAdjustMode("out");
-                setAdjustProduct(row.original);
-                setAdjustVariant(null);
-              }}
-            >
-              <Minus className="size-4" />
-              ลดสต็อค
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href={`/stock/${row.original.id}`}>
-                <History className="size-4" />
-                ดูประวัติ
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon-xs"
+            title="เพิ่มสต็อค"
+            onClick={() => {
+              setAdjustMode("in");
+              setAdjustProduct(row.original);
+              setAdjustVariant(null);
+            }}
+          >
+            <Plus className="size-3.5" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-xs"
+            title="ลดสต็อค"
+            onClick={() => {
+              setAdjustMode("out");
+              setAdjustProduct(row.original);
+              setAdjustVariant(null);
+            }}
+          >
+            <Minus className="size-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            title="ดูประวัติ"
+            asChild
+          >
+            <Link href={`/stock/${row.original.id}`}>
+              <History className="size-3.5" />
+            </Link>
+          </Button>
+        </div>
       ),
     },
   ];
@@ -289,6 +284,7 @@ export function StockTable({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">ทั้งหมด</SelectItem>
+            <SelectItem value="low_stock">สินค้าใกล้หมด</SelectItem>
             <SelectItem value="out_of_stock">สินค้าหมด</SelectItem>
           </SelectContent>
         </Select>
@@ -367,7 +363,9 @@ export function StockTable({
                       const variantStatus =
                         variant.stockQuantity === 0
                           ? "OUT_OF_STOCK"
-                          : "IN_STOCK";
+                          : variant.stockQuantity <= variant.lowStockThreshold
+                            ? "LOW_STOCK"
+                            : "IN_STOCK";
                       return (
                         <TableRow key={`variant-${variant.id}`} className="bg-muted/30">
                           <TableCell className="hidden md:table-cell" />
@@ -410,35 +408,32 @@ export function StockTable({
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon-xs">
-                                  <MoreHorizontal className="size-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setAdjustMode("in");
-                                    setAdjustProduct(product);
-                                    setAdjustVariant(variant);
-                                  }}
-                                >
-                                  <Plus className="size-4" />
-                                  เพิ่มสต็อค
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setAdjustMode("out");
-                                    setAdjustProduct(product);
-                                    setAdjustVariant(variant);
-                                  }}
-                                >
-                                  <Minus className="size-4" />
-                                  ลดสต็อค
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="icon-xs"
+                                title="เพิ่มสต็อค"
+                                onClick={() => {
+                                  setAdjustMode("in");
+                                  setAdjustProduct(product);
+                                  setAdjustVariant(variant);
+                                }}
+                              >
+                                <Plus className="size-3.5" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon-xs"
+                                title="ลดสต็อค"
+                                onClick={() => {
+                                  setAdjustMode("out");
+                                  setAdjustProduct(product);
+                                  setAdjustVariant(variant);
+                                }}
+                              >
+                                <Minus className="size-3.5" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );

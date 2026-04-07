@@ -70,10 +70,24 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
   const handleStatusChange = (docId: string, newStatus: string) => {
     startTransition(async () => {
       try {
-        await updateDocumentStatus(docId, newStatus as any);
+        const result = await updateDocumentStatus(docId, newStatus as any);
         toast.success(
           `เปลี่ยนสถานะเป็น "${DOCUMENT_STATUS_LABELS[newStatus]}" สำเร็จ`
         );
+
+        // Show shortage warning if stock was insufficient
+        if (result?.shortages && result.shortages.length > 0) {
+          const shortageLines = result.shortages
+            .map(
+              (s: { productSku: string; colorVariantName?: string | null; shortage: number }) =>
+                `${s.productSku}${s.colorVariantName ? ` (${s.colorVariantName})` : ""} ขาดอีก ${s.shortage} กล่อง`
+            )
+            .join("\n");
+          toast.warning("สต็อคไม่เพียงพอ", {
+            description: shortageLines,
+            duration: 10000,
+          });
+        }
       } catch (error) {
         console.error("Status update failed:", error);
         toast.error("ไม่สามารถเปลี่ยนสถานะได้");
