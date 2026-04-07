@@ -121,10 +121,9 @@ export function DocumentForm({
   const [deliveryCompletedDate, setDeliveryCompletedDate] = useState<Date | null>(
     initialData?.deliveryCompletedDate ? new Date(initialData.deliveryCompletedDate) : null
   );
-  const [paymentDate, setPaymentDate] = useState<Date | null>(
+  const [paymentDate] = useState<Date | null>(
     initialData?.paymentDate ? new Date(initialData.paymentDate) : null
   );
-  const [paymentDatePopoverOpen, setPaymentDatePopoverOpen] = useState(false);
   const [sourceQuotationId, setSourceQuotationId] = useState<string | undefined>(
     initialData?.sourceQuotationId || undefined
   );
@@ -197,12 +196,6 @@ export function DocumentForm({
   const vatRate = form.watch("vatRate");
   const selectedCompanyId = form.watch("companyId");
 
-  // Auto-set payment date to today for new RECEIPT documents
-  useEffect(() => {
-    if (type === "RECEIPT" && !isEditing && !paymentDate) {
-      setPaymentDate(toUTCNoon(new Date()));
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-generate custom invoice number for new RECEIPT documents
   useEffect(() => {
@@ -609,39 +602,6 @@ export function DocumentForm({
               </div>
             )}
 
-            {/* Payment Date - RECEIPT only */}
-            {type === "RECEIPT" && (
-              <div className="mb-4">
-                <Label>วันที่ชำระเงิน</Label>
-                <Popover open={paymentDatePopoverOpen} onOpenChange={setPaymentDatePopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn(
-                        "w-full max-w-xs mt-1.5 justify-start text-left font-normal",
-                        !paymentDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {paymentDate
-                        ? formatThaiDate(paymentDate, "short")
-                        : "เลือกวันที่ชำระเงิน"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={paymentDate ?? undefined}
-                      onSelect={(date) => {
-                        setPaymentDate(date ? toUTCNoon(date) : null);
-                        setPaymentDatePopoverOpen(false);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Company Select */}
