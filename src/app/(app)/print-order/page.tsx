@@ -1,10 +1,10 @@
-import { searchCustomers } from "@/data/customers";
+import { getCustomers } from "@/data/customers";
 import { PrintOrderForm } from "@/components/print-order/print-order-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function PrintOrderPage() {
-  const customers = await searchCustomers("");
+  const customers = await getCustomers({ status: "ACTIVE" });
 
   return (
     <div className="space-y-6">
