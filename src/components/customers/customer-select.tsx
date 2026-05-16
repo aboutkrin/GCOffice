@@ -62,14 +62,19 @@ export function CustomerSelect({ value, onSelect, customers: initialCustomers }:
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0" align="start">
+      <PopoverContent
+        className="w-[400px] p-0"
+        align="start"
+        side="bottom"
+        avoidCollisions={false}
+      >
         <Command shouldFilter={false}>
           <CommandInput
             placeholder="ค้นหาลูกค้า..."
             value={query}
             onValueChange={setQuery}
           />
-          <CommandList className="max-h-[70vh]">
+          <CommandList className="max-h-[min(70vh,var(--radix-popover-content-available-height))]">
             <CommandEmpty>ไม่พบข้อมูลลูกค้า</CommandEmpty>
             <CommandGroup>
               {filteredCustomers.map((customer) => (
