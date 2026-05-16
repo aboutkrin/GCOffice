@@ -69,7 +69,7 @@ export function CustomerSelect({ value, onSelect, customers: initialCustomers }:
             value={query}
             onValueChange={setQuery}
           />
-          <CommandList>
+          <CommandList className="max-h-[70vh]">
             <CommandEmpty>ไม่พบข้อมูลลูกค้า</CommandEmpty>
             <CommandGroup>
               {filteredCustomers.map((customer) => (
