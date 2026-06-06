@@ -67,7 +67,7 @@ export function YearlyStatsCards({ initialData }: YearlyStatsCardsProps) {
     {
       title: "ยอดขาย",
       value: formatBaht(data.confirmedTotal),
-      subtitle: `VAT ${formatBaht(data.vatTotal)}`,
+      subtitle: `ยอดไม่รวม VAT ${formatBaht(data.vatTotal)}`,
       icon: Banknote,
       href: `/invoices?${yearParam}&status=PAID,DEPOSITED`,
     },

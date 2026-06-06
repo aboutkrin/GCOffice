@@ -68,7 +68,7 @@ export default async function DashboardPage() {
     {
       title: "ยอดขายเดือนนี้",
       value: formatBaht(stats.thisMonthConfirmedTotal),
-      subtitle: `VAT ${formatBaht(stats.thisMonthVatTotal)}`,
+      subtitle: `ยอดไม่รวม VAT ${formatBaht(stats.thisMonthVatTotal)}`,
       icon: Banknote,
       href: `/invoices?${monthParams}&status=PAID,DEPOSITED`,
     },
