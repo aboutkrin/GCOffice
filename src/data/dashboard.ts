@@ -64,10 +64,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     thisMonthInvoices,
     thisMonthPendingDocuments,
     thisMonthPendingCollection,
-    thisMonthPaidTotal,
-    thisMonthDepositedTotal,
-    thisMonthPaidVat,
-    thisMonthDepositedVatRaw,
+    thisMonthConfirmedGrossTotal,
+    thisMonthConfirmedVatTotal,
     recentDocuments,
   ] = await Promise.all([
     safeCount({
@@ -93,49 +91,25 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
     }),
 
-    // Sum grandTotal for PAID invoices
+    // Sum grandTotal for CONFIRMED quotations
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
-        type: DocumentType.INVOICE,
-        status: DocumentStatus.PAID,
+        type: DocumentType.QUOTATION,
+        status: DocumentStatus.CONFIRMED,
         ...thisMonthFilter,
       },
     }).catch(() => null),
 
-    // Sum first payment term (sequence=1) calculatedAmount for DEPOSITED invoices
-    prisma.documentPaymentTerm.aggregate({
-      _sum: { calculatedAmount: true },
-      where: {
-        sequence: 1,
-        document: {
-          type: DocumentType.INVOICE,
-          status: DocumentStatus.DEPOSITED,
-          ...thisMonthFilter,
-        },
-      },
-    }).catch(() => null),
-
-    // Sum vatAmount for PAID invoices
+    // Sum vatAmount for CONFIRMED quotations
     prisma.document.aggregate({
       _sum: { vatAmount: true },
       where: {
-        type: DocumentType.INVOICE,
-        status: DocumentStatus.PAID,
+        type: DocumentType.QUOTATION,
+        status: DocumentStatus.CONFIRMED,
         ...thisMonthFilter,
       },
     }).catch(() => null),
-
-    // Sum proportional VAT for DEPOSITED invoices (first payment term)
-    prisma.$queryRaw<{ total: number }[]>`
-      SELECT COALESCE(SUM(dpt.calculated_amount * d.vat_amount / NULLIF(d.grand_total, 0)), 0)::float8 AS total
-      FROM documents d
-      INNER JOIN document_payment_terms dpt ON dpt.document_id = d.id AND dpt.sequence = 1
-      WHERE d.type = 'INVOICE'
-        AND d.status = 'DEPOSITED'
-        AND d.document_date >= ${startOfMonth}
-        AND d.document_date <= ${endOfMonth}
-    `.catch(() => [] as { total: number }[]),
 
     prisma.document.findMany({
       where: { status: { not: DocumentStatus.DRAFT } },
@@ -154,13 +128,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }).catch(() => [] as any[]),
   ]);
 
-  const paidVat = thisMonthPaidVat?._sum.vatAmount?.toNumber() ?? 0;
-  const depositedVat = thisMonthDepositedVatRaw?.[0]?.total ?? 0;
-  const totalVat = paidVat + depositedVat;
-
-  const grossTotal =
-    (thisMonthPaidTotal?._sum.grandTotal?.toNumber() ?? 0) +
-    (thisMonthDepositedTotal?._sum.calculatedAmount?.toNumber() ?? 0);
+  const totalVat = thisMonthConfirmedVatTotal?._sum.vatAmount?.toNumber() ?? 0;
+  const grossTotal = thisMonthConfirmedGrossTotal?._sum.grandTotal?.toNumber() ?? 0;
 
   return {
     thisMonthQuotations,
@@ -210,7 +179,7 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     }
   }
 
-  const [quotations, invoices, pendingDocuments, pendingCollection, paidTotal, depositedTotal, paidVat, depositedVatRaw, yearsData] = await Promise.all([
+  const [quotations, invoices, pendingDocuments, pendingCollection, confirmedGrossTotal, confirmedVatTotal, yearsData] = await Promise.all([
     safeCount({
       where: { type: DocumentType.QUOTATION, ...excludeDraft, ...yearFilter },
     }),
@@ -227,46 +196,24 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
         ...yearFilter,
       },
     }),
-    // Sum grandTotal for PAID invoices
+    // Sum grandTotal for CONFIRMED quotations
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
-        type: DocumentType.INVOICE,
-        status: DocumentStatus.PAID,
+        type: DocumentType.QUOTATION,
+        status: DocumentStatus.CONFIRMED,
         ...yearFilter,
       },
     }).catch(() => null),
-    // Sum first payment term (sequence=1) calculatedAmount for DEPOSITED invoices
-    prisma.documentPaymentTerm.aggregate({
-      _sum: { calculatedAmount: true },
-      where: {
-        sequence: 1,
-        document: {
-          type: DocumentType.INVOICE,
-          status: DocumentStatus.DEPOSITED,
-          ...yearFilter,
-        },
-      },
-    }).catch(() => null),
-    // Sum vatAmount for PAID invoices
+    // Sum vatAmount for CONFIRMED quotations
     prisma.document.aggregate({
       _sum: { vatAmount: true },
       where: {
-        type: DocumentType.INVOICE,
-        status: DocumentStatus.PAID,
+        type: DocumentType.QUOTATION,
+        status: DocumentStatus.CONFIRMED,
         ...yearFilter,
       },
     }).catch(() => null),
-    // Sum proportional VAT for DEPOSITED invoices (first payment term)
-    prisma.$queryRaw<{ total: number }[]>`
-      SELECT COALESCE(SUM(dpt.calculated_amount * d.vat_amount / NULLIF(d.grand_total, 0)), 0)::float8 AS total
-      FROM documents d
-      INNER JOIN document_payment_terms dpt ON dpt.document_id = d.id AND dpt.sequence = 1
-      WHERE d.type = 'INVOICE'
-        AND d.status = 'DEPOSITED'
-        AND d.document_date >= ${startOfYear}
-        AND d.document_date <= ${endOfYear}
-    `.catch(() => [] as { total: number }[]),
     prisma.$queryRaw<{ year: number }[]>`
       SELECT DISTINCT EXTRACT(YEAR FROM document_date)::int AS year
       FROM documents
@@ -274,13 +221,8 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
     `.catch(() => [] as { year: number }[]),
   ]);
 
-  const yearPaidVat = paidVat?._sum.vatAmount?.toNumber() ?? 0;
-  const yearDepositedVat = depositedVatRaw?.[0]?.total ?? 0;
-  const totalVat = yearPaidVat + yearDepositedVat;
-
-  const grossTotal =
-    (paidTotal?._sum.grandTotal?.toNumber() ?? 0) +
-    (depositedTotal?._sum.calculatedAmount?.toNumber() ?? 0);
+  const totalVat = confirmedVatTotal?._sum.vatAmount?.toNumber() ?? 0;
+  const grossTotal = confirmedGrossTotal?._sum.grandTotal?.toNumber() ?? 0;
 
   const availableYears = yearsData.map((d) => d.year);
   if (!availableYears.includes(year)) {
