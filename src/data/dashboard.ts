@@ -91,22 +91,22 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
     }),
 
-    // Sum grandTotal for CONFIRMED quotations
+    // Sum grandTotal for CONFIRMED/SHIPPED/BILLED quotations
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
         type: DocumentType.QUOTATION,
-        status: DocumentStatus.CONFIRMED,
+        status: { in: [DocumentStatus.CONFIRMED, DocumentStatus.SHIPPED, DocumentStatus.BILLED] },
         ...thisMonthFilter,
       },
     }).catch(() => null),
 
-    // Sum vatAmount for CONFIRMED quotations
+    // Sum vatAmount for CONFIRMED/SHIPPED/BILLED quotations
     prisma.document.aggregate({
       _sum: { vatAmount: true },
       where: {
         type: DocumentType.QUOTATION,
-        status: DocumentStatus.CONFIRMED,
+        status: { in: [DocumentStatus.CONFIRMED, DocumentStatus.SHIPPED, DocumentStatus.BILLED] },
         ...thisMonthFilter,
       },
     }).catch(() => null),
@@ -196,21 +196,21 @@ export async function getYearlyStats(year: number): Promise<YearlyStats> {
         ...yearFilter,
       },
     }),
-    // Sum grandTotal for CONFIRMED quotations
+    // Sum grandTotal for CONFIRMED/SHIPPED/BILLED quotations
     prisma.document.aggregate({
       _sum: { grandTotal: true },
       where: {
         type: DocumentType.QUOTATION,
-        status: DocumentStatus.CONFIRMED,
+        status: { in: [DocumentStatus.CONFIRMED, DocumentStatus.SHIPPED, DocumentStatus.BILLED] },
         ...yearFilter,
       },
     }).catch(() => null),
-    // Sum vatAmount for CONFIRMED quotations
+    // Sum vatAmount for CONFIRMED/SHIPPED/BILLED quotations
     prisma.document.aggregate({
       _sum: { vatAmount: true },
       where: {
         type: DocumentType.QUOTATION,
-        status: DocumentStatus.CONFIRMED,
+        status: { in: [DocumentStatus.CONFIRMED, DocumentStatus.SHIPPED, DocumentStatus.BILLED] },
         ...yearFilter,
       },
     }).catch(() => null),
