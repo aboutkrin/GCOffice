@@ -41,11 +41,12 @@ export function PreviewSummary({
 
   return (
     <div className="mb-3 flex justify-end">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-lg">
         <table className="w-full text-[10px]">
           <tbody>
             {/* Subtotal */}
             <tr>
+              <td />
               <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
                 รวมเป็นเงิน
               </td>
@@ -57,6 +58,7 @@ export function PreviewSummary({
             {/* Shipping */}
             {shippingCost > 0 && (
               <tr>
+                <td />
                 <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
                   ค่าจัดส่ง
                 </td>
@@ -70,6 +72,7 @@ export function PreviewSummary({
             {hasDiscount && (
               <>
                 <tr>
+                  <td />
                   <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
                     {discountLabel}
                   </td>
@@ -78,6 +81,7 @@ export function PreviewSummary({
                   </td>
                 </tr>
                 <tr>
+                  <td />
                   <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
                     ราคาหลังหักส่วนลด
                   </td>
@@ -91,6 +95,7 @@ export function PreviewSummary({
             {/* VAT */}
             {vatEnabled && (
               <tr>
+                <td />
                 <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
                   ภาษีมูลค่าเพิ่ม {vatRate}%
                 </td>
@@ -102,30 +107,22 @@ export function PreviewSummary({
 
             {/* Grand Total */}
             <tr className="border-t-2 border-blue-200 bg-blue-100">
-              <td className="pt-2 pb-1 pr-2 sm:pr-4 text-right text-[14px] font-bold text-gray-900">
+              <td className="pt-2 pb-1 pl-2 text-left text-[10px] text-gray-700 align-middle">
+                <span className="font-medium">({bahtText(grandTotal)})</span>
+              </td>
+              <td className="pt-2 pb-1 pr-2 sm:pr-4 text-right text-[14px] font-bold text-gray-900 whitespace-nowrap">
                 รวมทั้งสิ้น
               </td>
               <td className="pt-2 pb-1 text-right text-[14px] font-bold text-primary w-24 sm:w-32">
                 {formatNumber(grandTotal)}
               </td>
             </tr>
-
-            {/* Baht currency label */}
-            <tr>
-              <td className="pr-2 sm:pr-4 text-right text-gray-500 text-[10px]" />
-              <td className="text-right text-[10px] text-gray-500">บาท</td>
-            </tr>
           </tbody>
         </table>
 
-        {/* Thai Baht Text */}
-        <div className="mt-1 rounded bg-blue-50 px-2 py-1 text-center text-[10px] text-gray-700 border border-blue-200">
-          <span className="font-medium">({bahtText(grandTotal)})</span>
-        </div>
-
         {/* Free shipping note */}
         {freeShipping && (
-          <div className="mt-1.5 text-center text-[11px] font-semibold text-red-600">
+          <div className="mt-1.5 text-right text-[11px] font-semibold text-red-600">
             * จัดส่งฟรี
             {freeShippingLocation?.trim() ? `ที่ ${freeShippingLocation.trim()}` : ""} *
           </div>
