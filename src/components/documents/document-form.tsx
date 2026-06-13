@@ -118,6 +118,9 @@ export function DocumentForm({
   const [freeShipping, setFreeShipping] = useState<boolean>(
     initialData ? (initialData.freeShipping ?? false) : false
   );
+  const [shippingLocation, setShippingLocation] = useState<string>(
+    initialData?.shippingLocation || ""
+  );
   const [freeShippingLocation, setFreeShippingLocation] = useState<string>(
     initialData?.freeShippingLocation || ""
   );
@@ -398,6 +401,7 @@ export function DocumentForm({
       vatEnabled: formData.vatEnabled,
       vatRate: formData.vatRate,
       shippingCost: freeShipping ? 0 : shippingCost,
+      shippingLocation: !freeShipping && shippingCost > 0 ? shippingLocation || undefined : undefined,
       freeShipping,
       freeShippingLocation: freeShipping ? freeShippingLocation || undefined : undefined,
       footerNotes: footerNotes || undefined,
@@ -765,6 +769,8 @@ export function DocumentForm({
                 setShippingCost(val);
                 if (val > 0) setShippingError("");
               }}
+              shippingLocation={shippingLocation}
+              onShippingLocationChange={setShippingLocation}
               freeShipping={freeShipping}
               onFreeShippingChange={(val) => {
                 setFreeShipping(val);

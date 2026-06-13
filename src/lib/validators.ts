@@ -114,6 +114,7 @@ export const documentSchema = z.object({
   vatEnabled: z.boolean().default(true),
   vatRate: z.coerce.number().default(7),
   shippingCost: z.coerce.number().min(0, "ค่าจัดส่งต้องไม่ติดลบ").default(0),
+  shippingLocation: z.string().optional(),
   freeShipping: z.boolean().default(false),
   freeShippingLocation: z.string().optional(),
   footerNotes: z.string().optional(),
