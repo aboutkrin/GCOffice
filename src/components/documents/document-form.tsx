@@ -118,6 +118,9 @@ export function DocumentForm({
   const [freeShipping, setFreeShipping] = useState<boolean>(
     initialData ? (initialData.freeShipping ?? false) : false
   );
+  const [freeShippingLocation, setFreeShippingLocation] = useState<string>(
+    initialData?.freeShippingLocation || ""
+  );
   const [shippingError, setShippingError] = useState<string>("");
   const [paymentTermsError, setPaymentTermsError] = useState<string>("");
   const [productionDaysText, setProductionDaysText] = useState<string>("");
@@ -396,6 +399,7 @@ export function DocumentForm({
       vatRate: formData.vatRate,
       shippingCost: freeShipping ? 0 : shippingCost,
       freeShipping,
+      freeShippingLocation: freeShipping ? freeShippingLocation || undefined : undefined,
       footerNotes: footerNotes || undefined,
       productionDays: productionDaysText || undefined,
       productionDaysMin: productionDaysMin ?? undefined,
@@ -766,6 +770,8 @@ export function DocumentForm({
                 setFreeShipping(val);
                 if (val) setShippingError("");
               }}
+              freeShippingLocation={freeShippingLocation}
+              onFreeShippingLocationChange={setFreeShippingLocation}
               error={shippingError}
             />
           </CardContent>

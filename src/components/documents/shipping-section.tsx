@@ -1,8 +1,9 @@
 "use client";
 
 import { DecimalInput } from "@/components/ui/decimal-input";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Truck } from "lucide-react";
+import { Truck, MapPin } from "lucide-react";
 import { formatNumber } from "@/lib/thai-currency";
 
 interface ShippingSectionProps {
@@ -10,6 +11,8 @@ interface ShippingSectionProps {
   onShippingCostChange: (value: number) => void;
   freeShipping: boolean;
   onFreeShippingChange: (value: boolean) => void;
+  freeShippingLocation?: string;
+  onFreeShippingLocationChange?: (value: string) => void;
   error?: string;
 }
 
@@ -18,6 +21,8 @@ export function ShippingSection({
   onShippingCostChange,
   freeShipping,
   onFreeShippingChange,
+  freeShippingLocation = "",
+  onFreeShippingLocationChange,
   error,
 }: ShippingSectionProps) {
   return (
@@ -56,14 +61,32 @@ export function ShippingSection({
           จัดส่งฟรี
         </label>
       </div>
+      {freeShipping && (
+        <div className="space-y-1.5 rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 p-3">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            <Label htmlFor="freeShippingLocation" className="text-sm font-medium">
+              จัดส่งฟรีที่
+            </Label>
+          </div>
+          <Input
+            id="freeShippingLocation"
+            value={freeShippingLocation}
+            onChange={(e) => onFreeShippingLocationChange?.(e.target.value)}
+            placeholder="เช่น บริษัท คีน คอนแทรคเตอร์ จำกัด / หน้างาน / ทั่วประเทศ"
+            maxLength={120}
+          />
+          <p className="text-xs text-muted-foreground">
+            ข้อความนี้จะแสดงเป็นตัวสีแดงใต้ยอดรวมในบิล เช่น “* จัดส่งฟรีที่ ... *”
+            (เว้นว่างได้ หากไม่ต้องการระบุสถานที่)
+          </p>
+        </div>
+      )}
       {error && <p className="text-sm text-destructive">{error}</p>}
       {!freeShipping && shippingCost > 0 && (
         <p className="text-xs text-muted-foreground">
           ค่าจัดส่ง {formatNumber(shippingCost)} บาท จะถูกรวมในยอดรวมทั้งสิ้น
         </p>
-      )}
-      {freeShipping && (
-        <p className="text-xs text-muted-foreground">จัดส่งฟรี ไม่คิดค่าจัดส่ง</p>
       )}
     </div>
   );

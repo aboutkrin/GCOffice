@@ -77,6 +77,8 @@ export interface DocumentData {
   vatRate: number;
   vatAmount: number;
   shippingCost?: number;
+  freeShipping?: boolean;
+  freeShippingLocation?: string | null;
   grandTotal: number;
   footerNotes?: string;
   productionDays?: string;
@@ -139,6 +141,8 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           vatRate={doc.vatRate}
           vatAmount={doc.vatAmount}
           shippingCost={doc.shippingCost}
+          freeShipping={doc.freeShipping}
+          freeShippingLocation={doc.freeShippingLocation}
           grandTotal={doc.grandTotal}
         />
 

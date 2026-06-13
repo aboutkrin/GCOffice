@@ -12,6 +12,8 @@ interface PreviewSummaryProps {
   vatRate: number;
   vatAmount: number;
   shippingCost?: number;
+  freeShipping?: boolean;
+  freeShippingLocation?: string | null;
   grandTotal: number;
 }
 
@@ -24,6 +26,8 @@ export function PreviewSummary({
   vatRate,
   vatAmount,
   shippingCost = 0,
+  freeShipping = false,
+  freeShippingLocation,
   grandTotal,
 }: PreviewSummaryProps) {
   const hasDiscount = Number(discountAmount) > 0;
@@ -118,6 +122,14 @@ export function PreviewSummary({
         <div className="mt-1 rounded bg-blue-50 px-2 py-1 text-center text-[10px] text-gray-700 border border-blue-200">
           <span className="font-medium">({bahtText(grandTotal)})</span>
         </div>
+
+        {/* Free shipping note */}
+        {freeShipping && (
+          <div className="mt-1.5 text-center text-[11px] font-semibold text-red-600">
+            * จัดส่งฟรี
+            {freeShippingLocation?.trim() ? `ที่ ${freeShippingLocation.trim()}` : ""} *
+          </div>
+        )}
       </div>
     </div>
   );
