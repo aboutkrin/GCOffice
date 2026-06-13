@@ -65,6 +65,8 @@ export const StockReportPreview = forwardRef<
     return acc;
   }, {});
 
+  const totalStock = products.reduce((sum, p) => sum + p.stockQuantity, 0);
+
   let rowIndex = 0;
 
   return (
