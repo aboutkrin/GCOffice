@@ -10,7 +10,8 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
-import type { TooltipProps } from "recharts";
+import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent";
+import type { TooltipProps } from "recharts/types/component/Tooltip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -41,7 +42,7 @@ const profitChartConfig = {
   },
 } satisfies ChartConfig;
 
-function LineChartTooltip({ active, payload, label }: TooltipProps<number, string>) {
+function LineChartTooltip({ active, payload, label }: TooltipProps<ValueType, NameType>) {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   const grossRevenue = (d.revenue ?? 0) + (d.vat ?? 0);
