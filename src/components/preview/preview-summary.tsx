@@ -112,8 +112,8 @@ export function PreviewSummary({
           column widths mirror the payment section below */}
       <div className="mt-1 flex items-stretch gap-3">
         {/* Left: baht text — width matches "ข้อมูลบัญชีสำหรับการชำระ" box below */}
-        <div className="flex-1 min-w-0 flex items-center">
-          <div className="w-full rounded border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-center text-[10px] font-medium text-gray-700">
+        <div className="flex-1 min-w-0 flex">
+          <div className="w-full flex items-center justify-center rounded border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-center text-[10px] font-medium text-gray-700">
             ({bahtText(grandTotal)})
           </div>
         </div>
