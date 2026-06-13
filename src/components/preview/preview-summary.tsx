@@ -59,13 +59,13 @@ export function PreviewSummary({
               </tr>
 
               {/* Shipping */}
-              {shippingCost > 0 && (
+              {(shippingCost > 0 || freeShipping) && (
                 <tr>
                   <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
                     ค่าจัดส่ง
                   </td>
                   <td className="py-0.5 sm:py-1 text-right font-medium text-gray-900 w-24 sm:w-32">
-                    {formatNumber(shippingCost)}
+                    {formatNumber(freeShipping ? 0 : shippingCost)}
                   </td>
                 </tr>
               )}
