@@ -70,7 +70,7 @@ export function DeliveryInfo({
 
       {isReceipt ? (
         <div className="space-y-2">
-          <Label>วันที่จัดส่งสินค้าสำเร็จ</Label>
+          <Label>วันที่จัดส่งสินค้าสำเร็จ <span className="text-destructive">*</span></Label>
           <Popover open={completedDatePopoverOpen} onOpenChange={setCompletedDatePopoverOpen}>
             <PopoverTrigger asChild>
               <Button
