@@ -69,7 +69,7 @@ export function ShippingSection({
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-muted-foreground" />
             <Label htmlFor="shippingLocation" className="text-sm font-medium">
-              {"สถานที่จัดส่ง"}
+              {"สถานที่จัดส่ง"} <span className="text-destructive">*</span>
             </Label>
           </div>
           <Input
@@ -89,7 +89,7 @@ export function ShippingSection({
           <div className="flex items-center gap-2">
             <MapPin className="h-4 w-4 text-muted-foreground" />
             <Label htmlFor="freeShippingLocation" className="text-sm font-medium">
-              {"จัดส่งฟรีที่"}
+              {"จัดส่งฟรีที่"} <span className="text-destructive">*</span>
             </Label>
           </div>
           <Input
