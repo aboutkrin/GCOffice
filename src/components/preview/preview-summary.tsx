@@ -42,103 +42,107 @@ export function PreviewSummary({
       : "ส่วนลด";
 
   return (
-    <div className="mb-3 flex justify-end">
-      <div className="w-full max-w-lg">
-        <table className="w-full text-[10px]">
-          <tbody>
-            {/* Subtotal */}
-            <tr>
-              <td />
-              <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
-                รวมเป็นเงิน
-              </td>
-              <td className="py-0.5 sm:py-1 text-right font-medium text-gray-900 w-24 sm:w-32">
-                {formatNumber(subtotal)}
-              </td>
-            </tr>
-
-            {/* Shipping */}
-            {shippingCost > 0 && (
+    <div className="mb-3">
+      {/* Upper summary rows — right-aligned, width matches payment terms table below */}
+      <div className="flex justify-end">
+        <div className="w-full max-w-sm">
+          <table className="w-full text-[10px]">
+            <tbody>
+              {/* Subtotal */}
               <tr>
-                <td />
                 <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
-                  ค่าจัดส่ง
+                  รวมเป็นเงิน
                 </td>
                 <td className="py-0.5 sm:py-1 text-right font-medium text-gray-900 w-24 sm:w-32">
-                  {formatNumber(shippingCost)}
+                  {formatNumber(subtotal)}
                 </td>
               </tr>
-            )}
 
-            {/* Discount */}
-            {hasDiscount && (
-              <>
+              {/* Shipping */}
+              {shippingCost > 0 && (
                 <tr>
-                  <td />
                   <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
-                    {discountLabel}
-                  </td>
-                  <td className="py-0.5 sm:py-1 text-right font-medium text-red-600 w-24 sm:w-32">
-                    -{formatNumber(discountAmount)}
-                  </td>
-                </tr>
-                <tr>
-                  <td />
-                  <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
-                    ราคาหลังหักส่วนลด
+                    ค่าจัดส่ง
                   </td>
                   <td className="py-0.5 sm:py-1 text-right font-medium text-gray-900 w-24 sm:w-32">
-                    {formatNumber(afterDiscount)}
+                    {formatNumber(shippingCost)}
                   </td>
                 </tr>
-              </>
-            )}
+              )}
 
-            {/* VAT */}
-            {vatEnabled && (
-              <tr>
-                <td />
-                <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
-                  ภาษีมูลค่าเพิ่ม {vatRate}%
-                </td>
-                <td className="py-0.5 sm:py-1 text-right font-medium text-gray-900 w-24 sm:w-32">
-                  {formatNumber(vatAmount)}
-                </td>
-              </tr>
-            )}
+              {/* Discount */}
+              {hasDiscount && (
+                <>
+                  <tr>
+                    <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
+                      {discountLabel}
+                    </td>
+                    <td className="py-0.5 sm:py-1 text-right font-medium text-red-600 w-24 sm:w-32">
+                      -{formatNumber(discountAmount)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
+                      ราคาหลังหักส่วนลด
+                    </td>
+                    <td className="py-0.5 sm:py-1 text-right font-medium text-gray-900 w-24 sm:w-32">
+                      {formatNumber(afterDiscount)}
+                    </td>
+                  </tr>
+                </>
+              )}
 
-            {/* Grand Total */}
-            <tr className="border-t-2 border-blue-200 bg-blue-100">
-              <td className="py-1 pl-2 align-middle">
-                <div className="rounded border border-blue-200 bg-blue-50/50 px-2 py-1 text-[10px] font-medium text-gray-700">
-                  ({bahtText(grandTotal)})
-                </div>
-              </td>
-              <td className="pt-2 pb-1 pr-2 sm:pr-4 text-right text-[14px] font-bold text-gray-900 whitespace-nowrap">
-                รวมทั้งสิ้น
-              </td>
-              <td className="pt-2 pb-1 text-right text-[14px] font-bold text-primary w-24 sm:w-32">
-                {formatNumber(grandTotal)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* Shipping location note */}
-        {!freeShipping && shippingCost > 0 && shippingLocation?.trim() && (
-          <div className="mt-1.5 text-right text-[11px] font-semibold text-red-600">
-            * จัดส่งไปที่ {shippingLocation.trim()} *
-          </div>
-        )}
-
-        {/* Free shipping note */}
-        {freeShipping && (
-          <div className="mt-1.5 text-right text-[11px] font-semibold text-red-600">
-            * จัดส่งฟรี
-            {freeShippingLocation?.trim() ? `ที่ ${freeShippingLocation.trim()}` : ""} *
-          </div>
-        )}
+              {/* VAT */}
+              {vatEnabled && (
+                <tr>
+                  <td className="py-0.5 sm:py-1 pr-2 sm:pr-4 text-right text-gray-600">
+                    ภาษีมูลค่าเพิ่ม {vatRate}%
+                  </td>
+                  <td className="py-0.5 sm:py-1 text-right font-medium text-gray-900 w-24 sm:w-32">
+                    {formatNumber(vatAmount)}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* Grand Total row — bahtText box (left) + total box (right),
+          column widths mirror the payment section below */}
+      <div className="mt-1 flex items-stretch gap-3">
+        {/* Left: baht text — width matches "ข้อมูลบัญชีสำหรับการชำระ" box below */}
+        <div className="flex-1 min-w-0 flex items-center">
+          <div className="w-full rounded border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-[10px] font-medium text-gray-700">
+            ({bahtText(grandTotal)})
+          </div>
+        </div>
+
+        {/* Right: grand total — width matches the payment terms table below */}
+        <div className="w-full max-w-sm shrink-0 flex items-center justify-between border-t-2 border-blue-200 bg-blue-100 px-1 sm:px-2 py-1.5">
+          <span className="text-[14px] font-bold text-gray-900 whitespace-nowrap">
+            รวมทั้งสิ้น
+          </span>
+          <span className="text-[14px] font-bold text-primary">
+            {formatNumber(grandTotal)}
+          </span>
+        </div>
+      </div>
+
+      {/* Shipping location note */}
+      {!freeShipping && shippingCost > 0 && shippingLocation?.trim() && (
+        <div className="mt-1.5 text-right text-[11px] font-semibold text-red-600">
+          * จัดส่งไปที่ {shippingLocation.trim()} *
+        </div>
+      )}
+
+      {/* Free shipping note */}
+      {freeShipping && (
+        <div className="mt-1.5 text-right text-[11px] font-semibold text-red-600">
+          * จัดส่งฟรี
+          {freeShippingLocation?.trim() ? `ที่ ${freeShippingLocation.trim()}` : ""} *
+        </div>
+      )}
     </div>
   );
 }
