@@ -51,7 +51,6 @@ export const StockReportPreview = forwardRef<
   StockReportPreviewProps
 >(function StockReportPreview({ company, products }, ref) {
   const now = new Date();
-  const totalStock = products.reduce((sum, p) => sum + p.stockQuantity, 0);
 
   // Group products by category
   const grouped = products.reduce<
@@ -154,28 +153,6 @@ export const StockReportPreview = forwardRef<
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Summary Stats */}
-      <div className="mb-4 grid grid-cols-3 gap-3">
-        <div className="rounded-lg border bg-blue-50/50 p-2.5 text-center">
-          <p className="text-xs text-gray-500">จำนวนรายการ</p>
-          <p className="text-lg font-bold text-blue-700">
-            {products.length.toLocaleString()}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-green-50/50 p-2.5 text-center">
-          <p className="text-xs text-gray-500">สต็อครวม</p>
-          <p className="text-lg font-bold text-green-700">
-            {totalStock.toLocaleString()}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-purple-50/50 p-2.5 text-center">
-          <p className="text-xs text-gray-500">หมวดหมู่</p>
-          <p className="text-lg font-bold text-purple-700">
-            {Object.keys(grouped).length}
-          </p>
         </div>
       </div>
 
