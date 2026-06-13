@@ -383,9 +383,8 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     const rev = revenueData.find((d) => d.month === monthNum);
     const vat = vatData.find((d) => d.month === monthNum);
     const exp = expenseData.find((d) => d.month === monthNum);
-    const grossRevenue = rev?.total ?? 0;
+    const revenue = rev?.total ?? 0;
     const vatAmount = vat?.total ?? 0;
-    const revenue = grossRevenue - vatAmount;
     const expense = exp?.total ?? 0;
     return {
       month: monthNum,
