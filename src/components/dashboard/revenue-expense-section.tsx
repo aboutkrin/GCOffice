@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, Bar, BarChart, Cell } from "recharts";
+import { Line, LineChart, CartesianGrid, XAxis, YAxis, Bar, BarChart, Cell, Tooltip } from "recharts";
 import {
   ChartConfig,
   ChartContainer,
@@ -10,6 +10,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart";
+import type { TooltipProps } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -39,6 +40,43 @@ const profitChartConfig = {
     color: "oklch(0.6 0.118 150)",
   },
 } satisfies ChartConfig;
+
+function LineChartTooltip({ active, payload, label }: TooltipProps<number, string>) {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  const grossRevenue = (d.revenue ?? 0) + (d.vat ?? 0);
+  const profit = (d.revenue ?? 0) - (d.expense ?? 0);
+  const isPositive = profit >= 0;
+  return (
+    <div className="rounded-lg border bg-background px-4 py-3 shadow-md text-sm min-w-[200px]">
+      <p className="font-semibold mb-2">{label}</p>
+      <div className="space-y-1.5">
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">ยอดขาย</span>
+          <span className="font-medium">{formatBaht(grossRevenue)}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">รายได้</span>
+          <span className="font-medium text-[oklch(0.45_0.15_260)]">{formatBaht(d.revenue ?? 0)}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">VAT</span>
+          <span className="font-medium">{formatBaht(d.vat ?? 0)}</span>
+        </div>
+        <div className="flex justify-between gap-4">
+          <span className="text-muted-foreground">ต้นทุน</span>
+          <span className="font-medium text-[oklch(0.55_0.2_25)]">{formatBaht(d.expense ?? 0)}</span>
+        </div>
+        <div className="border-t pt-1.5 flex justify-between gap-4">
+          <span className="text-muted-foreground">กำไร</span>
+          <span className={`font-semibold ${isPositive ? "text-green-600" : "text-red-600"}`}>
+            {formatBaht(profit)}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface RevenueExpenseSectionProps {
   initialData: MonthlyRevenueExpenseResult;
@@ -136,16 +174,7 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
                 }
                 width={50}
               />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    formatter={(value, name) => {
-                      const label = name === "revenue" ? "รายได้" : "ต้นทุน";
-                      return `${label}: ${formatBaht(value as number)}`;
-                    }}
-                  />
-                }
-              />
+              <Tooltip content={<LineChartTooltip />} />
               <ChartLegend content={<ChartLegendContent payload={[]} />} />
               <Line
                 dataKey="revenue"
