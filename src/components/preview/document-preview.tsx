@@ -138,20 +138,28 @@ function ContinuationHeader({
   documentNumber: string;
   documentDate: Date;
 }) {
+  const isLongName = company.name.length > 25;
+
   return (
     <div className="mb-3 flex items-center justify-between border-b border-gray-300 pb-1.5">
       <div className="flex items-center gap-2 min-w-0">
         {company.logoUrl && (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={company.logoUrl}
-            alt={company.name}
-            className="h-8 w-8 shrink-0 object-contain"
-          />
+          <div className="relative h-14 w-14 sm:h-16 sm:w-16 shrink-0 overflow-hidden rounded">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={company.logoUrl}
+              alt={company.name}
+              className="h-full w-full object-contain"
+            />
+          </div>
         )}
-        <span className="truncate text-sm font-bold text-gray-900">
+        <h1
+          className={`font-bold text-gray-900 break-words ${
+            isLongName ? "text-xs sm:text-base" : "text-lg sm:text-2xl"
+          }`}
+        >
           {company.name}
-        </span>
+        </h1>
       </div>
       <div className="shrink-0 text-right">
         <div className="text-xs font-bold text-primary">
