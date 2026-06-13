@@ -107,9 +107,7 @@ export function PreviewSummary({
 
             {/* Grand Total */}
             <tr className="border-t-2 border-blue-200 bg-blue-100">
-              <td className="pt-2 pb-1 pl-2 text-left text-[10px] text-gray-700 align-middle">
-                <span className="font-medium">({bahtText(grandTotal)})</span>
-              </td>
+              <td />
               <td className="pt-2 pb-1 pr-2 sm:pr-4 text-right text-[14px] font-bold text-gray-900 whitespace-nowrap">
                 รวมทั้งสิ้น
               </td>
@@ -119,6 +117,11 @@ export function PreviewSummary({
             </tr>
           </tbody>
         </table>
+
+        {/* Baht text in its own blue box */}
+        <div className="mt-1 rounded border border-blue-200 bg-blue-50/50 px-3 py-1.5 text-center text-[10px] font-medium text-gray-700">
+          ({bahtText(grandTotal)})
+        </div>
 
         {/* Free shipping note */}
         {freeShipping && (
