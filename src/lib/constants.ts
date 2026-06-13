@@ -14,7 +14,7 @@ export const DOCUMENT_STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-800",
   QUOTED: "bg-blue-100 text-blue-800",
   CONFIRMED: "bg-green-100 text-green-800",
-  SHIPPED: "bg-gray-200 text-gray-600",
+  SHIPPED: "bg-orange-100 text-orange-800",
   SAMPLE: "bg-purple-100 text-purple-800",
   BILLED: "bg-blue-100 text-blue-800",
   PAID: "bg-green-100 text-green-800",
