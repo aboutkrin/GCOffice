@@ -54,7 +54,7 @@ function PaymentDatePicker({
 
   return (
     <div className="w-full sm:w-[200px] space-y-1">
-      <Label className="text-xs text-muted-foreground">วันที่ชำระเงิน</Label>
+      <Label className="text-xs text-muted-foreground">วันที่ชำระเงิน <span className="text-destructive">*</span></Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
