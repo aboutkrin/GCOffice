@@ -119,13 +119,19 @@ export function PreviewSummary({
         </div>
 
         {/* Right: grand total — width matches the payment terms table below */}
-        <div className="w-full max-w-sm shrink-0 flex items-center justify-between border-t-2 border-blue-200 bg-blue-100 px-1 sm:px-2 py-1.5">
-          <span className="text-[14px] font-bold text-gray-900 whitespace-nowrap">
-            รวมทั้งสิ้น
-          </span>
-          <span className="text-[14px] font-bold text-primary">
-            {formatNumber(grandTotal)}
-          </span>
+        <div className="w-full max-w-sm shrink-0 border-t-2 border-blue-200 bg-blue-100 py-1.5">
+          <table className="w-full">
+            <tbody>
+              <tr>
+                <td className="pr-2 sm:pr-4 text-right text-[14px] font-bold text-gray-900 whitespace-nowrap">
+                  รวมทั้งสิ้น
+                </td>
+                <td className="text-right text-[14px] font-bold text-primary w-24 sm:w-32 px-1 sm:px-2">
+                  {formatNumber(grandTotal)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
