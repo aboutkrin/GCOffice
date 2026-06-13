@@ -12,6 +12,7 @@ interface PreviewSummaryProps {
   vatRate: number;
   vatAmount: number;
   shippingCost?: number;
+  shippingLocation?: string | null;
   freeShipping?: boolean;
   freeShippingLocation?: string | null;
   grandTotal: number;
@@ -26,6 +27,7 @@ export function PreviewSummary({
   vatRate,
   vatAmount,
   shippingCost = 0,
+  shippingLocation,
   freeShipping = false,
   freeShippingLocation,
   grandTotal,
@@ -119,6 +121,13 @@ export function PreviewSummary({
             </tr>
           </tbody>
         </table>
+
+        {/* Shipping location note */}
+        {!freeShipping && shippingCost > 0 && shippingLocation?.trim() && (
+          <div className="mt-1.5 text-right text-[11px] font-semibold text-red-600">
+            * จัดส่งไปที่ {shippingLocation.trim()} *
+          </div>
+        )}
 
         {/* Free shipping note */}
         {freeShipping && (
