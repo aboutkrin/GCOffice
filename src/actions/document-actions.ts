@@ -108,6 +108,10 @@ export async function createDocument(data: unknown) {
           vatRate: validated.vatRate,
           vatAmount,
           shippingCost,
+          freeShipping: validated.freeShipping,
+          freeShippingLocation: validated.freeShipping
+            ? validated.freeShippingLocation?.trim() || null
+            : null,
           grandTotal,
           footerNotes: validated.footerNotes,
           productionDays: validated.productionDays,
@@ -255,6 +259,10 @@ export async function updateDocument(id: string, data: unknown) {
           vatRate: validated.vatRate,
           vatAmount,
           shippingCost,
+          freeShipping: validated.freeShipping,
+          freeShippingLocation: validated.freeShipping
+            ? validated.freeShippingLocation?.trim() || null
+            : null,
           grandTotal,
           footerNotes: validated.footerNotes,
           productionDays: validated.productionDays,

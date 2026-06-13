@@ -187,6 +187,8 @@ model Document {
   vatRate        Decimal       @default(7) @map("vat_rate") @db.Decimal(5, 2)
   vatAmount      Decimal       @default(0) @map("vat_amount") @db.Decimal(12, 2)
   shippingCost   Decimal       @default(0) @map("shipping_cost") @db.Decimal(12, 2)
+  freeShipping         Boolean @default(false) @map("free_shipping")
+  freeShippingLocation String? @map("free_shipping_location") @db.Text
   grandTotal     Decimal       @default(0) @map("grand_total") @db.Decimal(12, 2)
 
   footerNotes       String?   @map("footer_notes") @db.Text
