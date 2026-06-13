@@ -329,31 +329,18 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
-  // Revenue from INVOICE documents:
-  // - PAID: full grandTotal
-  // - DEPOSITED: only first payment term (sequence=1) calculatedAmount
+  // Revenue from QUOTATION documents with status CONFIRMED, SHIPPED, or BILLED
+  // (matches the "ยอดขายเดือนนี้" logic in getDashboardStats)
   async function fetchInvoiceRevenueData() {
     try {
       return await prisma.$queryRaw<{ month: number; total: number }[]>`
-        SELECT month, COALESCE(SUM(total), 0)::float8 AS total
-        FROM (
-          SELECT
-            EXTRACT(MONTH FROM document_date)::int AS month,
-            grand_total AS total
-          FROM documents
-          WHERE type = 'INVOICE'
-            AND status = 'PAID'
-            AND EXTRACT(YEAR FROM document_date) = ${year}
-          UNION ALL
-          SELECT
-            EXTRACT(MONTH FROM d.document_date)::int AS month,
-            dpt.calculated_amount AS total
-          FROM documents d
-          INNER JOIN document_payment_terms dpt ON dpt.document_id = d.id AND dpt.sequence = 1
-          WHERE d.type = 'INVOICE'
-            AND d.status = 'DEPOSITED'
-            AND EXTRACT(YEAR FROM d.document_date) = ${year}
-        ) sub
+        SELECT
+          EXTRACT(MONTH FROM document_date)::int AS month,
+          COALESCE(SUM(grand_total - vat_amount), 0)::float8 AS total
+        FROM documents
+        WHERE type = 'QUOTATION'
+          AND status IN ('CONFIRMED', 'SHIPPED', 'BILLED')
+          AND EXTRACT(YEAR FROM document_date) = ${year}
         GROUP BY month
         ORDER BY month
       `;
@@ -362,31 +349,17 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
-  // VAT from INVOICE documents:
-  // - PAID: full vatAmount
-  // - DEPOSITED: proportional VAT for first payment term
+  // VAT from QUOTATION documents with status CONFIRMED, SHIPPED, or BILLED
   async function fetchInvoiceVatData() {
     try {
       return await prisma.$queryRaw<{ month: number; total: number }[]>`
-        SELECT month, COALESCE(SUM(total), 0)::float8 AS total
-        FROM (
-          SELECT
-            EXTRACT(MONTH FROM document_date)::int AS month,
-            vat_amount AS total
-          FROM documents
-          WHERE type = 'INVOICE'
-            AND status = 'PAID'
-            AND EXTRACT(YEAR FROM document_date) = ${year}
-          UNION ALL
-          SELECT
-            EXTRACT(MONTH FROM d.document_date)::int AS month,
-            dpt.calculated_amount * d.vat_amount / NULLIF(d.grand_total, 0) AS total
-          FROM documents d
-          INNER JOIN document_payment_terms dpt ON dpt.document_id = d.id AND dpt.sequence = 1
-          WHERE d.type = 'INVOICE'
-            AND d.status = 'DEPOSITED'
-            AND EXTRACT(YEAR FROM d.document_date) = ${year}
-        ) sub
+        SELECT
+          EXTRACT(MONTH FROM document_date)::int AS month,
+          COALESCE(SUM(vat_amount), 0)::float8 AS total
+        FROM documents
+        WHERE type = 'QUOTATION'
+          AND status IN ('CONFIRMED', 'SHIPPED', 'BILLED')
+          AND EXTRACT(YEAR FROM document_date) = ${year}
         GROUP BY month
         ORDER BY month
       `;
