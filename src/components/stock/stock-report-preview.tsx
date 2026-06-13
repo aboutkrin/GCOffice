@@ -161,8 +161,8 @@ export const StockReportPreview = forwardRef<
       {/* Product Table by Category */}
       {Object.entries(grouped).map(([catId, { categoryName, items }]) => (
         <div key={catId} className="mb-4">
-          <div className="mb-1 rounded bg-gray-100 px-2 py-1">
-            <h3 className="text-xs font-semibold text-gray-700">
+          <div className="mb-1 rounded bg-gray-800 px-2 py-1">
+            <h3 className="text-xs font-semibold text-white">
               {categoryName} ({items.length} รายการ)
             </h3>
           </div>
