@@ -20,13 +20,14 @@ import {
 } from "@/components/ui/popover";
 import { formatNumber } from "@/lib/thai-currency";
 import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
-import { Trash2, AlertTriangle, CalendarDays, CalendarIcon } from "lucide-react";
+import { Trash2, AlertTriangle, CalendarDays, CalendarIcon, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PaymentTerm } from "@/hooks/use-payment-terms";
 import { PaymentTermTemplateSelect } from "./payment-term-template-select";
 
 interface PaymentTermsProps {
   terms: PaymentTerm[];
+  addTerm: () => void;
   removeTerm: (id: string) => void;
   updateTerm: (id: string, updates: Partial<PaymentTerm>) => void;
   totalAmount: number;
@@ -35,6 +36,7 @@ interface PaymentTermsProps {
   onApplyTemplate?: (templateItems: any[]) => void;
   deliveryCompletedDate?: Date | null;
   documentType?: "QUOTATION" | "INVOICE" | "RECEIPT";
+  error?: string;
 }
 
 function PaymentDatePicker({
@@ -89,6 +91,7 @@ function PaymentDatePicker({
 
 export function PaymentTermsSection({
   terms,
+  addTerm,
   removeTerm,
   updateTerm,
   totalAmount,
@@ -97,6 +100,7 @@ export function PaymentTermsSection({
   onApplyTemplate,
   deliveryCompletedDate,
   documentType,
+  error,
 }: PaymentTermsProps) {
   const mismatch =
     terms.length > 0 && Math.abs(totalAmount - grandTotal) > 0.01;
@@ -104,7 +108,9 @@ export function PaymentTermsSection({
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
-        <Label className="text-base font-semibold">เงื่อนไขการชำระเงิน</Label>
+        <Label className="text-base font-semibold">
+          เงื่อนไขการชำระเงิน <span className="text-destructive">*</span>
+        </Label>
         <div className="flex items-center gap-2">
           {paymentTermTemplates && paymentTermTemplates.length > 0 && onApplyTemplate && (
             <PaymentTermTemplateSelect
@@ -113,12 +119,22 @@ export function PaymentTermsSection({
               onApply={onApplyTemplate}
             />
           )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addTerm}
+            className="gap-1"
+          >
+            <Plus className="h-4 w-4" />
+            เพิ่มงวด
+          </Button>
         </div>
       </div>
 
       {terms.length === 0 && (
-        <p className="text-sm text-muted-foreground py-2">
-          ยังไม่มีเงื่อนไขการชำระเงิน
+        <p className={`text-sm py-2 ${error ? "text-destructive" : "text-muted-foreground"}`}>
+          {error || "ยังไม่มีเงื่อนไขการชำระเงิน"}
         </p>
       )}
 

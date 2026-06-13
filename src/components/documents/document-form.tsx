@@ -115,6 +115,11 @@ export function DocumentForm({
   const [shippingCost, setShippingCost] = useState<number>(
     initialData?.shippingCost ? Number(initialData.shippingCost) : 0
   );
+  const [freeShipping, setFreeShipping] = useState<boolean>(
+    initialData ? (initialData.freeShipping ?? false) : false
+  );
+  const [shippingError, setShippingError] = useState<string>("");
+  const [paymentTermsError, setPaymentTermsError] = useState<string>("");
   const [productionDaysText, setProductionDaysText] = useState<string>("");
   const [deliveryDateStart, setDeliveryDateStart] = useState<Date | null>(null);
   const [deliveryDateEnd, setDeliveryDateEnd] = useState<Date | null>(null);
@@ -389,7 +394,8 @@ export function DocumentForm({
       discountValue,
       vatEnabled: formData.vatEnabled,
       vatRate: formData.vatRate,
-      shippingCost,
+      shippingCost: freeShipping ? 0 : shippingCost,
+      freeShipping,
       footerNotes: footerNotes || undefined,
       productionDays: productionDaysText || undefined,
       productionDaysMin: productionDaysMin ?? undefined,
@@ -447,6 +453,24 @@ export function DocumentForm({
       alert("กรุณาระบุชื่อสินค้าให้ครบทุกรายการ");
       return;
     }
+
+    // Validate shipping
+    if (!freeShipping && shippingCost <= 0) {
+      setShippingError("กรุณาระบุค่าจัดส่ง หรือเลือก จัดส่งฟรี");
+      const el = document.getElementById("shipping-section");
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    setShippingError("");
+
+    // Validate payment terms
+    if (terms.length === 0) {
+      setPaymentTermsError("กรุณาเพิ่มเงื่อนไขการชำระเงินอย่างน้อย 1 งวด");
+      const el = document.getElementById("payment-terms-section");
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    setPaymentTermsError("");
 
     setSaving(true);
     try {
@@ -601,7 +625,7 @@ export function DocumentForm({
                 name="companyId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>บริษัท</FormLabel>
+                    <FormLabel>บริษัท <span className="text-destructive">*</span></FormLabel>
                     <Select
                       onValueChange={(companyId) => {
                         field.onChange(companyId);
@@ -637,7 +661,7 @@ export function DocumentForm({
                 name="customerId"
                 render={({ field }) => (
                   <FormItem className="min-w-0">
-                    <FormLabel>ลูกค้า</FormLabel>
+                    <FormLabel>ลูกค้า <span className="text-destructive">*</span></FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value}
@@ -723,7 +747,7 @@ export function DocumentForm({
         </Card>
 
         {/* Section 3: Shipping */}
-        <Card>
+        <Card id="shipping-section">
           <CardHeader>
             <CardTitle>ค่าจัดส่ง</CardTitle>
             <CardDescription>
@@ -733,7 +757,16 @@ export function DocumentForm({
           <CardContent>
             <ShippingSection
               shippingCost={shippingCost}
-              onShippingCostChange={setShippingCost}
+              onShippingCostChange={(val) => {
+                setShippingCost(val);
+                if (val > 0) setShippingError("");
+              }}
+              freeShipping={freeShipping}
+              onFreeShippingChange={(val) => {
+                setFreeShipping(val);
+                if (val) setShippingError("");
+              }}
+              error={shippingError}
             />
           </CardContent>
         </Card>
@@ -762,18 +795,26 @@ export function DocumentForm({
         </Card>
 
         {/* Section 5: Payment Terms */}
-        <Card>
+        <Card id="payment-terms-section">
           <CardContent className="pt-6">
             <PaymentTermsSection
               terms={terms}
+              addTerm={() => {
+                addTerm();
+                setPaymentTermsError("");
+              }}
               removeTerm={removeTerm}
               updateTerm={handleUpdateTerm}
               totalAmount={paymentTotalAmount}
               grandTotal={pricing.grandTotal}
               paymentTermTemplates={paymentTermTemplates}
-              onApplyTemplate={handleApplyTemplate}
+              onApplyTemplate={(tpl) => {
+                handleApplyTemplate(tpl);
+                setPaymentTermsError("");
+              }}
               deliveryCompletedDate={deliveryCompletedDate}
               documentType={type}
+              error={paymentTermsError}
             />
           </CardContent>
         </Card>
