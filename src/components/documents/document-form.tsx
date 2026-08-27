@@ -51,6 +51,7 @@ import { PricingSummary } from "./pricing-summary";
 import { ShippingSection } from "./shipping-section";
 import { PaymentTermsSection } from "./payment-terms";
 import { DeliveryInfo } from "./delivery-info";
+import { CustomerSelect } from "@/components/customers/customer-select";
 
 import { Input } from "@/components/ui/input";
 import { createDocument, updateDocument } from "@/actions/document-actions";
@@ -670,23 +671,12 @@ export function DocumentForm({
                 render={({ field }) => (
                   <FormItem className="min-w-0">
                     <FormLabel>ลูกค้า <span className="text-destructive">*</span></FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
+                    <CustomerSelect
+                      customers={customers}
                       value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="เลือกลูกค้า" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {customers.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.companyName || customer.customerName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onSelect={(customer) => field.onChange(customer.id)}
+                      placeholder="เลือกลูกค้า"
+                    />
                     <FormMessage />
                   </FormItem>
                 )}

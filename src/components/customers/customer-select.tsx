@@ -23,9 +23,17 @@ interface CustomerSelectProps {
   value?: string;
   onSelect: (customer: any) => void;
   customers?: any[];
+  placeholder?: string;
+  className?: string;
 }
 
-export function CustomerSelect({ value, onSelect, customers: initialCustomers }: CustomerSelectProps) {
+export function CustomerSelect({
+  value,
+  onSelect,
+  customers: initialCustomers,
+  placeholder = "เลือกลูกค้า...",
+  className,
+}: CustomerSelectProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const customers = initialCustomers ?? [];
@@ -37,7 +45,8 @@ export function CustomerSelect({ value, onSelect, customers: initialCustomers }:
       (c) =>
         c.code?.toLowerCase().includes(q) ||
         c.customerName?.toLowerCase().includes(q) ||
-        c.companyName?.toLowerCase().includes(q)
+        c.companyName?.toLowerCase().includes(q) ||
+        c.phone?.toLowerCase().includes(q)
     );
   }, [customers, query]);
 
@@ -50,20 +59,22 @@ export function CustomerSelect({ value, onSelect, customers: initialCustomers }:
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between font-normal"
+          className={cn("w-full min-w-0 justify-between font-normal", className)}
         >
           {selectedCustomer ? (
-            <span className="truncate">
+            <span className="min-w-0 truncate">
               {selectedCustomer.companyName || selectedCustomer.customerName}
             </span>
           ) : (
-            <span className="text-muted-foreground">เลือกลูกค้า...</span>
+            <span className="min-w-0 truncate text-muted-foreground">
+              {placeholder}
+            </span>
           )}
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[400px] p-0"
+        className="w-[min(400px,calc(100vw-2rem))] p-0"
         align="start"
         side="bottom"
         avoidCollisions={false}
