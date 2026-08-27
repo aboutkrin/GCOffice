@@ -305,6 +305,7 @@ export function DocumentForm({
       productSku: item.productSku || undefined,
       productName: item.productName || "",
       productImage: item.productImage || undefined,
+      colorVariantName: item.colorVariantName || undefined,
       showImage: item.showImage ?? false,
       details: item.details || undefined,
       quantity: item.quantity || 1,
@@ -328,6 +329,9 @@ export function DocumentForm({
     // Pre-fill footer notes, shipping, and production day settings
     setFooterNotes(q.footerNotes || "");
     setShippingCost(q.shippingCost ? Number(q.shippingCost) : 0);
+    setFreeShipping(q.freeShipping ?? false);
+    setShippingLocation(q.shippingLocation || "");
+    setFreeShippingLocation(q.freeShippingLocation || "");
     setProductionDaysMin(q.productionDaysMin ?? null);
     setProductionDaysMax(q.productionDaysMax ?? null);
     setSkipWeekends(q.skipWeekends ?? false);
@@ -359,6 +363,7 @@ export function DocumentForm({
       productSku: item.productSku || undefined,
       productName: item.productName || "",
       productImage: item.productImage || undefined,
+      colorVariantName: item.colorVariantName || undefined,
       showImage: item.showImage ?? false,
       details: item.details || undefined,
       quantity: item.quantity || 1,
@@ -382,6 +387,9 @@ export function DocumentForm({
     // Pre-fill footer notes, shipping, and production day settings
     setFooterNotes(inv.footerNotes || "");
     setShippingCost(inv.shippingCost ? Number(inv.shippingCost) : 0);
+    setFreeShipping(inv.freeShipping ?? false);
+    setShippingLocation(inv.shippingLocation || "");
+    setFreeShippingLocation(inv.freeShippingLocation || "");
     setProductionDaysMin(inv.productionDaysMin ?? null);
     setProductionDaysMax(inv.productionDaysMax ?? null);
     setSkipWeekends(inv.skipWeekends ?? false);
