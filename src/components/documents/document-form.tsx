@@ -207,6 +207,11 @@ export function DocumentForm({
   const vatEnabled = form.watch("vatEnabled");
   const vatRate = form.watch("vatRate");
   const selectedCompanyId = form.watch("companyId");
+  const selectedCustomerId = form.watch("customerId");
+
+  // ที่อยู่ลูกค้าจากหัวบิล — ใช้เป็นตัวเลือกด่วนของ "สถานที่จัดส่ง"
+  const selectedCustomerAddress =
+    customers.find((c) => c.id === selectedCustomerId)?.address || "";
 
 
 
@@ -328,6 +333,9 @@ export function DocumentForm({
     // Pre-fill footer notes, shipping, and production day settings
     setFooterNotes(q.footerNotes || "");
     setShippingCost(q.shippingCost ? Number(q.shippingCost) : 0);
+    setFreeShipping(q.freeShipping ?? false);
+    setShippingLocation(q.shippingLocation || "");
+    setFreeShippingLocation(q.freeShippingLocation || "");
     setProductionDaysMin(q.productionDaysMin ?? null);
     setProductionDaysMax(q.productionDaysMax ?? null);
     setSkipWeekends(q.skipWeekends ?? false);
@@ -382,6 +390,9 @@ export function DocumentForm({
     // Pre-fill footer notes, shipping, and production day settings
     setFooterNotes(inv.footerNotes || "");
     setShippingCost(inv.shippingCost ? Number(inv.shippingCost) : 0);
+    setFreeShipping(inv.freeShipping ?? false);
+    setShippingLocation(inv.shippingLocation || "");
+    setFreeShippingLocation(inv.freeShippingLocation || "");
     setProductionDaysMin(inv.productionDaysMin ?? null);
     setProductionDaysMax(inv.productionDaysMax ?? null);
     setSkipWeekends(inv.skipWeekends ?? false);
@@ -768,6 +779,7 @@ export function DocumentForm({
               }}
               freeShippingLocation={freeShippingLocation}
               onFreeShippingLocationChange={setFreeShippingLocation}
+              customerAddress={selectedCustomerAddress}
               error={shippingError}
             />
           </CardContent>
