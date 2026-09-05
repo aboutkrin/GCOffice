@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -124,6 +125,13 @@ export function AppSidebar() {
       {/* Logo */}
       <div className="flex h-14 items-center border-b px-6">
         <Link href="/dashboard" className="flex items-center gap-2">
+          <Image
+            src="/logo.png"
+            alt="GCOffice"
+            width={32}
+            height={32}
+            className="size-8"
+          />
           <span className="text-xl font-bold tracking-tight">GCOffice</span>
         </Link>
       </div>
