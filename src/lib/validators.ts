@@ -181,13 +181,6 @@ export type LineItemFormData = z.infer<typeof lineItemSchema>;
 export type PaymentTermFormData = z.infer<typeof paymentTermSchema>;
 export type HolidayFormData = z.infer<typeof holidaySchema>;
 export type HolidayRangeFormData = z.infer<typeof holidayRangeSchema>;
-export const wooCommerceConfigSchema = z.object({
-  storeUrl: z.string().url("กรุณาระบุ URL ที่ถูกต้อง").min(1, "กรุณาระบุ URL ร้านค้า"),
-  consumerKey: z.string().min(1, "กรุณาระบุ Consumer Key"),
-  consumerSecret: z.string().min(1, "กรุณาระบุ Consumer Secret"),
-  autoSyncEnabled: z.boolean().default(false),
-});
-
 export const profileSchema = z.object({
   firstName: z.string().min(1, "กรุณาระบุชื่อ"),
   lastName: z.string().min(1, "กรุณาระบุนามสกุล"),
@@ -211,7 +204,6 @@ export const expenseSchema = z.object({
 
 export type PaymentTermTemplateItemFormData = z.infer<typeof paymentTermTemplateItemSchema>;
 export type PaymentTermTemplateFormData = z.infer<typeof paymentTermTemplateSchema>;
-export type WooCommerceConfigFormData = z.infer<typeof wooCommerceConfigSchema>;
 export type ProfileFormData = z.infer<typeof profileSchema>;
 export type ExpenseCategoryFormData = z.infer<typeof expenseCategorySchema>;
 export type ExpenseFormData = z.infer<typeof expenseSchema>;
@@ -268,6 +260,10 @@ export const colorVariantInputSchema = z.object({
   imageUrl: z.string().optional(),
   price: z.coerce.number().min(0, "ราคาต้องไม่ติดลบ").optional().nullable(),
   sortOrder: z.coerce.number().int().default(0),
+  // Website-owned colours (synced from goodchoiceth.com); informational on the client,
+  // the server re-reads ownership from the database before writing.
+  websiteVariantId: z.number().int().optional().nullable(),
+  websiteActive: z.boolean().optional(),
 });
 
 export const stockAdjustmentSchema = z.object({

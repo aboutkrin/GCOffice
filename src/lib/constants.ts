@@ -54,8 +54,12 @@ export const STATUS_LABELS: Record<string, string> = {
 
 export const PRODUCT_SOURCE_LABELS: Record<string, string> = {
   MANUAL: "เพิ่มเอง",
-  WOOCOMMERCE: "WooCommerce",
+  WOOCOMMERCE: "WooCommerce (เก่า)",
+  WEBSITE: "เว็บไซต์",
 };
+
+/** Badge for colour variants the website stopped selling (`websiteActive === false`). */
+export const WEBSITE_INACTIVE_LABEL = "ไม่แสดงบนเว็บ";
 
 export const SYNC_STATUS_LABELS: Record<string, string> = {
   RUNNING: "กำลังซิงค์",
@@ -72,6 +76,12 @@ export const SYNC_STATUS_COLORS: Record<string, string> = {
 export const SYNC_TRIGGER_LABELS: Record<string, string> = {
   MANUAL: "ซิงค์เอง",
   SCHEDULED: "อัตโนมัติ",
+  WEBHOOK: "อัตโนมัติ (เว็บไซต์)",
+};
+
+export const SYNC_SCOPE_LABELS: Record<string, string> = {
+  full: "ทั้งหมด",
+  products: "เฉพาะรายการ",
 };
 
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {

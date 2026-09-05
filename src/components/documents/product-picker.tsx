@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -24,6 +25,7 @@ import {
 } from "@/actions/product-actions";
 import { Search, Package, ArrowLeft } from "lucide-react";
 import { formatNumber } from "@/lib/thai-currency";
+import { WEBSITE_INACTIVE_LABEL } from "@/lib/constants";
 
 interface ColorVariant {
   id: string;
@@ -32,6 +34,9 @@ interface ColorVariant {
   imageUrl?: string | null;
   price?: number | null;
   stockQuantity: number;
+  /** false = the website stopped selling this colour; still selectable here. */
+  websiteActive?: boolean;
+  websiteVariantId?: number | null;
 }
 
 interface Product {
@@ -210,7 +215,14 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                       <div className="size-8 rounded-full border bg-muted shrink-0" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{variant.name}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium">{variant.name}</p>
+                        {variant.websiteActive === false && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {WEBSITE_INACTIVE_LABEL}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         สต็อค: {variant.stockQuantity}
                       </p>

@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus } from "lucide-react";
+import { ExternalLink, Globe, Loader2, Plus } from "lucide-react";
 
 import { productSchema, updateProductSchema, type ProductFormData, type UpdateProductFormData } from "@/lib/validators";
 import { createProductWithColorVariants, updateProductWithColorVariants, createProductCategory } from "@/actions/product-actions";
@@ -44,9 +44,11 @@ import { Label } from "@/components/ui/label";
 interface ProductFormProps {
   initialData?: any;
   categories: any[];
+  /** `${CATALOG_API_URL}/admin/products/${websiteProductId}` for WEBSITE products, from the page. */
+  websiteAdminUrl?: string | null;
 }
 
-export function ProductForm({ initialData, categories }: ProductFormProps) {
+export function ProductForm({ initialData, categories, websiteAdminUrl }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [categoryList, setCategoryList] = useState(categories);
@@ -61,9 +63,15 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
       imageUrl: v.imageUrl ?? "",
       price: v.price != null ? Number(v.price) : null,
       sortOrder: v.sortOrder ?? 0,
+      websiteVariantId: v.websiteVariantId ?? null,
+      websiteActive: v.websiteActive ?? true,
     })) ?? []
   );
   const isEditing = !!initialData;
+  // Website-sourced products: product fields are owned by goodchoiceth.com and
+  // overwritten on every sync. Colour prices and manually added colours stay editable.
+  const isWebsiteProduct = initialData?.source === "WEBSITE";
+  const fieldsLocked = isWebsiteProduct;
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(isEditing ? updateProductSchema : productSchema) as any,
@@ -118,6 +126,26 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {isWebsiteProduct && (
+          <div className="flex flex-col gap-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2">
+              <Globe className="size-4 mt-0.5 shrink-0" />
+              <span>
+                ข้อมูลสินค้านี้จัดการบนเว็บไซต์ — แก้ไขได้ที่ goodchoiceth.com
+                (ราคาเฉพาะสีและสีที่เพิ่มเองยังแก้ไขได้ที่นี่)
+              </span>
+            </div>
+            {websiteAdminUrl && (
+              <Button type="button" variant="outline" size="sm" asChild>
+                <a href={websiteAdminUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="size-4" />
+                  เปิดบนเว็บไซต์
+                </a>
+              </Button>
+            )}
+          </div>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>ข้อมูลสินค้า</CardTitle>
@@ -144,7 +172,7 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
                   <FormItem>
                     <FormLabel>ชื่อสินค้า</FormLabel>
                     <FormControl>
-                      <Input placeholder="ชื่อสินค้า" {...field} />
+                      <Input placeholder="ชื่อสินค้า" {...field} disabled={fieldsLocked} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -163,6 +191,7 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
                       <Select
                         onValueChange={field.onChange}
                         value={field.value ?? ""}
+                        disabled={fieldsLocked}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full">
@@ -179,7 +208,12 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
                       </Select>
                       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
-                          <Button type="button" variant="outline" size="icon">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            disabled={fieldsLocked}
+                          >
                             <Plus className="size-4" />
                           </Button>
                         </DialogTrigger>
@@ -248,6 +282,7 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
                         {...field}
                         value={field.value || ""}
                         onChange={(e) => field.onChange(Number(e.target.value))}
+                        disabled={fieldsLocked}
                       />
                     </FormControl>
                     <FormMessage />
@@ -268,6 +303,7 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
                       rows={3}
                       {...field}
                       value={field.value ?? ""}
+                      disabled={fieldsLocked}
                     />
                   </FormControl>
                   <FormMessage />
@@ -287,6 +323,7 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
                       onChange={field.onChange}
                       bucket="product-images"
                       folder="products"
+                      disabled={fieldsLocked}
                     />
                   </FormControl>
                   <FormMessage />
@@ -311,6 +348,7 @@ export function ProductForm({ initialData, categories }: ProductFormProps) {
                       onCheckedChange={(checked) =>
                         field.onChange(checked ? "ACTIVE" : "INACTIVE")
                       }
+                      disabled={fieldsLocked}
                     />
                   </FormControl>
                 </FormItem>

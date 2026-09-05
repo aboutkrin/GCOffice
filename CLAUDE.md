@@ -22,8 +22,8 @@ GCOffice is a Thai-language business document management app (quotations & invoi
 
 - `src/app/(auth)/` — Login page (unauthenticated layout group)
 - `src/app/(app)/` — All protected pages (authenticated layout group): dashboard, companies, customers, products, quotations, invoices
-- `src/app/api/` — API routes for file uploads and document status updates
-- `middleware.ts` — Supabase auth middleware; redirects unauthenticated users to `/login`
+- `src/app/api/` — API routes for file uploads, document status updates, the website catalog webhook (`api/webhooks/catalog`) and the nightly sync cron (`api/cron/catalog-sync`)
+- `middleware.ts` — Supabase auth middleware; redirects unauthenticated users to `/login`. The matcher **excludes `api/webhooks` and `api/cron`**: those routes authenticate themselves (HMAC signature / `CRON_SECRET`) and would otherwise be redirected to the login page.
 
 ### Data Flow
 
@@ -40,7 +40,10 @@ Key models:
 - **Profile** — Synced from Supabase auth.users via DB trigger
 - **Company** — Business entities with logo, bank details, VAT config
 - **Customer** — COMPANY or INDIVIDUAL type, with lead source tracking
-- **Product** — SKU-based catalog with categories, images, dimensions, pricing
+- **Product** — SKU-based catalog with categories, images, dimensions, pricing, cost fields and stock. `source` is `MANUAL` (created in GCOffice), `WEBSITE` (mirrored from goodchoiceth.com) or `WOOCOMMERCE` (legacy rows from the retired WooCommerce sync; `woocommerceId` is kept only to match website products by `wpPostId`)
+- **ProductColorVariant** — Colour variants per product (name unique per product, colourHex, imageUrl, price, stock). Rows with `websiteVariantId` are website-owned; `websiteActive === false` renders the badge "ไม่แสดงบนเว็บ" but the colour stays selectable in documents
+- **StockMovement** — IN/OUT/ADJUSTMENT/INITIAL movements per product or colour variant. `Product.stockQuantity` is the sum of its variants' stock once variants exist. `src/data/stock.ts` aggregates by `productSku`, so **existing SKUs must never be rewritten**
+- **CatalogSyncLog** — One row per website sync run (trigger, scope, counters, dry-run `details`)
 - **Document** — Quotations and invoices with status workflow (DRAFT → SENT → CONFIRMED → CANCELLED)
 - **DocumentLineItem** / **DocumentPaymentTerm** — Cascade-deleted children of Document
 - **DocumentCounter** — Per-type, per-month auto-incrementing document numbers
@@ -78,6 +81,31 @@ Supabase Auth with email/password. Four client configurations in `src/lib/supaba
 - `src/lib/export-jpg.ts` — HTML-to-JPG via html2canvas-pro
 - Preview components in `src/components/preview/`
 
+### Website Catalog Sync (goodchoiceth.com → GCOffice)
+
+Products and colour variants are created on goodchoiceth.com; GCOffice pulls them. One-way, idempotent upserts, nothing is ever deleted (missing products become `INACTIVE`).
+
+Modules in `src/lib/catalog/`:
+- `types.ts` — the feed/webhook JSON contract, copied verbatim from the website (`lib/catalog/types.ts`). Only add fields, never rename or remove.
+- `signature.ts` — `X-GC-Signature: t=<unix>,v1=<hmac-sha256>` sign/verify (5-minute tolerance), copied from the website.
+- `client.ts` — `getCatalogConfig()`, `cleanEnv()` (scrubs a leading BOM), `fetchAllCatalogProducts()` (cursor pagination), `fetchCatalogProduct(id)` (null on 404), `fetchCatalogCategories()`, `checkCatalogHealth()`.
+- `mapper.ts` — pure `mapCatalogProduct` / `mapCatalogVariant` / `stripHtml`.
+- `sync.ts` — `syncAll(trigger, { dryRun })` (full reconcile, running-guard, deactivates unseen WEBSITE/WOOCOMMERCE products), `syncProductIds(ids)` (webhook path), `markWebsiteProductsDeleted(ids)`. Match order: `websiteProductId` → `woocommerceId === wpPostId` → `sku` → create. New SKUs: website sku → `WEB-<sku>` → category prefix counter → `WEB-<websiteProductId>`. Categories: `websiteCategoryId` → case-insensitive name match (then pinned) → created with the next free `WEBnn` prefix.
+
+Routes / triggers:
+- `POST /api/webhooks/catalog` — called by the website on every product save/delete; verifies the raw body signature, zod-parses `{id, event, productIds, occurredAt}`, runs the sync in `after()` and returns `202 {ok, received}`.
+- `GET /api/cron/catalog-sync` — nightly full reconcile (`vercel.json`), `Authorization: Bearer ${CRON_SECRET}`.
+- `/website-sync` page — connection status, "ตรวจสอบก่อนซิงค์" (dry run with `details`) and "ซิงค์ตอนนี้" (`src/actions/catalog-actions.ts`).
+
+Field ownership (enforced in `sync.ts`, `src/actions/product-actions.ts` and the product form):
+
+| Website-owned (overwritten on every sync) | GCOffice-owned (never touched by sync) |
+|---|---|
+| Product: name, description, imageUrl (first image), basePrice (`effectivePrice`), status (published → ACTIVE), categoryId, websiteSlug, websiteSpecs (tile facts JSON), websiteUpdatedAt, source = WEBSITE | Product: costPrice, exchangeRate, weightPerBox, shippingCostPerBox, width/height, stockQuantity, lowStockThreshold, **existing sku** |
+| Variant (rows with `websiteVariantId`): name, colorHex, imageUrl, sortOrder, sku, websiteActive, websiteStockStatus | Variant: price, stockQuantity, lowStockThreshold, stock movements; variants without `websiteVariantId`; MANUAL products |
+
+WEBSITE products cannot be deleted in GCOffice (delete on the website instead); their product fields are read-only in the form with a link to `${CATALOG_API_URL}/admin/products/<websiteProductId>`. `saveColorVariantsInTransaction` never deletes website-owned variants and updates only their `price`.
+
 ### Custom Hooks
 
 - `use-line-items.ts` — Manage document line item state
@@ -90,6 +118,9 @@ Supabase Auth with email/password. Four client configurations in `src/lib/supaba
 - `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase public key
 - `SUPABASE_SERVICE_ROLE_KEY` — Supabase admin key (server-only)
+- `CRON_SECRET` — Bearer token Vercel sends to `/api/cron/*`
+- `CATALOG_API_URL` — goodchoiceth.com origin (e.g. `https://goodchoiceth.com`); also used for the admin edit links
+- `CATALOG_API_KEY` — shared key: Bearer for `/api/catalog/*` on the website and HMAC secret for the webhook. Must equal the website's `CATALOG_API_KEY`; a pasted BOM is scrubbed by `cleanEnv()`
 
 ## Key Conventions
 

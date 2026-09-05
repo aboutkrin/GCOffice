@@ -7,6 +7,8 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|sw\\.js\\.map|swe-worker.*|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // api/webhooks and api/cron authenticate themselves (HMAC / CRON_SECRET);
+    // without this exclusion updateSession() redirects them to /login.
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js|sw\\.js\\.map|swe-worker.*|api/webhooks|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

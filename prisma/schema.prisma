@@ -74,6 +74,7 @@ model ProductCategory {
   prefix     String?  @unique
   lastNumber Int      @default(0) @map("last_number")
   sortOrder  Int      @default(0) @map("sort_order")
+  websiteCategoryId Int? @unique @map("website_category_id")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
@@ -104,8 +105,16 @@ model Product {
   categoryId String?          @map("category_id")
   category   ProductCategory? @relation(fields: [categoryId], references: [id])
 
-  woocommerceId Int?          @unique @map("woocommerce_id")
-  source        ProductSource @default(MANUAL)
+  /// LEGACY: WooCommerce post id, used once to match website products via wp_post_id.
+  woocommerceId    Int?          @unique @map("woocommerce_id")
+  source           ProductSource @default(MANUAL)
+
+  // Website catalog sync (goodchoiceth.com) — website-owned, see src/lib/catalog/sync.ts
+  websiteProductId Int?      @unique @map("website_product_id")
+  websiteSlug      String?   @map("website_slug")
+  websiteSpecs     Json?     @map("website_specs")
+  websiteUpdatedAt DateTime? @map("website_updated_at")
+  lastSyncedAt     DateTime? @map("last_synced_at")
 
   // Stock tracking
   stockQuantity     Int @default(0) @map("stock_quantity")
@@ -464,6 +473,7 @@ enum PaymentTermType {
 enum ProductSource {
   MANUAL
   WOOCOMMERCE
+  WEBSITE
 }
 
 enum SyncStatus {
@@ -475,6 +485,7 @@ enum SyncStatus {
 enum SyncTrigger {
   MANUAL
   SCHEDULED
+  WEBHOOK
 }
 
 enum PaymentMethod {
@@ -510,6 +521,12 @@ model ProductColorVariant {
   stockQuantity     Int @default(0) @map("stock_quantity")
   lowStockThreshold Int @default(5) @map("low_stock_threshold")
 
+  // Website catalog sync — website-owned when websiteVariantId is set
+  sku                String?
+  websiteVariantId   Int?     @unique @map("website_variant_id")
+  websiteActive      Boolean  @default(true) @map("website_active")
+  websiteStockStatus String?  @map("website_stock_status")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -544,43 +561,30 @@ model StockMovement {
 }
 
 // ============================================================
-// WOOCOMMERCE INTEGRATION
+// WEBSITE CATALOG SYNC (goodchoiceth.com -> GCOffice)
 // ============================================================
 
-model WooCommerceConfig {
-  id              String   @id @default(cuid())
-  storeUrl        String   @map("store_url")
-  consumerKey     String   @map("consumer_key")
-  consumerSecret  String   @map("consumer_secret")
-  autoSyncEnabled Boolean  @default(false) @map("auto_sync_enabled")
-  lastSyncAt      DateTime? @map("last_sync_at")
+model CatalogSyncLog {
+  id      String      @id @default(cuid())
+  status  SyncStatus
+  trigger SyncTrigger
+  /// "full" (all products, nightly/manual) | "products" (webhook, selected ids)
+  scope   String      @default("full")
+  dryRun  Boolean     @default(false) @map("dry_run")
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  totalFetched Int @default(0) @map("total_fetched")
+  created      Int @default(0)
+  updated      Int @default(0)
+  deactivated  Int @default(0)
+  failed       Int @default(0)
 
-  syncLogs WooCommerceSyncLog[]
-
-  @@map("woocommerce_configs")
-}
-
-model WooCommerceSyncLog {
-  id       String      @id @default(cuid())
-  configId String      @map("config_id")
-  config   WooCommerceConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
-
-  status       SyncStatus
-  trigger      SyncTrigger
-  totalFetched Int        @default(0) @map("total_fetched")
-  created      Int        @default(0)
-  updated      Int        @default(0)
-  skipped      Int        @default(0)
-  failed       Int        @default(0)
-  errorMessage String?    @map("error_message") @db.Text
+  errorMessage String? @map("error_message") @db.Text
+  /// Dry-run preview / per-run diagnostics (see CatalogSyncDetails in src/lib/catalog/sync.ts)
+  details      Json?
 
   startedAt   DateTime  @default(now()) @map("started_at")
   completedAt DateTime? @map("completed_at")
 
-  @@index([configId])
   @@index([startedAt])
-  @@map("woocommerce_sync_logs")
+  @@map("catalog_sync_logs")
 }

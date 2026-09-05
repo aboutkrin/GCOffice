@@ -150,6 +150,11 @@ export function ProductTable({
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
           {row.original.name}
+          {row.original.source === "WEBSITE" && (
+            <Badge className="bg-sky-100 text-sky-800 text-[10px] px-1.5 py-0">
+              เว็บ
+            </Badge>
+          )}
           {row.original.source === "WOOCOMMERCE" && (
             <Badge className="bg-purple-100 text-purple-800 text-[10px] px-1.5 py-0">
               WC
@@ -199,23 +204,25 @@ export function ProductTable({
                 แก้ไข
               </Link>
             </DropdownMenuItem>
-            {row.original.status === "ACTIVE" ? (
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setDeleteId(row.original.id)}
-              >
-                <Trash2 className="size-4" />
-                ลบ
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setPermanentDeleteId(row.original.id)}
-              >
-                <Trash2 className="size-4" />
-                ลบถาวร
-              </DropdownMenuItem>
-            )}
+            {/* Website-synced products are removed on goodchoiceth.com, not here */}
+            {row.original.source !== "WEBSITE" &&
+              (row.original.status === "ACTIVE" ? (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setDeleteId(row.original.id)}
+                >
+                  <Trash2 className="size-4" />
+                  ลบ
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setPermanentDeleteId(row.original.id)}
+                >
+                  <Trash2 className="size-4" />
+                  ลบถาวร
+                </DropdownMenuItem>
+              ))}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -234,8 +241,10 @@ export function ProductTable({
       try {
         await deleteProduct(deleteId);
         toast.success("ลบสินค้าเรียบร้อยแล้ว");
-      } catch {
-        toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
+        );
       } finally {
         setDeleteId(null);
       }
@@ -248,8 +257,10 @@ export function ProductTable({
       try {
         await permanentDeleteProduct(permanentDeleteId);
         toast.success("ลบสินค้าถาวรเรียบร้อยแล้ว");
-      } catch {
-        toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
+        );
       } finally {
         setPermanentDeleteId(null);
       }

@@ -17,7 +17,7 @@ import {
   CalendarOff,
   Settings,
   ChevronDown,
-  ShoppingCart,
+  Globe,
   User,
   ReceiptText,
   Printer,
@@ -132,9 +132,9 @@ const settingsNavItems = [
     icon: Building2,
   },
   {
-    href: "/woocommerce",
-    label: "WooCommerce",
-    icon: ShoppingCart,
+    href: "/website-sync",
+    label: "ซิงค์เว็บไซต์",
+    icon: Globe,
   },
 ];
 
