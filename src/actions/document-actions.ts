@@ -404,27 +404,11 @@ export async function getDocumentForShare(id: string) {
 
   if (!document) throw new Error("ไม่พบเอกสาร");
 
+  // Use live company data directly instead of manually picking fields
+  // to ensure new fields are always included
   const result = {
     ...document,
-    companySnapshot: document.company
-      ? {
-          name: document.company.name,
-          address: document.company.address,
-          phone: document.company.phone,
-          email: document.company.email,
-          facebook: document.company.facebook,
-          instagram: document.company.instagram,
-          lineOa: document.company.lineOa,
-          tiktok: document.company.tiktok,
-          logoUrl: document.company.logoUrl,
-          bankName: document.company.bankName,
-          bankLogoUrl: document.company.bankLogoUrl,
-          accountName: document.company.accountName,
-          accountNumber: document.company.accountNumber,
-          promptpayQrUrl: document.company.promptpayQrUrl,
-          taxId: document.company.taxId,
-        }
-      : document.companySnapshot,
+    companySnapshot: document.company ?? document.companySnapshot,
     createdBy: document.createdBy,
   };
 
