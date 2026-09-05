@@ -10,6 +10,9 @@ import { ConnectionStatusCard } from "@/components/website-sync/connection-statu
 import { SyncHistoryTable } from "@/components/website-sync/sync-history-table";
 
 export const dynamic = "force-dynamic";
+// The sync buttons are Server Actions invoked from this page, so they run under
+// this route's limit. A full run over the whole catalog must not be cut off.
+export const maxDuration = 300;
 
 export default async function WebsiteSyncPage() {
   const [syncLogs, lastCompleted] = await Promise.all([

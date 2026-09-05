@@ -36,7 +36,10 @@ import type { CatalogCategory, CatalogProduct } from "./types";
 
 type Tx = Prisma.TransactionClient;
 
-const STALE_RUNNING_MS = 30 * 60 * 1000;
+// A run cannot outlive its function (maxDuration 300s on the cron route and the
+// sync page), so a RUNNING row older than this was killed mid-flight and must
+// not block the next run.
+const STALE_RUNNING_MS = 10 * 60 * 1000;
 const PRODUCT_TX_TIMEOUT_MS = 20_000;
 const WEBSITE_PREFIX = "WEB";
 
@@ -66,6 +69,8 @@ export interface CatalogSyncDetails {
   categoriesToCreate: string[];
   unmatchedColours: UnmatchedColours[];
   errors: { websiteProductId: number; name: string; message: string }[];
+  /** Linked products whose website `updatedAt` has not moved since the last run; no writes made. */
+  unchanged: number;
 }
 
 export interface SyncOptions {
@@ -91,6 +96,8 @@ interface ProductRow {
   status: string;
   woocommerceId: number | null;
   websiteProductId: number | null;
+  websiteUpdatedAt: Date | null;
+  lastSyncedAt: Date | null;
 }
 
 interface VariantRow {
@@ -98,7 +105,26 @@ interface VariantRow {
   productId: string;
   name: string;
   websiteVariantId: number | null;
+  colorHex: string | null;
+  imageUrl: string | null;
+  sortOrder: number;
+  sku: string | null;
+  websiteActive: boolean;
+  websiteStockStatus: string | null;
 }
+
+const VARIANT_ROW_SELECT = {
+  id: true,
+  productId: true,
+  name: true,
+  websiteVariantId: true,
+  colorHex: true,
+  imageUrl: true,
+  sortOrder: true,
+  sku: true,
+  websiteActive: true,
+  websiteStockStatus: true,
+} as const;
 
 interface SyncContext {
   dryRun: boolean;
@@ -125,6 +151,7 @@ function emptyDetails(): CatalogSyncDetails {
     categoriesToCreate: [],
     unmatchedColours: [],
     errors: [],
+    unchanged: 0,
   };
 }
 
@@ -145,10 +172,12 @@ async function buildContext(
         status: true,
         woocommerceId: true,
         websiteProductId: true,
+        websiteUpdatedAt: true,
+        lastSyncedAt: true,
       },
     }),
     prisma.productColorVariant.findMany({
-      select: { id: true, productId: true, name: true, websiteVariantId: true },
+      select: VARIANT_ROW_SELECT,
       orderBy: { sortOrder: "asc" },
     }),
   ]);
@@ -422,6 +451,21 @@ async function applyVariantPlan(
         `[catalog-sync] colour "${row.name}" of product ${productId} not renamed to "${data.name}": name already used`
       );
     }
+    // Every write is a round trip to the database; skip colours that already
+    // match the website exactly.
+    const sameName = renameBlocked || row.name === data.name;
+    if (
+      sameName &&
+      row.websiteVariantId === data.websiteVariantId &&
+      row.colorHex === data.colorHex &&
+      row.imageUrl === data.imageUrl &&
+      row.sortOrder === data.sortOrder &&
+      row.sku === data.sku &&
+      row.websiteActive === data.websiteActive &&
+      row.websiteStockStatus === data.websiteStockStatus
+    ) {
+      continue;
+    }
     await tx.productColorVariant.update({
       where: { id: row.id },
       data: {
@@ -437,6 +481,12 @@ async function applyVariantPlan(
     });
     row.websiteVariantId = data.websiteVariantId;
     if (!renameBlocked) row.name = data.name;
+    row.colorHex = data.colorHex;
+    row.imageUrl = data.imageUrl;
+    row.sortOrder = data.sortOrder;
+    row.sku = data.sku;
+    row.websiteActive = data.websiteActive;
+    row.websiteStockStatus = data.websiteStockStatus;
   }
 
   if (plan.toCreate.length > 0) {
@@ -453,7 +503,7 @@ async function applyVariantPlan(
           websiteActive: data.websiteActive,
           websiteStockStatus: data.websiteStockStatus,
         },
-        select: { id: true, productId: true, name: true, websiteVariantId: true },
+        select: VARIANT_ROW_SELECT,
       });
       const list = ctx.variantsByProductId.get(productId);
       if (list) list.push(created);
@@ -477,7 +527,7 @@ async function applyVariantPlan(
 // Per-product upsert
 // ----------------------------------------------------------------------------
 
-type UpsertOutcome = "created" | "updated";
+type UpsertOutcome = "created" | "updated" | "unchanged";
 
 /**
  * One product, one transaction. In dry-run mode nothing is written; the
@@ -515,9 +565,26 @@ async function upsertCatalogProduct(
         status: mapped.status,
         woocommerceId: null,
         websiteProductId: mapped.websiteProductId,
+        websiteUpdatedAt: null,
+        lastSyncedAt: null,
       });
     }
     return "created";
+  }
+
+  // Already linked and the website has not touched it since we last wrote it:
+  // nothing to do. Every product save on the website bumps `updatedAt` (colour
+  // edits go through the same save), so this is safe and makes the nightly run
+  // nearly free.
+  if (
+    existing &&
+    existing.websiteProductId === mapped.websiteProductId &&
+    existing.lastSyncedAt !== null &&
+    existing.websiteUpdatedAt !== null &&
+    existing.websiteUpdatedAt.getTime() === mapped.websiteUpdatedAt.getTime()
+  ) {
+    ctx.details.unchanged++;
+    return "unchanged";
   }
 
   const outcome = await prisma.$transaction(
@@ -552,6 +619,8 @@ async function upsertCatalogProduct(
         existing.websiteProductId = mapped.websiteProductId;
         existing.source = "WEBSITE";
         existing.status = mapped.status;
+        existing.websiteUpdatedAt = mapped.websiteUpdatedAt;
+        existing.lastSyncedAt = ctx.now;
         ctx.productsByWebsiteId.set(mapped.websiteProductId, existing);
         ctx.seenProductIds.add(existing.id);
         return "updated";
@@ -574,6 +643,8 @@ async function upsertCatalogProduct(
         status: mapped.status,
         woocommerceId: null,
         websiteProductId: mapped.websiteProductId,
+        websiteUpdatedAt: mapped.websiteUpdatedAt,
+        lastSyncedAt: ctx.now,
       };
       ctx.productsBySku.set(sku, row);
       ctx.productsByWebsiteId.set(mapped.websiteProductId, row);
@@ -708,7 +779,7 @@ export async function syncAll(
       try {
         const outcome = await upsertCatalogProduct(cp, ctx);
         if (outcome === "created") result.created++;
-        else result.updated++;
+        else if (outcome === "updated") result.updated++;
       } catch (err) {
         result.failed++;
         const message = err instanceof Error ? err.message : String(err);
@@ -800,7 +871,7 @@ export async function syncProductIds(
         result.totalFetched++;
         const outcome = await upsertCatalogProduct(cp, ctx);
         if (outcome === "created") result.created++;
-        else result.updated++;
+        else if (outcome === "updated") result.updated++;
       } catch (err) {
         result.failed++;
         const message = err instanceof Error ? err.message : String(err);
