@@ -247,6 +247,7 @@ model DocumentLineItem {
   productName      String   @map("product_name")
   productImage     String?  @map("product_image")
   colorVariantName String?  @map("color_variant_name")
+  colorVariantSku  String?  @map("color_variant_sku")
   showImage        Boolean  @default(false) @map("show_image")
   details          String?  @db.Text
   quantity     Int

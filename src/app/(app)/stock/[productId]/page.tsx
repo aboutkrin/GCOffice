@@ -108,6 +108,11 @@ export default async function ProductStockPage({
                         <div className="size-5 rounded-full border bg-muted shrink-0" />
                       )}
                       <span className="font-medium text-sm">{variant.name}</span>
+                      {variant.sku && (
+                        <span className="ml-1 font-mono text-xs text-muted-foreground">
+                          {variant.sku}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold font-mono">

@@ -37,6 +37,8 @@ interface ColorVariant {
   /** false = the website stopped selling this colour; still selectable here. */
   websiteActive?: boolean;
   websiteVariantId?: number | null;
+  /** Website colour code (e.g. YSP125-Q302). */
+  sku?: string | null;
 }
 
 interface Product {
@@ -60,6 +62,7 @@ interface ProductPickerProps {
     basePrice: number;
     imageUrl?: string;
     colorVariantName?: string;
+    colorVariantSku?: string;
   }) => void;
   children?: React.ReactNode;
 }
@@ -101,8 +104,42 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
     return () => clearTimeout(timeout);
   }, [query, categoryId, open]);
 
+  const normalizedQuery = query.trim().toLowerCase();
+
+  /** Colours whose website code or name contain what the user typed. */
+  const matchingColours = (product: Product): ColorVariant[] => {
+    if (!normalizedQuery || !product.colorVariants) return [];
+    return product.colorVariants.filter(
+      (v) =>
+        (v.sku ?? "").toLowerCase().includes(normalizedQuery) ||
+        v.name.toLowerCase().includes(normalizedQuery)
+    );
+  };
+
+  /** True when the product itself (not only one of its colours) matched the query. */
+  const productMatches = (product: Product): boolean =>
+    !normalizedQuery ||
+    product.name.toLowerCase().includes(normalizedQuery) ||
+    product.sku.toLowerCase().includes(normalizedQuery);
+
+  /** Colour step order: colours that matched the query first, then admin order. */
+  const orderedColours = (product: Product): ColorVariant[] => {
+    const variants = product.colorVariants ?? [];
+    const matched = new Set(matchingColours(product).map((v) => v.id));
+    return [...variants].sort(
+      (a, b) => Number(matched.has(b.id)) - Number(matched.has(a.id))
+    );
+  };
+
   const handleSelect = (product: Product) => {
     if (product.colorVariants && product.colorVariants.length > 0) {
+      // Typing a colour code (YSP125-Q302) is how staff pick a colour on the
+      // website; when it identifies exactly one colour, skip the colour step.
+      const matched = matchingColours(product);
+      if (matched.length === 1 && !productMatches(product)) {
+        finalizeSelect(product, matched[0]);
+        return;
+      }
       // Show variant selection step
       setSelectedProduct(product);
     } else {
@@ -119,6 +156,7 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
       basePrice: variantPrice ?? Number(product.basePrice),
       imageUrl: variant?.imageUrl || product.imageUrl || undefined,
       colorVariantName: variant?.name,
+      colorVariantSku: variant?.sku ?? undefined,
     });
     setOpen(false);
     resetState();
@@ -184,7 +222,7 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                     {formatNumber(selectedProduct.basePrice)} บาท
                   </span>
                 </button>
-                {selectedProduct.colorVariants!.map((variant) => {
+                {orderedColours(selectedProduct).map((variant) => {
                   const displayPrice = variant.price != null ? Number(variant.price) : Number(selectedProduct.basePrice);
                   return (
                   <button
@@ -217,6 +255,11 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="text-sm font-medium">{variant.name}</p>
+                        {variant.sku && (
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {variant.sku}
+                          </span>
+                        )}
                         {variant.websiteActive === false && (
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                             {WEBSITE_INACTIVE_LABEL}
@@ -245,7 +288,7 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="ค้นหาชื่อสินค้าหรือรหัส SKU..."
+                  placeholder="ค้นหาชื่อสินค้า รหัสสินค้า หรือรหัสสี..."
                   className="pl-9"
                 />
               </div>
@@ -313,6 +356,18 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                         <p className="text-xs text-muted-foreground">
                           SKU: {product.sku}
                         </p>
+                        {!productMatches(product) &&
+                          matchingColours(product).slice(0, 1).map((v) => (
+                            <p
+                              key={v.id}
+                              className="text-xs text-muted-foreground truncate"
+                            >
+                              สี: {v.name}
+                              {v.sku && (
+                                <span className="ml-1 font-mono">{v.sku}</span>
+                              )}
+                            </p>
+                          ))}
                       </div>
                       <span className="text-sm font-medium shrink-0">
                         {formatNumber(product.basePrice)} บาท

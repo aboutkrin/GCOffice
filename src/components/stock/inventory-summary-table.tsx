@@ -45,6 +45,7 @@ interface SummaryItem {
   productImage: string | null;
   colorVariantId: string | null;
   colorVariantName: string | null;
+  colorVariantSku?: string | null;
   currentStock: number;
   totalOrdered: number;
   shortage: number;
@@ -119,7 +120,7 @@ export function InventorySummaryTable({
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
+            placeholder="ค้นหาชื่อสินค้า รหัสสินค้า หรือรหัสสี..."
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             className="pl-9"
@@ -203,7 +204,15 @@ export function InventorySummaryTable({
                           <p className="text-xs text-muted-foreground">
                             SKU: {item.productSku}
                             {item.colorVariantName && (
-                              <> — สี: {item.colorVariantName}</>
+                              <>
+                                {" — สี: "}
+                                {item.colorVariantName}
+                                {item.colorVariantSku && (
+                                  <span className="ml-1 font-mono text-xs text-muted-foreground">
+                                    {item.colorVariantSku}
+                                  </span>
+                                )}
+                              </>
                             )}
                           </p>
                         </div>

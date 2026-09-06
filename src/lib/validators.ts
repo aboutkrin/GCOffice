@@ -69,6 +69,7 @@ export const lineItemSchema = z.object({
   productName: z.string().min(1, "กรุณาระบุชื่อสินค้า"),
   productImage: z.string().optional(),
   colorVariantName: z.string().optional(),
+  colorVariantSku: z.string().optional(),
   showImage: z.boolean().default(true),
   details: z.string().optional(),
   quantity: z.coerce.number().int().min(1, "จำนวนต้องมากกว่า 0"),
@@ -264,6 +265,8 @@ export const colorVariantInputSchema = z.object({
   // the server re-reads ownership from the database before writing.
   websiteVariantId: z.number().int().optional().nullable(),
   websiteActive: z.boolean().optional(),
+  /** Website colour code (e.g. YSP125-Q302); read-only, the sync owns it. */
+  sku: z.string().optional().nullable(),
 });
 
 export const stockAdjustmentSchema = z.object({

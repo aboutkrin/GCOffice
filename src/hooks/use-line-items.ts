@@ -9,6 +9,7 @@ export interface LineItem {
   productName: string;
   productImage?: string;
   colorVariantName?: string;
+  colorVariantSku?: string;
   showImage: boolean;
   details?: string;
   quantity: number;
@@ -71,6 +72,7 @@ export function useLineItems(initial: LineItem[] = []) {
         basePrice: number;
         imageUrl?: string;
         colorVariantName?: string;
+        colorVariantSku?: string;
       }
     ) => {
       setItems((prev) =>
@@ -82,6 +84,7 @@ export function useLineItems(initial: LineItem[] = []) {
             productName: product.name,
             productImage: product.imageUrl,
             colorVariantName: product.colorVariantName,
+            colorVariantSku: product.colorVariantSku,
             unitPrice: Number(product.basePrice),
             lineTotal: item.quantity * Number(product.basePrice),
           };

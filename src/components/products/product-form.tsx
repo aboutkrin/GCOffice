@@ -65,6 +65,7 @@ export function ProductForm({ initialData, categories, websiteAdminUrl }: Produc
       sortOrder: v.sortOrder ?? 0,
       websiteVariantId: v.websiteVariantId ?? null,
       websiteActive: v.websiteActive ?? true,
+      sku: v.sku ?? null,
     })) ?? []
   );
   const isEditing = !!initialData;

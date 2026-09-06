@@ -23,6 +23,8 @@ export interface ColorVariantItem {
   websiteVariantId?: number | null;
   /** false = the website stopped selling this colour (still usable in documents). */
   websiteActive?: boolean;
+  /** Website colour code (e.g. YSP125-Q302); read-only, owned by the sync. */
+  sku?: string | null;
 }
 
 function isWebsiteOwned(variant: ColorVariantItem): boolean {
@@ -111,6 +113,11 @@ export function ColorVariantsSection({
                   )}
                   <span className="text-sm font-medium flex-1 flex items-center gap-2 flex-wrap">
                     {variant.name || "(ยังไม่ได้ตั้งชื่อ)"}
+                    {variant.sku && (
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {variant.sku}
+                      </span>
+                    )}
                     {variant.price != null && variant.price > 0 && (
                       <span className="text-xs text-muted-foreground">
                         ฿{variant.price.toLocaleString()}
@@ -163,6 +170,12 @@ export function ColorVariantsSection({
                       </p>
                     )}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {locked && (
+                        <div>
+                          <Label className="mb-1.5 block text-xs">รหัสสี (เว็บ)</Label>
+                          <Input value={variant.sku ?? ""} readOnly disabled className="font-mono" />
+                        </div>
+                      )}
                       <div>
                         <Label className="mb-1.5 block text-xs">ชื่อสี</Label>
                         <Input

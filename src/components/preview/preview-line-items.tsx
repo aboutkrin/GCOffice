@@ -8,6 +8,7 @@ interface LineItem {
   productName: string;
   productImage?: string;
   colorVariantName?: string;
+  colorVariantSku?: string;
   showImage: boolean;
   details?: string;
   quantity: number;
@@ -74,7 +75,9 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
                       <div className="text-[10px] text-gray-400 break-all">
                         {item.productSku && <>SKU: {item.productSku}</>}
                         {item.productSku && item.colorVariantName && " — "}
-                        {item.colorVariantName && <>สี: {item.colorVariantName}</>}
+                        {item.colorVariantName && (
+                          <>สี: {item.colorVariantName}{item.colorVariantSku ? ` (${item.colorVariantSku})` : ""}</>
+                        )}
                       </div>
                     )}
                     {item.details && (

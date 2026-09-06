@@ -25,6 +25,7 @@ interface StockProduct {
     colorHex?: string | null;
     imageUrl?: string | null;
     stockQuantity: number;
+    sku?: string | null;
   }[];
 }
 
@@ -302,6 +303,11 @@ export const StockReportPreview = forwardRef<
                         )}
                         <span className="text-[10px] text-gray-600">
                           {variant.name}
+                          {variant.sku && (
+                            <span className="ml-1 font-mono text-gray-400">
+                              {variant.sku}
+                            </span>
+                          )}
                         </span>
                       </div>
                     </td>

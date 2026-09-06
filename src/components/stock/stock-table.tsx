@@ -267,7 +267,7 @@ export function StockTable({
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
+            placeholder="ค้นหาชื่อสินค้า รหัสสินค้า หรือรหัสสี..."
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             className="pl-9"
@@ -394,6 +394,11 @@ export function StockTable({
                                 <div className="size-4 rounded-full border bg-muted shrink-0" />
                               )}
                               <span className="text-sm">{variant.name}</span>
+                              {variant.sku && (
+                                <span className="ml-1 font-mono text-xs text-muted-foreground">
+                                  {variant.sku}
+                                </span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell" />

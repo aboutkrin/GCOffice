@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { productSearchWhere } from "@/data/products";
 import { serialize } from "@/lib/utils";
 import { DocumentStatus, DocumentType } from "@/generated/prisma/client";
 
@@ -14,11 +15,8 @@ export async function getStockOverview(params?: {
   };
 
   if (params?.categoryId) where.categoryId = params.categoryId;
-  if (params?.search) {
-    where.OR = [
-      { name: { contains: params.search, mode: "insensitive" } },
-      { sku: { contains: params.search, mode: "insensitive" } },
-    ];
+  if (params?.search?.trim()) {
+    where.OR = productSearchWhere(params.search).OR;
   }
   if (params?.stockFilter === "low_stock") {
     where.stockQuantity = { gt: 0 };
@@ -59,6 +57,7 @@ export async function getStockOverview(params?: {
               imageUrl: true,
               stockQuantity: true,
               lowStockThreshold: true,
+              sku: true,
             },
           },
         },
@@ -174,6 +173,7 @@ export async function getInStockProducts() {
             colorHex: true,
             imageUrl: true,
             stockQuantity: true,
+            sku: true,
           },
         },
       },
@@ -231,6 +231,7 @@ export async function getInventorySummary() {
           select: {
             id: true,
             name: true,
+            sku: true,
             stockQuantity: true,
           },
         },
@@ -252,6 +253,7 @@ export async function getInventorySummary() {
         productImage: string | null;
         colorVariantId: string | null;
         colorVariantName: string | null;
+        colorVariantSku: string | null;
         currentStock: number;
         totalOrdered: number;
         orders: {
@@ -282,12 +284,14 @@ export async function getInventorySummary() {
           // Determine current stock for this product/variant
           let currentStock = product.stockQuantity;
           let colorVariantId: string | null = null;
+          let colorVariantSku: string | null = null;
           if (item.colorVariantName) {
             const variant = product.colorVariants.find(
               (v) => v.name === item.colorVariantName
             );
             currentStock = variant?.stockQuantity ?? 0;
             colorVariantId = variant?.id ?? null;
+            colorVariantSku = variant?.sku ?? null;
           }
 
           demandMap.set(key, {
@@ -297,6 +301,7 @@ export async function getInventorySummary() {
             productImage: item.productImage || product.imageUrl,
             colorVariantId,
             colorVariantName: item.colorVariantName,
+            colorVariantSku,
             currentStock,
             totalOrdered: 0,
             orders: [],
