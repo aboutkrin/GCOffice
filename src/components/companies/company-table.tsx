@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   useReactTable,
   getCoreRowModel,
@@ -18,6 +17,7 @@ import { deleteCompany } from "@/actions/company-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import {
   Table,
   TableBody,
@@ -56,22 +56,13 @@ export function CompanyTable({ companies }: CompanyTableProps) {
     {
       accessorKey: "logoUrl",
       header: "โลโก้",
-      cell: ({ row }) => {
-        const url = row.original.logoUrl;
-        return url ? (
-          <Image
-            src={url}
-            alt={row.original.name}
-            width={40}
-            height={40}
-            className="rounded object-contain size-10"
-          />
-        ) : (
-          <div className="size-10 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">
-            N/A
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <ProductThumb
+          src={row.original.logoUrl}
+          alt={row.original.name}
+          className="object-contain"
+        />
+      ),
       enableGlobalFilter: false,
     },
     {

@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Trash2 } from "lucide-react";
-import Image from "next/image";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import { ProductPicker } from "./product-picker";
 import { formatNumber } from "@/lib/thai-currency";
 import { type LineItem, MAX_LINE_ITEMS } from "@/hooks/use-line-items";
@@ -80,12 +80,10 @@ export function LineItemTable({
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {item.productImage && (
-                      <Image
+                      <ProductThumb
                         src={item.productImage}
                         alt={item.productName}
-                        width={40}
-                        height={40}
-                        className="rounded border object-cover shrink-0"
+                        className="border"
                       />
                     )}
                     <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -218,12 +216,11 @@ export function LineItemTable({
               )}
               {item.productImage && (
                 <div className="mt-2">
-                  <Image
+                  <ProductThumb
                     src={item.productImage}
                     alt={item.productName}
-                    width={80}
-                    height={80}
-                    className="rounded border object-cover"
+                    size={80}
+                    className="border"
                   />
                 </div>
               )}

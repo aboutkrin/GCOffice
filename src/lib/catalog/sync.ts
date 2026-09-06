@@ -708,7 +708,7 @@ async function guardAgainstRunningSync(): Promise<void> {
       where: { id: running.id },
       data: {
         status: "FAILED",
-        errorMessage: "Sync timed out (exceeded 30 minutes)",
+        errorMessage: "Sync timed out (exceeded 10 minutes)",
         completedAt: new Date(),
       },
     });

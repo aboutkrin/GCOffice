@@ -2,21 +2,23 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   ChevronDown,
   ChevronUp,
   Search,
+  Loader2,
   Plus,
   X,
 } from "lucide-react";
 
 import { formatThaiDateShort } from "@/lib/thai-date";
+import { useDebouncedSearchParam } from "@/hooks/use-debounced-search-param";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -67,7 +69,13 @@ export function InventorySummaryTable({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [searchValue, setSearchValue] = useState(filters.search);
+  const {
+    value: searchValue,
+    onChange: onSearchChange,
+    flush: flushSearch,
+    reset: resetSearch,
+    isSearching,
+  } = useDebouncedSearchParam({ initialValue: filters.search, resetPage: false });
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Dialog state
@@ -91,7 +99,7 @@ export function InventorySummaryTable({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateParams({ search: searchValue });
+    flushSearch();
   };
 
   const toggleExpand = (key: string) => {
@@ -107,7 +115,7 @@ export function InventorySummaryTable({
       : item.productSku;
 
   const clearFilters = () => {
-    setSearchValue("");
+    resetSearch();
     router.push(pathname);
   };
 
@@ -118,11 +126,15 @@ export function InventorySummaryTable({
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          {isSearching ? (
+            <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          )}
           <Input
             placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
+            onChange={onSearchChange}
             className="pl-9"
           />
         </form>
@@ -184,19 +196,7 @@ export function InventorySummaryTable({
                         </Button>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {item.productImage ? (
-                          <Image
-                            src={item.productImage}
-                            alt={item.productName}
-                            width={40}
-                            height={40}
-                            className="rounded object-cover size-10"
-                          />
-                        ) : (
-                          <div className="size-10 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">
-                            N/A
-                          </div>
-                        )}
+                        <ProductThumb src={item.productImage} alt={item.productName} />
                       </TableCell>
                       <TableCell>
                         <div>

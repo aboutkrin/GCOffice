@@ -2,9 +2,9 @@
 
 import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight, Package, FileText, Truck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -475,20 +475,12 @@ export function DeliverySchedule({
                       key={i}
                       className="flex items-start gap-2 text-sm border-b pb-2 last:border-0"
                     >
-                      {li.productImage ? (
-                        <Image
-                          src={li.productImage}
-                          alt={li.productName}
-                          width={48}
-                          height={48}
-                          className="rounded object-cover shrink-0"
-                          style={{ width: 48, height: 48 }}
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded bg-muted flex items-center justify-center shrink-0">
-                          <Package className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      )}
+                      <ProductThumb
+                        src={li.productImage}
+                        alt={li.productName}
+                        size={48}
+                        fallback="icon"
+                      />
                       <span className="flex-1 min-w-0 pt-1">{li.productName}</span>
                       <Badge variant="secondary" className="shrink-0 mt-1">
                         {li.quantity.toLocaleString()}

@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   useReactTable,
@@ -12,6 +11,7 @@ import {
 } from "@tanstack/react-table";
 import {
   Search,
+  Loader2,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -27,10 +27,12 @@ import {
   STOCK_STATUS_LABELS,
   STOCK_STATUS_COLORS,
 } from "@/lib/constants";
+import { useDebouncedSearchParam } from "@/hooks/use-debounced-search-param";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import {
   Select,
   SelectContent,
@@ -79,7 +81,13 @@ export function StockTable({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [searchValue, setSearchValue] = useState(filters.search);
+  const {
+    value: searchValue,
+    onChange: onSearchChange,
+    flush: flushSearch,
+    reset: resetSearch,
+    isSearching,
+  } = useDebouncedSearchParam({ initialValue: filters.search });
 
   // Dialog state
   const [adjustMode, setAdjustMode] = useState<"in" | "out">("in");
@@ -107,11 +115,11 @@ export function StockTable({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateParams({ search: searchValue });
+    flushSearch();
   };
 
   const clearFilters = () => {
-    setSearchValue("");
+    resetSearch();
     router.push(pathname);
   };
 
@@ -121,26 +129,9 @@ export function StockTable({
     {
       accessorKey: "imageUrl",
       header: "รูป",
-      cell: ({ row }) => {
-        const url = row.original.imageUrl;
-        return url ? (
-          <Image
-            src={url}
-            alt={row.original.name}
-            width={40}
-            height={40}
-            className="rounded object-cover size-10"
-          />
-        ) : (
-          <div className="size-10 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">
-            N/A
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "sku",
-      header: "รหัส",
+      cell: ({ row }) => (
+        <ProductThumb src={row.original.imageUrl} alt={row.original.name} />
+      ),
     },
     {
       accessorKey: "name",
@@ -208,6 +199,10 @@ export function StockTable({
       },
     },
     {
+      accessorKey: "sku",
+      header: "รหัส",
+    },
+    {
       id: "actions",
       header: "จัดการ",
       cell: ({ row }) => (
@@ -265,11 +260,15 @@ export function StockTable({
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          {isSearching ? (
+            <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          )}
           <Input
             placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
+            onChange={onSearchChange}
             className="pl-9"
           />
         </form>
@@ -324,7 +323,7 @@ export function StockTable({
                   <TableHead
                     key={header.id}
                     className={
-                      ["imageUrl", "category.name"].includes(header.id)
+                      ["imageUrl", "category.name", "sku"].includes(header.id)
                         ? "hidden md:table-cell"
                         : ""
                     }
@@ -350,7 +349,7 @@ export function StockTable({
                         <TableCell
                           key={cell.id}
                           className={
-                            ["imageUrl", "category.name"].includes(cell.column.id)
+                            ["imageUrl", "category.name", "sku"].includes(cell.column.id)
                               ? "hidden md:table-cell"
                               : ""
                           }
@@ -369,22 +368,13 @@ export function StockTable({
                       return (
                         <TableRow key={`variant-${variant.id}`} className="bg-muted/30">
                           <TableCell className="hidden md:table-cell" />
-                          <TableCell />
                           <TableCell>
                             <div className="flex items-center gap-2 pl-6">
-                              {variant.imageUrl ? (
-                                <Image
-                                  src={variant.imageUrl}
-                                  alt={variant.name}
-                                  width={40}
-                                  height={40}
-                                  className="rounded object-cover size-10 shrink-0"
-                                />
-                              ) : (
-                                <div className="size-10 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs shrink-0">
-                                  N/A
-                                </div>
-                              )}
+                              <ProductThumb
+                                src={variant.imageUrl}
+                                alt={variant.name}
+                                className="shrink-0"
+                              />
                               {variant.colorHex ? (
                                 <div
                                   className="size-4 rounded-full border shrink-0"
@@ -412,6 +402,7 @@ export function StockTable({
                               {STOCK_STATUS_LABELS[variantStatus]}
                             </Badge>
                           </TableCell>
+                          <TableCell className="hidden md:table-cell" />
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <Button

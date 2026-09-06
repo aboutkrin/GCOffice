@@ -2,7 +2,6 @@
 
 import { useState, useTransition, useCallback } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   useReactTable,
@@ -15,6 +14,7 @@ import {
   Pencil,
   Trash2,
   Search,
+  Loader2,
   ChevronLeft,
   ChevronRight,
   X,
@@ -23,10 +23,12 @@ import { toast } from "sonner";
 
 import { formatNumber } from "@/lib/thai-currency";
 import { deleteProduct, permanentDeleteProduct } from "@/actions/product-actions";
+import { useDebouncedSearchParam } from "@/hooks/use-debounced-search-param";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import {
   Select,
   SelectContent,
@@ -83,7 +85,13 @@ export function ProductTable({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [searchValue, setSearchValue] = useState(filters.search);
+  const {
+    value: searchValue,
+    onChange: onSearchChange,
+    flush: flushSearch,
+    reset: resetSearch,
+    isSearching,
+  } = useDebouncedSearchParam({ initialValue: filters.search });
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [permanentDeleteId, setPermanentDeleteId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -109,11 +117,11 @@ export function ProductTable({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateParams({ search: searchValue });
+    flushSearch();
   };
 
   const clearFilters = () => {
-    setSearchValue("");
+    resetSearch();
     router.push(pathname);
   };
 
@@ -123,26 +131,9 @@ export function ProductTable({
     {
       accessorKey: "imageUrl",
       header: "รูป",
-      cell: ({ row }) => {
-        const url = row.original.imageUrl;
-        return url ? (
-          <Image
-            src={url}
-            alt={row.original.name}
-            width={40}
-            height={40}
-            className="rounded object-cover size-10"
-          />
-        ) : (
-          <div className="size-10 rounded bg-muted flex items-center justify-center text-muted-foreground text-xs">
-            N/A
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: "sku",
-      header: "รหัส",
+      cell: ({ row }) => (
+        <ProductThumb src={row.original.imageUrl} alt={row.original.name} />
+      ),
     },
     {
       accessorKey: "name",
@@ -186,6 +177,10 @@ export function ProductTable({
           {row.original.status === "ACTIVE" ? "ใช้งาน" : "ไม่ใช้งาน"}
         </Badge>
       ),
+    },
+    {
+      accessorKey: "sku",
+      header: "รหัส",
     },
     {
       id: "actions",
@@ -275,11 +270,15 @@ export function ProductTable({
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          {isSearching ? (
+            <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          )}
           <Input
             placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
+            onChange={onSearchChange}
             className="pl-9"
           />
         </form>
@@ -334,7 +333,7 @@ export function ProductTable({
                   <TableHead
                     key={header.id}
                     className={
-                      ["imageUrl", "basePrice", "status"].includes(header.id)
+                      ["imageUrl", "basePrice", "status", "sku"].includes(header.id)
                         ? "hidden md:table-cell"
                         : ""
                     }
@@ -355,7 +354,7 @@ export function ProductTable({
                     <TableCell
                       key={cell.id}
                       className={
-                        ["imageUrl", "basePrice", "status"].includes(cell.column.id)
+                        ["imageUrl", "basePrice", "status", "sku"].includes(cell.column.id)
                           ? "hidden md:table-cell"
                           : ""
                       }

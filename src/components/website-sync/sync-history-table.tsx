@@ -7,7 +7,7 @@ import {
   flexRender,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { Loader2, RefreshCw, SearchCheck } from "lucide-react";
+import { Eye, Loader2, RefreshCw, SearchCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -26,7 +26,6 @@ import { formatThaiDateTime } from "@/lib/thai-date";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +43,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+import { SyncDetailsView } from "./sync-details-view";
+
 interface SyncLog {
   id: string;
   status: string;
@@ -56,6 +57,7 @@ interface SyncLog {
   deactivated: number;
   failed: number;
   errorMessage: string | null;
+  /** Prisma Json column — shape matches CatalogSyncDetails but isn't typed as such at the DB layer. */
   details?: unknown;
   startedAt: string | Date;
   completedAt: string | Date | null;
@@ -73,6 +75,7 @@ export function SyncHistoryTable({ syncLogs, lastSyncAt }: SyncHistoryTableProps
   const [isPreviewing, startPreviewing] = useTransition();
   const [preview, setPreview] = useState<Preview | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [detailLog, setDetailLog] = useState<SyncLog | null>(null);
 
   const busy = isSyncing || isPreviewing;
 
@@ -148,6 +151,20 @@ export function SyncHistoryTable({ syncLogs, lastSyncAt }: SyncHistoryTableProps
     { accessorKey: "updated", header: "อัปเดต" },
     { accessorKey: "deactivated", header: "ปิดใช้งาน" },
     { accessorKey: "failed", header: "ล้มเหลว" },
+    {
+      id: "detail",
+      header: "",
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          title="ดูรายละเอียด"
+          onClick={() => setDetailLog(row.original)}
+        >
+          <Eye className="size-4" />
+        </Button>
+      ),
+    },
   ];
 
   const table = useReactTable({
@@ -240,95 +257,15 @@ export function SyncHistoryTable({ syncLogs, lastSyncAt }: SyncHistoryTableProps
           </DialogHeader>
 
           {preview && (
-            <ScrollArea className="max-h-[60vh] pr-3">
-              <div className="space-y-5 text-sm">
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <Stat label="สินค้าบนเว็บ" value={preview.totalFetched} />
-                  <Stat label="จะเพิ่มใหม่" value={preview.details.toCreate.length} />
-                  <Stat label="จะอัปเดต" value={preview.details.toUpdate} />
-                  <Stat label="จะปิดใช้งาน" value={preview.details.toDeactivate.length} />
-                </div>
-
-                <Section
-                  title="สินค้าที่จะเพิ่มใหม่"
-                  count={preview.details.toCreate.length}
-                  emptyText="ไม่มี"
-                >
-                  <ul className="list-disc pl-5 space-y-0.5">
-                    {preview.details.toCreate.map((p, i) => (
-                      <li key={`${p.sku}-${i}`}>
-                        <span className="font-mono text-xs">{p.sku}</span> — {p.name}
-                      </li>
-                    ))}
-                  </ul>
-                </Section>
-
-                <Section
-                  title="สินค้าที่จะถูกปิดใช้งาน (ไม่มีบนเว็บไซต์แล้ว)"
-                  count={preview.details.toDeactivate.length}
-                  emptyText="ไม่มี"
-                >
-                  <ul className="list-disc pl-5 space-y-0.5">
-                    {preview.details.toDeactivate.map((p) => (
-                      <li key={p.sku}>
-                        <span className="font-mono text-xs">{p.sku}</span> — {p.name}
-                      </li>
-                    ))}
-                  </ul>
-                </Section>
-
-                <Section
-                  title="หมวดหมู่ที่จะสร้างใหม่"
-                  count={preview.details.categoriesToCreate.length}
-                  emptyText="ไม่มี"
-                >
-                  <ul className="list-disc pl-5 space-y-0.5">
-                    {preview.details.categoriesToCreate.map((c) => (
-                      <li key={c}>{c}</li>
-                    ))}
-                  </ul>
-                </Section>
-
-                <Section
-                  title="สีที่ชื่อไม่ตรงกัน"
-                  count={preview.details.unmatchedColours.length}
-                  emptyText="ไม่มี"
-                  hint="สีใน GCOffice ที่ชื่อไม่ตรงกับเว็บไซต์จะไม่ถูกรวมกัน — สีเดิมจะคงอยู่ (พร้อมสต็อค) และสีจากเว็บจะถูกเพิ่มใหม่ หากต้องการรวม ให้เปลี่ยนชื่อสีใน GCOffice ให้ตรงกับเว็บไซต์ก่อนซิงค์"
-                >
-                  <div className="space-y-2">
-                    {preview.details.unmatchedColours.map((u) => (
-                      <div key={u.productSku} className="rounded-md border p-2">
-                        <div className="font-medium">
-                          <span className="font-mono text-xs">{u.productSku}</span> — {u.productName}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          GCOffice: {u.gcofficeNames.join(", ")}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          เว็บไซต์: {u.websiteNames.join(", ")}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Section>
-
-                {preview.details.errors.length > 0 && (
-                  <Section
-                    title="ข้อผิดพลาด"
-                    count={preview.details.errors.length}
-                    emptyText=""
-                  >
-                    <ul className="list-disc pl-5 space-y-0.5 text-red-700">
-                      {preview.details.errors.map((e) => (
-                        <li key={e.websiteProductId}>
-                          #{e.websiteProductId} {e.name}: {e.message}
-                        </li>
-                      ))}
-                    </ul>
-                  </Section>
-                )}
-              </div>
-            </ScrollArea>
+            <SyncDetailsView
+              mode="preview"
+              totalFetched={preview.totalFetched}
+              created={preview.created}
+              updated={preview.updated}
+              deactivated={preview.deactivated}
+              failed={preview.failed}
+              details={preview.details}
+            />
           )}
 
           <DialogFooter>
@@ -350,46 +287,47 @@ export function SyncHistoryTable({ syncLogs, lastSyncAt }: SyncHistoryTableProps
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
 
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-md border p-2">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-lg font-semibold">{value.toLocaleString("th-TH")}</div>
-    </div>
-  );
-}
+      <Dialog open={!!detailLog} onOpenChange={(open) => !open && setDetailLog(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          {detailLog && (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {formatThaiDateTime(new Date(detailLog.startedAt))}
+                </DialogTitle>
+                <DialogDescription>
+                  {SYNC_TRIGGER_LABELS[detailLog.trigger] ?? detailLog.trigger} ·{" "}
+                  {SYNC_SCOPE_LABELS[detailLog.scope] ?? detailLog.scope}
+                  {detailLog.completedAt &&
+                    ` · ใช้เวลา ${Math.round(
+                      (new Date(detailLog.completedAt).getTime() -
+                        new Date(detailLog.startedAt).getTime()) /
+                        1000
+                    )} วินาที`}
+                </DialogDescription>
+              </DialogHeader>
 
-function Section({
-  title,
-  count,
-  emptyText,
-  hint,
-  children,
-}: {
-  title: string;
-  count: number;
-  emptyText: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-1.5">
-        <h3 className="font-medium">{title}</h3>
-        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-          {count}
-        </Badge>
-      </div>
-      {hint && <p className="text-xs text-muted-foreground mb-2">{hint}</p>}
-      {count === 0 ? (
-        <p className="text-muted-foreground text-xs">{emptyText}</p>
-      ) : (
-        children
-      )}
+              <SyncDetailsView
+                mode="history"
+                totalFetched={detailLog.totalFetched}
+                created={detailLog.created}
+                updated={detailLog.updated}
+                deactivated={detailLog.deactivated}
+                failed={detailLog.failed}
+                details={(detailLog.details as CatalogSyncDetails | null) ?? null}
+                errorMessage={detailLog.errorMessage}
+              />
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDetailLog(null)}>
+                  ปิด
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
