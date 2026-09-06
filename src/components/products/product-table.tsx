@@ -277,7 +277,7 @@ export function ProductTable({
         <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="ค้นหาชื่อสินค้า รหัสสินค้า หรือรหัสสี..."
+            placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             className="pl-9"

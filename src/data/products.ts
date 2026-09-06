@@ -2,23 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { Status } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 
-/**
- * Text search over a product and its colours. On goodchoiceth.com the colour
- * is the sellable item that carries the code (e.g. YSP125-Q302) while the
- * product is the series, so staff search by colour code or colour name as
- * often as by product name/SKU. Every product search box shares this.
- */
-export function productSearchWhere(search: string) {
-  const contains = { contains: search.trim(), mode: "insensitive" as const };
-  return {
-    OR: [
-      { name: contains },
-      { sku: contains },
-      { colorVariants: { some: { OR: [{ sku: contains }, { name: contains }] } } },
-    ],
-  };
-}
-
 export async function getProducts(params?: {
   search?: string;
   status?: Status;
@@ -29,8 +12,11 @@ export async function getProducts(params?: {
   const where: any = {};
   if (params?.status) where.status = params.status;
   if (params?.categoryId) where.categoryId = params.categoryId;
-  if (params?.search?.trim()) {
-    where.OR = productSearchWhere(params.search).OR;
+  if (params?.search) {
+    where.OR = [
+      { name: { contains: params.search, mode: "insensitive" } },
+      { sku: { contains: params.search, mode: "insensitive" } },
+    ];
   }
 
   const page = params?.page ?? 1;
@@ -105,8 +91,11 @@ export async function searchProducts(query: string, categoryId?: string) {
     where.categoryId = categoryId;
   }
 
-  if (query.trim()) {
-    where.OR = productSearchWhere(query).OR;
+  if (query) {
+    where.OR = [
+      { name: { contains: query, mode: "insensitive" } },
+      { sku: { contains: query, mode: "insensitive" } },
+    ];
   }
 
   try {
@@ -163,8 +152,11 @@ export async function getProductsForCost(params?: {
     where.categoryId = params.categoryId;
   }
 
-  if (params?.search?.trim()) {
-    where.OR = productSearchWhere(params.search).OR;
+  if (params?.search) {
+    where.OR = [
+      { name: { contains: params.search, mode: "insensitive" } },
+      { sku: { contains: params.search, mode: "insensitive" } },
+    ];
   }
 
   const page = params?.page ?? 1;

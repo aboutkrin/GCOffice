@@ -108,8 +108,6 @@ WEBSITE products cannot be deleted in GCOffice (delete on the website instead); 
 
 `DocumentLineItem.colorVariantSku` snapshots the website colour code (`ProductColorVariant.sku`) when a colour is picked and is printed after the colour name (`สี: สีฟ้า (YSP125-Q302)`); `colorVariantName` stays the bare colour name because stock deduction (`stock-actions.ts`, `data/stock.ts`) matches the variant on it.
 
-Every product search box (products list, document picker, stock, costs) uses `productSearchWhere()` in `src/data/products.ts`, which matches product name/SKU **and** colour name/code, so typing `YSP125-Q302` finds the series; the picker then lands directly on that colour.
-
 ### Custom Hooks
 
 - `use-line-items.ts` — Manage document line item state

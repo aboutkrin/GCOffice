@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { productSearchWhere } from "@/data/products";
 import { serialize } from "@/lib/utils";
 import { DocumentStatus, DocumentType } from "@/generated/prisma/client";
 
@@ -15,8 +14,11 @@ export async function getStockOverview(params?: {
   };
 
   if (params?.categoryId) where.categoryId = params.categoryId;
-  if (params?.search?.trim()) {
-    where.OR = productSearchWhere(params.search).OR;
+  if (params?.search) {
+    where.OR = [
+      { name: { contains: params.search, mode: "insensitive" } },
+      { sku: { contains: params.search, mode: "insensitive" } },
+    ];
   }
   if (params?.stockFilter === "low_stock") {
     where.stockQuantity = { gt: 0 };

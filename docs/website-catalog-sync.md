@@ -57,8 +57,6 @@ Decisions made with the owner:
 - Products missing from the feed become INACTIVE (never deleted). MANUAL products are never touched.
 - Document lines: `DocumentLineItem.colorVariantSku` snapshots the website colour code (`ProductColorVariant.sku`) and is printed after the colour name (`สี: สีฟ้า (YSP125-Q302)`). `colorVariantName` stays the bare colour name because stock deduction matches the variant on it.
 
-Every product search box (products list, document picker, stock, costs) uses `productSearchWhere()` in `src/data/products.ts`, which matches product name/SKU **and** colour name/code, so typing `YSP125-Q302` finds the series; the picker then lands directly on that colour.
-
 ### Field ownership
 | Website-owned (overwritten every sync) | GCOffice-owned (never touched) |
 |---|---|
