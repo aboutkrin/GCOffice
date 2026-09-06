@@ -43,6 +43,16 @@ export function getCatalogConfigOrNull(): CatalogConfig | null {
   return { baseUrl: url.replace(/\/+$/, ""), apiKey };
 }
 
+/**
+ * The website origin alone, with no API key requirement. Used for admin
+ * edit links, which only need `CATALOG_API_URL` — requiring `CATALOG_API_KEY`
+ * too (as `getCatalogConfigOrNull` does) would hide the link over a bad key.
+ */
+export function getCatalogBaseUrl(): string | null {
+  const url = cleanEnv("CATALOG_API_URL");
+  return url ? url.replace(/\/+$/, "") : null;
+}
+
 export function getCatalogConfig(): CatalogConfig {
   const config = getCatalogConfigOrNull();
   if (!config) {

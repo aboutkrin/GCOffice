@@ -46,9 +46,11 @@ interface ProductFormProps {
   categories: any[];
   /** `${CATALOG_API_URL}/admin/products/${websiteProductId}` for WEBSITE products, from the page. */
   websiteAdminUrl?: string | null;
+  /** `${CATALOG_API_URL}/products/${websiteSlug}` for WEBSITE products, from the page. */
+  websitePublicUrl?: string | null;
 }
 
-export function ProductForm({ initialData, categories, websiteAdminUrl }: ProductFormProps) {
+export function ProductForm({ initialData, categories, websiteAdminUrl, websitePublicUrl }: ProductFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [categoryList, setCategoryList] = useState(categories);
@@ -136,14 +138,24 @@ export function ProductForm({ initialData, categories, websiteAdminUrl }: Produc
                 (ราคาเฉพาะสีและสีที่เพิ่มเองยังแก้ไขได้ที่นี่)
               </span>
             </div>
-            {websiteAdminUrl && (
-              <Button type="button" variant="outline" size="sm" asChild>
-                <a href={websiteAdminUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="size-4" />
-                  เปิดบนเว็บไซต์
-                </a>
-              </Button>
-            )}
+            <div className="flex shrink-0 gap-2">
+              {websitePublicUrl && (
+                <Button type="button" variant="ghost" size="sm" asChild>
+                  <a href={websitePublicUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="size-4" />
+                    ดูหน้าสินค้า
+                  </a>
+                </Button>
+              )}
+              {websiteAdminUrl && (
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <a href={websiteAdminUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="size-4" />
+                    เปิดบนเว็บไซต์
+                  </a>
+                </Button>
+              )}
+            </div>
           </div>
         )}
 

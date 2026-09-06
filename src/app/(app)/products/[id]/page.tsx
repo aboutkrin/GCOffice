@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { getProductById, getProductCategories } from "@/data/products";
-import { getCatalogConfigOrNull } from "@/lib/catalog/client";
+import { getCatalogBaseUrl } from "@/lib/catalog/client";
 import { Button } from "@/components/ui/button";
 import { ProductForm } from "@/components/products/product-form";
 
@@ -24,11 +24,16 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     notFound();
   }
 
-  // Website-sourced products are edited on goodchoiceth.com; link straight to the admin page.
-  const catalogConfig = getCatalogConfigOrNull();
+  // Website-sourced products are edited on goodchoiceth.com; link straight to the admin page
+  // (and to the public product page, which needs no admin login).
+  const catalogBaseUrl = getCatalogBaseUrl();
   const websiteAdminUrl =
-    product.source === "WEBSITE" && product.websiteProductId != null && catalogConfig
-      ? `${catalogConfig.baseUrl}/admin/products/${product.websiteProductId}`
+    product.source === "WEBSITE" && product.websiteProductId != null && catalogBaseUrl
+      ? `${catalogBaseUrl}/admin/products/${product.websiteProductId}`
+      : null;
+  const websitePublicUrl =
+    product.source === "WEBSITE" && product.websiteSlug && catalogBaseUrl
+      ? `${catalogBaseUrl}/products/${product.websiteSlug}`
       : null;
 
   return (
@@ -49,6 +54,7 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         initialData={product}
         categories={categories}
         websiteAdminUrl={websiteAdminUrl}
+        websitePublicUrl={websitePublicUrl}
       />
     </div>
   );
