@@ -394,6 +394,11 @@ export function StockTable({
                                 <div className="size-4 rounded-full border bg-muted shrink-0" />
                               )}
                               <span className="text-sm">{variant.name}</span>
+                              {variant.sku && (
+                                <span className="ml-1 font-mono text-xs text-muted-foreground">
+                                  {variant.sku}
+                                </span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="hidden md:table-cell" />

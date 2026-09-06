@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { getProductById, getProductCategories } from "@/data/products";
+import { getCatalogConfigOrNull } from "@/lib/catalog/client";
 import { Button } from "@/components/ui/button";
 import { ProductForm } from "@/components/products/product-form";
 
@@ -23,6 +24,13 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
     notFound();
   }
 
+  // Website-sourced products are edited on goodchoiceth.com; link straight to the admin page.
+  const catalogConfig = getCatalogConfigOrNull();
+  const websiteAdminUrl =
+    product.source === "WEBSITE" && product.websiteProductId != null && catalogConfig
+      ? `${catalogConfig.baseUrl}/admin/products/${product.websiteProductId}`
+      : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -37,7 +45,11 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         </div>
       </div>
 
-      <ProductForm initialData={product} categories={categories} />
+      <ProductForm
+        initialData={product}
+        categories={categories}
+        websiteAdminUrl={websiteAdminUrl}
+      />
     </div>
   );
 }

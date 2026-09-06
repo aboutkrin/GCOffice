@@ -145,13 +145,14 @@ export async function createDocument(data: unknown) {
       // Bulk-insert line items with createMany (avoids oversized nested query)
       await tx.documentLineItem.createMany({
         data: validated.lineItems.map(
-          (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
+          (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; colorVariantSku?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
             documentId: doc.id,
             sequence: item.sequence,
             productSku: item.productSku,
             productName: item.productName,
             productImage: item.productImage,
             colorVariantName: item.colorVariantName,
+            colorVariantSku: item.colorVariantSku,
             showImage: item.showImage,
             details: item.details,
             quantity: item.quantity,
@@ -294,13 +295,14 @@ export async function updateDocument(id: string, data: unknown) {
       // Bulk-insert line items with createMany (avoids oversized nested query)
       await tx.documentLineItem.createMany({
         data: validated.lineItems.map(
-          (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
+          (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; colorVariantSku?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
             documentId: id,
             sequence: item.sequence,
             productSku: item.productSku,
             productName: item.productName,
             productImage: item.productImage,
             colorVariantName: item.colorVariantName,
+            colorVariantSku: item.colorVariantSku,
             showImage: item.showImage,
             details: item.details,
             quantity: item.quantity,

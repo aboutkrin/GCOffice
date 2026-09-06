@@ -7,6 +7,20 @@ import { serialize } from "@/lib/utils";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+const WEBSITE_PRODUCT_DELETE_ERROR =
+  "สินค้านี้ซิงค์จากเว็บไซต์ กรุณาลบหรือปิดการแสดงบนเว็บไซต์แทน";
+
+/** Products synced from goodchoiceth.com are owned by the website (see src/lib/catalog/sync.ts). */
+async function assertNotWebsiteProduct(id: string) {
+  const product = await prisma.product.findUnique({
+    where: { id },
+    select: { source: true },
+  });
+  if (product?.source === "WEBSITE") {
+    throw new Error(WEBSITE_PRODUCT_DELETE_ERROR);
+  }
+}
+
 export async function createProduct(data: unknown) {
   const validated = productSchema.parse(data);
   const product = await prisma.$transaction(async (tx) => {
@@ -45,6 +59,7 @@ export async function updateProduct(id: string, data: unknown) {
 }
 
 export async function deleteProduct(id: string) {
+  await assertNotWebsiteProduct(id);
   await prisma.product.update({
     where: { id },
     data: { status: "INACTIVE" },
@@ -53,6 +68,7 @@ export async function deleteProduct(id: string) {
 }
 
 export async function permanentDeleteProduct(id: string) {
+  await assertNotWebsiteProduct(id);
   await prisma.product.delete({ where: { id } });
   revalidatePath("/products");
   revalidatePath("/product-costs");
@@ -138,16 +154,23 @@ async function saveColorVariantsInTransaction(
   productId: string,
   validated: z.infer<typeof colorVariantInputSchema>[]
 ) {
-  // Get existing variants
+  // Get existing variants. Rows with a websiteVariantId are owned by the
+  // website sync: they are never deleted here and only their price (a
+  // GCOffice-owned field) may change.
   const existing = await tx.productColorVariant.findMany({
     where: { productId },
-    select: { id: true },
+    select: { id: true, websiteVariantId: true },
   });
   const existingIds = new Set(existing.map((v) => v.id));
+  const websiteOwnedIds = new Set(
+    existing.filter((v) => v.websiteVariantId !== null).map((v) => v.id)
+  );
   const submittedIds = new Set(validated.filter((v) => v.id).map((v) => v.id!));
 
-  // Delete removed variants
-  const toDelete = [...existingIds].filter((id) => !submittedIds.has(id));
+  // Delete removed variants (never website-owned ones)
+  const toDelete = [...existingIds].filter(
+    (id) => !submittedIds.has(id) && !websiteOwnedIds.has(id)
+  );
   if (toDelete.length > 0) {
     await tx.stockMovement.deleteMany({
       where: { colorVariantId: { in: toDelete } },
@@ -160,6 +183,13 @@ async function saveColorVariantsInTransaction(
   // Update existing variants
   const toUpdate = validated.filter((v) => v.id && existingIds.has(v.id));
   for (const variant of toUpdate) {
+    if (websiteOwnedIds.has(variant.id!)) {
+      await tx.productColorVariant.update({
+        where: { id: variant.id! },
+        data: { price: variant.price ?? null },
+      });
+      continue;
+    }
     await tx.productColorVariant.update({
       where: { id: variant.id! },
       data: {
@@ -221,17 +251,31 @@ export async function updateProductWithColorVariants(
   const validatedVariants = z.array(colorVariantInputSchema).parse(variants);
 
   const product = await prisma.$transaction(async (tx) => {
-    const updated = await tx.product.update({
+    const current = await tx.product.findUnique({
       where: { id },
-      data: {
-        name: validatedProduct.name,
-        description: validatedProduct.description,
-        categoryId: validatedProduct.categoryId,
-        basePrice: validatedProduct.basePrice,
-        imageUrl: validatedProduct.imageUrl,
-        status: validatedProduct.status,
-      },
+      select: { source: true },
     });
+    if (!current) {
+      throw new Error("ไม่พบสินค้า");
+    }
+
+    // Website-sourced products: name/description/category/price/image/status are
+    // owned by goodchoiceth.com and overwritten on every sync, so only the colour
+    // variants (prices, manually added colours) are saved here.
+    const updated =
+      current.source === "WEBSITE"
+        ? await tx.product.findUniqueOrThrow({ where: { id } })
+        : await tx.product.update({
+            where: { id },
+            data: {
+              name: validatedProduct.name,
+              description: validatedProduct.description,
+              categoryId: validatedProduct.categoryId,
+              basePrice: validatedProduct.basePrice,
+              imageUrl: validatedProduct.imageUrl,
+              status: validatedProduct.status,
+            },
+          });
     await saveColorVariantsInTransaction(tx, id, validatedVariants);
     return updated;
   }, { timeout: 30000 });

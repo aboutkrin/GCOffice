@@ -45,6 +45,7 @@ interface SummaryItem {
   productImage: string | null;
   colorVariantId: string | null;
   colorVariantName: string | null;
+  colorVariantSku?: string | null;
   currentStock: number;
   totalOrdered: number;
   shortage: number;
@@ -203,7 +204,15 @@ export function InventorySummaryTable({
                           <p className="text-xs text-muted-foreground">
                             SKU: {item.productSku}
                             {item.colorVariantName && (
-                              <> — สี: {item.colorVariantName}</>
+                              <>
+                                {" — สี: "}
+                                {item.colorVariantName}
+                                {item.colorVariantSku && (
+                                  <span className="ml-1 font-mono text-xs text-muted-foreground">
+                                    {item.colorVariantSku}
+                                  </span>
+                                )}
+                              </>
                             )}
                           </p>
                         </div>

@@ -12,6 +12,8 @@ interface ImageUploadProps {
   onChange: (url: string) => void;
   bucket: "product-images" | "company-logos" | "signatures";
   folder?: string;
+  /** Read-only: show the current image without upload/remove controls. */
+  disabled?: boolean;
 }
 
 export function ImageUpload({
@@ -19,6 +21,7 @@ export function ImageUpload({
   onChange,
   bucket,
   folder = "uploads",
+  disabled = false,
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -82,15 +85,20 @@ export function ImageUpload({
         <img
           src={value}
           alt="Uploaded image"
-          className="size-40 rounded-lg border object-cover"
+          className={cn(
+            "size-40 rounded-lg border object-cover",
+            disabled && "opacity-70"
+          )}
         />
-        <button
-          type="button"
-          onClick={handleRemove}
-          className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
-        >
-          <X className="size-4" />
-        </button>
+        {!disabled && (
+          <button
+            type="button"
+            onClick={handleRemove}
+            className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-destructive-foreground shadow-sm hover:bg-destructive/90"
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </div>
     );
   }
@@ -110,15 +118,16 @@ export function ImageUpload({
       />
       <button
         type="button"
-        disabled={isUploading}
+        disabled={isUploading || disabled}
         onClick={() => inputRef.current?.click()}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
+        onDrop={disabled ? undefined : handleDrop}
+        onDragOver={disabled ? undefined : handleDragOver}
+        onDragLeave={disabled ? undefined : handleDragLeave}
         className={cn(
           "flex size-40 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-muted-foreground transition-colors hover:border-primary hover:text-primary",
           isDragging && "border-primary bg-primary/5 text-primary",
-          isUploading && "pointer-events-none opacity-60"
+          isUploading && "pointer-events-none opacity-60",
+          disabled && "cursor-not-allowed opacity-60 hover:border-inherit hover:text-muted-foreground"
         )}
       >
         {isUploading ? (

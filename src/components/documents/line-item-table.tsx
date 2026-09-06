@@ -31,6 +31,8 @@ interface LineItemTableProps {
       name: string;
       basePrice: number;
       imageUrl?: string;
+      colorVariantName?: string;
+      colorVariantSku?: string;
     }
   ) => void;
 }
@@ -104,7 +106,9 @@ export function LineItemTable({
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {item.productSku && <>SKU: {item.productSku}</>}
                       {item.productSku && item.colorVariantName && " — "}
-                      {item.colorVariantName && <>สี: {item.colorVariantName}</>}
+                      {item.colorVariantName && (
+                        <>สี: {item.colorVariantName}{item.colorVariantSku ? ` (${item.colorVariantSku})` : ""}</>
+                      )}
                     </p>
                   )}
                 </TableCell>
@@ -207,7 +211,9 @@ export function LineItemTable({
                 <p className="text-xs text-muted-foreground">
                   {item.productSku && <>SKU: {item.productSku}</>}
                   {item.productSku && item.colorVariantName && " — "}
-                  {item.colorVariantName && <>สี: {item.colorVariantName}</>}
+                  {item.colorVariantName && (
+                        <>สี: {item.colorVariantName}{item.colorVariantSku ? ` (${item.colorVariantSku})` : ""}</>
+                      )}
                 </p>
               )}
               {item.productImage && (
