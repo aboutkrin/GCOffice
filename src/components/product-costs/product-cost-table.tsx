@@ -2,16 +2,17 @@
 
 import { useState, useTransition, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import Image from "next/image";
-import { Search, ChevronLeft, ChevronRight, X, Save, RefreshCw, Package } from "lucide-react";
+import { Search, Loader2, ChevronLeft, ChevronRight, X, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { formatNumber } from "@/lib/thai-currency";
 import { updateProductCost } from "@/actions/product-actions";
 import { type ProductForCost } from "@/data/products";
+import { useDebouncedSearchParam } from "@/hooks/use-debounced-search-param";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import {
   Table,
   TableBody,
@@ -56,7 +57,13 @@ export function ProductCostTable({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [searchValue, setSearchValue] = useState(search);
+  const {
+    value: searchValue,
+    onChange: onSearchChange,
+    flush: flushSearch,
+    reset: resetSearch,
+    isSearching,
+  } = useDebouncedSearchParam({ initialValue: search });
   const [isPending, startTransition] = useTransition();
   const [editingRows, setEditingRows] = useState<Record<string, EditingRow>>({});
   const [currentExchangeRate, setCurrentExchangeRate] = useState<number | null>(null);
@@ -128,11 +135,11 @@ export function ProductCostTable({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateParams({ search: searchValue });
+    flushSearch();
   };
 
   const clearFilters = () => {
-    setSearchValue("");
+    resetSearch();
     router.push(pathname);
   };
 
@@ -247,11 +254,15 @@ export function ProductCostTable({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <form onSubmit={handleSearchSubmit} className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            {isSearching ? (
+              <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />
+            ) : (
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            )}
             <Input
               placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
               value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
+              onChange={onSearchChange}
               className="pl-9"
             />
           </form>
@@ -260,6 +271,11 @@ export function ProductCostTable({
               <X className="size-4" />
               ล้างตัวกรอง
             </Button>
+          )}
+          {Object.keys(editingRows).length > 0 && (
+            <span className="text-xs text-amber-600">
+              มีการแก้ไขที่ยังไม่บันทึก
+            </span>
           )}
         </div>
 
@@ -320,7 +336,6 @@ export function ProductCostTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-[60px]">รูป</TableHead>
-              <TableHead className="w-[100px]">รหัส</TableHead>
               <TableHead className="min-w-[180px]">ชื่อสินค้า</TableHead>
               <TableHead className="w-[100px] text-right">ต้นทุน (CNY)</TableHead>
               <TableHead className="w-[100px] text-right">เรท (฿/¥)</TableHead>
@@ -332,6 +347,7 @@ export function ProductCostTable({
               <TableHead className="w-[100px] text-right">ราคาขาย</TableHead>
               <TableHead className="w-[100px] text-right">กำไร/กล่อง</TableHead>
               <TableHead className="w-[80px] text-right">กำไร %</TableHead>
+              <TableHead className="hidden md:table-cell w-[100px]">รหัส</TableHead>
               <TableHead className="w-[60px]">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
@@ -359,23 +375,8 @@ export function ProductCostTable({
                 return (
                   <TableRow key={product.id}>
                     <TableCell>
-                      {product.imageUrl ? (
-                        <div className="relative size-10 rounded overflow-hidden bg-muted">
-                          <Image
-                            src={product.imageUrl}
-                            alt={product.name}
-                            fill
-                            className="object-cover"
-                            sizes="40px"
-                          />
-                        </div>
-                      ) : (
-                        <div className="size-10 rounded bg-muted flex items-center justify-center">
-                          <Package className="size-5 text-muted-foreground" />
-                        </div>
-                      )}
+                      <ProductThumb src={product.imageUrl} alt={product.name} fallback="icon" />
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{product.sku}</TableCell>
                     <TableCell className="text-sm">{product.name}</TableCell>
                     <TableCell>
                       <Input
@@ -452,6 +453,9 @@ export function ProductCostTable({
                       {profit !== null && totalCost !== null && totalCost > 0
                         ? `${((profit / totalCost) * 100).toFixed(1)}%`
                         : "-"}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell font-mono text-sm">
+                      {product.sku}
                     </TableCell>
                     <TableCell>
                       <Button
