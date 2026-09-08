@@ -3,10 +3,12 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { homeFor } from "@/lib/nav";
 
 export type SessionUser = {
   id: string;
   email: string;
+  username: string | null;
   role: "ADMIN" | "STAFF";
   status: "ACTIVE" | "INACTIVE";
   fullName: string | null;
@@ -38,6 +40,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
   return {
     id: profile.id,
     email: profile.email,
+    username: profile.username,
     role: profile.role,
     status: profile.status,
     fullName: profile.fullName,
@@ -57,7 +60,7 @@ export async function requireUser(): Promise<SessionUser> {
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
   if (user.role !== "ADMIN") {
-    redirect("/dashboard?denied=1");
+    redirect(homeFor(user.role));
   }
   return user;
 }

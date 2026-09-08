@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Settings, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MAIN_NAV, SETTINGS_NAV, filterNav } from "@/lib/nav";
+import { MAIN_NAV, SETTINGS_NAV, filterNav, homeFor } from "@/lib/nav";
 
 interface AppSidebarProps {
   role: string;
@@ -25,7 +25,7 @@ export function AppSidebar({ role }: AppSidebarProps) {
     <aside className="hidden md:flex md:w-64 md:flex-col bg-card border-r">
       {/* Logo */}
       <div className="flex h-14 items-center border-b px-6">
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href={homeFor(role)} className="flex items-center gap-2">
           <span className="text-xl font-bold tracking-tight">GCOffice</span>
         </Link>
       </div>

@@ -289,8 +289,23 @@ export type ColorVariantInputFormData = z.infer<typeof colorVariantInputSchema>;
 export type StockAdjustmentFormData = z.infer<typeof stockAdjustmentSchema>;
 export type StockThresholdFormData = z.infer<typeof stockThresholdSchema>;
 
+const usernameField = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, "ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษร")
+  .max(30, "ชื่อผู้ใช้ต้องไม่เกิน 30 ตัวอักษร")
+  .regex(/^[a-z0-9._-]+$/, "ชื่อผู้ใช้ใช้ได้เฉพาะ a-z, 0-9, จุด, ขีดกลาง และขีดล่าง");
+
+export const loginSchema = z.object({
+  username: usernameField,
+  password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
+});
+export type LoginFormData = z.infer<typeof loginSchema>;
+
 export const userCreateSchema = z.object({
   email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง"),
+  username: usernameField,
   password: z.string().min(8, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"),
   firstName: z.string().min(1, "กรุณาระบุชื่อ"),
   lastName: z.string().optional(),
@@ -299,6 +314,7 @@ export const userCreateSchema = z.object({
 });
 
 export const userUpdateSchema = z.object({
+  username: usernameField,
   firstName: z.string().min(1, "กรุณาระบุชื่อ"),
   lastName: z.string().optional(),
   role: z.enum(["ADMIN", "STAFF"], { error: "กรุณาเลือกสิทธิ์การใช้งาน" }),

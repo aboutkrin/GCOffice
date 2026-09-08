@@ -69,6 +69,11 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
       ),
     },
     {
+      accessorKey: "username",
+      header: "ชื่อผู้ใช้",
+      cell: ({ row }) => row.original.username ?? "-",
+    },
+    {
       accessorKey: "email",
       header: "อีเมล",
     },
@@ -134,11 +139,12 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
     globalFilterFn: (row, columnId, filterValue) => {
       const search = filterValue.toLowerCase();
       const email = String(row.original.email ?? "").toLowerCase();
+      const username = String(row.original.username ?? "").toLowerCase();
       const name = [row.original.firstName, row.original.lastName]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
-      return email.includes(search) || name.includes(search);
+      return email.includes(search) || username.includes(search) || name.includes(search);
     },
   });
 

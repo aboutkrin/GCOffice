@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { signIn } from "@/actions/auth-actions";
+import { loginSchema, type LoginFormData } from "@/lib/validators";
 import {
   Card,
   CardContent,
@@ -24,26 +24,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-const loginSchema = z.object({
-  email: z.string().email("กรุณากรอกอีเมลที่ถูกต้อง"),
-  password: z.string().min(1, "กรุณากรอกรหัสผ่าน"),
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const form = useForm<LoginFormValues>({
+  const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
 
-  async function onSubmit(values: LoginFormValues) {
+  async function onSubmit(values: LoginFormData) {
     setIsLoading(true);
     setError(null);
 
@@ -68,15 +61,15 @@ export default function LoginPage() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="email"
+              name="username"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>อีเมล</FormLabel>
+                  <FormLabel>ชื่อผู้ใช้</FormLabel>
                   <FormControl>
                     <Input
-                      type="email"
-                      placeholder="email@example.com"
-                      autoComplete="email"
+                      type="text"
+                      placeholder="username"
+                      autoComplete="username"
                       {...field}
                     />
                   </FormControl>

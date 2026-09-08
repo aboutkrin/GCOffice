@@ -28,6 +28,7 @@ import { MAIN_NAV, SETTINGS_NAV, filterNav } from "@/lib/nav";
 interface AppHeaderProps {
   user: {
     email?: string;
+    username?: string | null;
   };
   role: string;
 }
@@ -43,7 +44,8 @@ export function AppHeader({ user, role }: AppHeaderProps) {
   );
   const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);
 
-  const userInitial = user.email ? user.email.charAt(0).toUpperCase() : "U";
+  const displayName = user.username || user.email;
+  const userInitial = displayName ? displayName.charAt(0).toUpperCase() : "U";
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b bg-card px-4 md:px-6">
@@ -155,7 +157,7 @@ export function AppHeader({ user, role }: AppHeaderProps) {
             <div className="flex flex-col space-y-1">
               <p className="text-sm font-medium leading-none">บัญชีผู้ใช้</p>
               <p className="text-xs leading-none text-muted-foreground">
-                {user.email}
+                {displayName}
               </p>
             </div>
           </DropdownMenuLabel>
