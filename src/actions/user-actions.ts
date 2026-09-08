@@ -6,6 +6,14 @@ import { userCreateSchema, userUpdateSchema } from "@/lib/validators";
 import { assertAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@/generated/prisma/client";
+
+function rethrowUsernameConflict(err: unknown): never {
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+    throw new Error("ชื่อผู้ใช้นี้ถูกใช้งานแล้ว");
+  }
+  throw err;
+}
 
 export async function createUser(data: unknown) {
   await assertAdmin();
@@ -28,12 +36,14 @@ export async function createUser(data: unknown) {
       create: {
         id: created.user.id,
         email: validated.email,
+        username: validated.username,
         firstName: validated.firstName,
         lastName: validated.lastName || null,
         role: validated.role,
         status: validated.status,
       },
       update: {
+        username: validated.username,
         firstName: validated.firstName,
         lastName: validated.lastName || null,
         role: validated.role,
@@ -47,7 +57,7 @@ export async function createUser(data: unknown) {
     // Roll back the auth user if the profile write failed, so we don't
     // leave an orphaned Supabase account with no corresponding profile.
     await admin.auth.admin.deleteUser(created.user.id);
-    throw err;
+    rethrowUsernameConflict(err);
   }
 }
 
@@ -68,15 +78,21 @@ export async function updateUser(id: string, data: unknown) {
     }
   }
 
-  const user = await prisma.profile.update({
-    where: { id },
-    data: {
-      firstName: validated.firstName,
-      lastName: validated.lastName || null,
-      role: validated.role,
-      status: validated.status,
-    },
-  });
+  let user;
+  try {
+    user = await prisma.profile.update({
+      where: { id },
+      data: {
+        username: validated.username,
+        firstName: validated.firstName,
+        lastName: validated.lastName || null,
+        role: validated.role,
+        status: validated.status,
+      },
+    });
+  } catch (err) {
+    rethrowUsernameConflict(err);
+  }
 
   if (validated.password) {
     const admin = createAdminClient();

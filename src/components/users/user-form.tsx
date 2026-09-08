@@ -45,6 +45,7 @@ export function UserForm({ initialData, isSelf }: UserFormProps) {
     resolver: zodResolver(isEdit ? userUpdateSchema : userCreateSchema) as any,
     defaultValues: {
       email: initialData?.email ?? "",
+      username: initialData?.username ?? "",
       password: "",
       firstName: initialData?.firstName ?? "",
       lastName: initialData?.lastName ?? "",
@@ -99,6 +100,20 @@ export function UserForm({ initialData, isSelf }: UserFormProps) {
                 )}
               />
             )}
+
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ชื่อผู้ใช้</FormLabel>
+                  <FormControl>
+                    <Input placeholder="username" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

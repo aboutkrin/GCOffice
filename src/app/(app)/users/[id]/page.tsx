@@ -32,7 +32,7 @@ export default async function EditUserPage({ params }: EditUserPageProps) {
         <div>
           <h1 className="text-2xl font-bold">แก้ไขผู้ใช้งาน</h1>
           <p className="text-muted-foreground text-sm">
-            {[user.firstName, user.lastName].filter(Boolean).join(" ") || user.email}
+            {[user.firstName, user.lastName].filter(Boolean).join(" ") || user.username || user.email}
           </p>
         </div>
       </div>
