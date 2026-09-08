@@ -31,6 +31,18 @@ export const CUSTOMER_TYPE_LABELS: Record<string, string> = {
   INDIVIDUAL: "บุคคลธรรมดา",
 };
 
+export const USER_ROLE_LABELS: Record<string, string> = {
+  ADMIN: "ผู้ดูแลระบบ",
+  STAFF: "พนักงาน",
+};
+
+export const USER_ROLE_COLORS: Record<string, string> = {
+  ADMIN: "bg-purple-100 text-purple-800",
+  STAFF: "bg-slate-100 text-slate-800",
+};
+
+export const USER_ROLE_OPTIONS = ["ADMIN", "STAFF"] as const;
+
 export const LEAD_TYPE_LABELS: Record<string, string> = {
   FACEBOOK: "Facebook",
   INSTAGRAM: "Instagram",

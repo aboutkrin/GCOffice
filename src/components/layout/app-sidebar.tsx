@@ -3,116 +3,18 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Package,
-  Users,
-  Building2,
-  FileText,
-  Receipt,
-  ClipboardList,
-  Tags,
-  CalendarOff,
-  Settings,
-  ChevronDown,
-  Globe,
-  Calculator,
-  Wallet,
-  ReceiptText,
-  Truck,
-  Printer,
-  Warehouse,
-} from "lucide-react";
+import { Settings, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MAIN_NAV, SETTINGS_NAV, filterNav } from "@/lib/nav";
 
-const mainNavItems = [
-  {
-    href: "/dashboard",
-    label: "แดชบอร์ด",
-    icon: LayoutDashboard,
-  },
-  {
-    href: "/quotations",
-    label: "ใบเสนอราคา",
-    icon: FileText,
-  },
-  {
-    href: "/invoices",
-    label: "ใบแจ้งหนี้",
-    icon: Receipt,
-  },
-  {
-    href: "/receipts",
-    label: "ใบเสร็จรับเงิน",
-    icon: ReceiptText,
-  },
-  {
-    href: "/customers",
-    label: "ลูกค้า",
-    icon: Users,
-  },
-  {
-    href: "/products",
-    label: "สินค้า",
-    icon: Package,
-  },
-  {
-    href: "/stock",
-    label: "สต็อคสินค้า",
-    icon: Warehouse,
-  },
-  {
-    href: "/product-costs",
-    label: "ต้นทุนสินค้า",
-    icon: Calculator,
-  },
-  {
-    href: "/vendor-costs",
-    label: "ต้นทุนใบสั่งซื้อ",
-    icon: Truck,
-  },
-  {
-    href: "/expenses",
-    label: "ค่าใช้จ่ายรายเดือน",
-    icon: Wallet,
-  },
-  {
-    href: "/print-order",
-    label: "พิมพ์ใบส่งของ",
-    icon: Printer,
-  },
-];
+interface AppSidebarProps {
+  role: string;
+}
 
-const settingsNavItems = [
-  {
-    href: "/categories",
-    label: "หมวดหมู่สินค้า",
-    icon: Tags,
-  },
-  {
-    href: "/payment-terms",
-    label: "เงื่อนไขชำระเงิน",
-    icon: ClipboardList,
-  },
-  {
-    href: "/holidays",
-    label: "วันหยุด",
-    icon: CalendarOff,
-  },
-  {
-    href: "/companies",
-    label: "บริษัท",
-    icon: Building2,
-  },
-  {
-    href: "/website-sync",
-    label: "ซิงค์เว็บไซต์",
-    icon: Globe,
-  },
-];
-
-export function AppSidebar() {
+export function AppSidebar({ role }: AppSidebarProps) {
   const pathname = usePathname();
+  const mainNavItems = filterNav(MAIN_NAV, role);
+  const settingsNavItems = filterNav(SETTINGS_NAV, role);
   const isSettingsActive = settingsNavItems.some(
     (item) =>
       pathname === item.href || pathname.startsWith(item.href + "/")
@@ -153,52 +55,54 @@ export function AppSidebar() {
         })}
 
         {/* การตั้งค่า submenu */}
-        <div>
-          <button
-            onClick={() => setSettingsOpen(!settingsOpen)}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-              isSettingsActive
-                ? "text-accent-foreground font-medium"
-                : "text-muted-foreground hover:bg-accent/50"
-            )}
-          >
-            <Settings className="size-4" />
-            <span className="flex-1 text-left">การตั้งค่า</span>
-            <ChevronDown
+        {settingsNavItems.length > 0 && (
+          <div>
+            <button
+              onClick={() => setSettingsOpen(!settingsOpen)}
               className={cn(
-                "size-4 transition-transform",
-                settingsOpen ? "rotate-0" : "-rotate-90"
+                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                isSettingsActive
+                  ? "text-accent-foreground font-medium"
+                  : "text-muted-foreground hover:bg-accent/50"
               )}
-            />
-          </button>
-          {settingsOpen && (
-            <div className="ml-4 space-y-1 mt-1">
-              {settingsNavItems.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  pathname.startsWith(item.href + "/");
-                const Icon = item.icon;
+            >
+              <Settings className="size-4" />
+              <span className="flex-1 text-left">การตั้งค่า</span>
+              <ChevronDown
+                className={cn(
+                  "size-4 transition-transform",
+                  settingsOpen ? "rotate-0" : "-rotate-90"
+                )}
+              />
+            </button>
+            {settingsOpen && (
+              <div className="ml-4 space-y-1 mt-1">
+                {settingsNavItems.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    pathname.startsWith(item.href + "/");
+                  const Icon = item.icon;
 
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                      isActive
-                        ? "bg-accent text-accent-foreground font-medium"
-                        : "text-muted-foreground hover:bg-accent/50"
-                    )}
-                  >
-                    <Icon className="size-4" />
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                        isActive
+                          ? "bg-accent text-accent-foreground font-medium"
+                          : "text-muted-foreground hover:bg-accent/50"
+                      )}
+                    >
+                      <Icon className="size-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
     </aside>
   );

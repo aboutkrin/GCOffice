@@ -9,6 +9,7 @@ interface DocumentPageTabsProps {
   cancelledDocuments: any[];
   basePath: string;
   documentType: "QUOTATION" | "INVOICE" | "RECEIPT";
+  canDelete?: boolean;
 }
 
 export function DocumentPageTabs({
@@ -16,6 +17,7 @@ export function DocumentPageTabs({
   cancelledDocuments,
   basePath,
   documentType,
+  canDelete = false,
 }: DocumentPageTabsProps) {
   return (
     <Tabs defaultValue="active">
@@ -42,6 +44,7 @@ export function DocumentPageTabs({
           documents={activeDocuments}
           basePath={basePath}
           documentType={documentType}
+          canDelete={canDelete}
         />
       </TabsContent>
       <TabsContent value="cancelled">
@@ -49,6 +52,7 @@ export function DocumentPageTabs({
           documents={cancelledDocuments}
           basePath={basePath}
           documentType={documentType}
+          canDelete={canDelete}
         />
       </TabsContent>
     </Tabs>

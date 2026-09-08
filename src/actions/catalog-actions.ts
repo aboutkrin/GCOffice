@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { syncAll, type CatalogSyncDetails } from "@/lib/catalog/sync";
 import { serialize } from "@/lib/utils";
+import { assertAdmin } from "@/lib/auth";
 
 export interface CatalogSyncSummary {
   logId: string;
@@ -16,6 +17,7 @@ export interface CatalogSyncSummary {
 
 /** "ซิงค์ตอนนี้": full reconcile, writes to the database. */
 export async function triggerCatalogSync(): Promise<CatalogSyncSummary> {
+  await assertAdmin();
   const result = await syncAll("MANUAL");
   revalidatePath("/website-sync");
   return serialize({
@@ -32,6 +34,7 @@ export async function triggerCatalogSync(): Promise<CatalogSyncSummary> {
 export async function previewCatalogSync(): Promise<
   CatalogSyncSummary & { details: CatalogSyncDetails }
 > {
+  await assertAdmin();
   const result = await syncAll("MANUAL", { dryRun: true });
   revalidatePath("/website-sync");
   return serialize({

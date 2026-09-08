@@ -5,6 +5,7 @@ import { DocumentPageTabs } from "@/components/documents/document-page-tabs";
 import { MonthPicker } from "@/components/documents/month-picker";
 import { StatusFilter } from "@/components/documents/status-filter";
 import { getDocuments } from "@/data/documents";
+import { getCurrentUser } from "@/lib/auth";
 import { DocumentStatus } from "@/generated/prisma/client";
 import { Plus } from "lucide-react";
 
@@ -28,13 +29,16 @@ export default async function QuotationsPage({
     ? params.excludeStatus.split(",").filter((s): s is DocumentStatus => s in DocumentStatus)
     : undefined;
 
-  const documents = await getDocuments({
-    type: "QUOTATION",
-    year,
-    month,
-    status: statusFilter && statusFilter.length === 1 ? statusFilter[0] : statusFilter,
-    excludeStatus: excludeStatusFilter && excludeStatusFilter.length === 1 ? excludeStatusFilter[0] : excludeStatusFilter,
-  });
+  const [documents, user] = await Promise.all([
+    getDocuments({
+      type: "QUOTATION",
+      year,
+      month,
+      status: statusFilter && statusFilter.length === 1 ? statusFilter[0] : statusFilter,
+      excludeStatus: excludeStatusFilter && excludeStatusFilter.length === 1 ? excludeStatusFilter[0] : excludeStatusFilter,
+    }),
+    getCurrentUser(),
+  ]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeDocuments = documents.filter((doc: any) => doc.status !== "CANCELLED");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,6 +68,7 @@ export default async function QuotationsPage({
         cancelledDocuments={cancelledDocuments}
         basePath="/quotations"
         documentType="QUOTATION"
+        canDelete={user?.role === "ADMIN"}
       />
     </div>
   );

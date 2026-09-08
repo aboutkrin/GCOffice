@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { documentSchema } from "@/lib/validators";
 import { generateDocumentNumber, generateCustomInvoiceNumber } from "@/lib/document-number";
-import { createClient } from "@/lib/supabase/server";
+import { requireUserAction, assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { DocumentStatus, PaymentTermType } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
@@ -33,11 +33,7 @@ export async function createDocument(data: unknown) {
   try {
     const validated = documentSchema.parse(data);
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return { success: false as const, error: "ไม่ได้เข้าสู่ระบบ" };
+    const user = await requireUserAction();
 
     const documentNumber = await generateDocumentNumber(validated.type);
 
@@ -204,6 +200,8 @@ export async function updateDocument(id: string, data: unknown) {
   try {
     const validated = documentSchema.parse(data);
 
+    await requireUserAction();
+
     // Calculate totals
     const subtotal = validated.lineItems.reduce(
       (sum: number, item: { quantity: number; unitPrice: number }) =>
@@ -354,6 +352,8 @@ export async function updateDocumentStatus(
   id: string,
   status: DocumentStatus
 ) {
+  await requireUserAction();
+
   // Fetch current status to determine stock actions
   const currentDocument = await prisma.document.findUniqueOrThrow({
     where: { id },
@@ -362,6 +362,11 @@ export async function updateDocumentStatus(
 
   const oldStatus = currentDocument.status;
   const newStatus = status;
+
+  // Cancelling a document that has already moved past DRAFT is an admin-only action.
+  if (newStatus === DocumentStatus.CANCELLED && oldStatus !== DocumentStatus.DRAFT) {
+    await assertAdmin();
+  }
 
   // Update the status
   const document = await prisma.document.update({
@@ -439,6 +444,8 @@ export async function getNextCustomInvoiceNumber(documentDate: Date) {
 }
 
 export async function deleteDocument(id: string) {
+  await assertAdmin();
+
   // Fetch current status to check if stock needs restoring
   const currentDocument = await prisma.document.findUniqueOrThrow({
     where: { id },

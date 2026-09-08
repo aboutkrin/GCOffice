@@ -29,6 +29,7 @@ export async function getProducts(params?: {
         include: {
           category: true,
           _count: { select: { colorVariants: true } },
+          createdBy: { select: { firstName: true, lastName: true, email: true } },
         },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * perPage,

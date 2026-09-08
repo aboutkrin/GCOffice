@@ -50,9 +50,10 @@ interface DocumentTableProps {
   documents: any[];
   basePath: string; // "/quotations", "/invoices", or "/receipts"
   documentType: "QUOTATION" | "INVOICE" | "RECEIPT";
+  canDelete?: boolean;
 }
 
-export function DocumentTable({ documents, basePath, documentType }: DocumentTableProps) {
+export function DocumentTable({ documents, basePath, documentType, canDelete = false }: DocumentTableProps) {
   const statusOptionsMap = {
     QUOTATION: QUOTATION_STATUS_OPTIONS,
     INVOICE: INVOICE_STATUS_OPTIONS,
@@ -188,10 +189,16 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
       setDeleteId(null);
     } catch (error) {
       console.error("ยกเลิกเอกสารไม่สำเร็จ:", error);
+      toast.error(error instanceof Error ? error.message : "ยกเลิกเอกสารไม่สำเร็จ");
     } finally {
       setDeleting(false);
     }
   };
+
+  const getStatusOptions = (currentStatus: string) =>
+    canDelete || currentStatus === "DRAFT"
+      ? STATUS_OPTIONS
+      : STATUS_OPTIONS.filter((status) => status !== "CANCELLED");
 
   const getCustomerName = (doc: any) => {
     if (doc.customerSnapshot && typeof doc.customerSnapshot === "object") {
@@ -263,7 +270,7 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="center">
-                      {STATUS_OPTIONS.map((status) => (
+                      {getStatusOptions(doc.status).map((status) => (
                         <DropdownMenuItem
                           key={status}
                           disabled={status === doc.status}
@@ -314,15 +321,17 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
                     >
                       <Share2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      title="ลบ"
-                      onClick={() => setDeleteId(doc.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        title="ลบ"
+                        onClick={() => setDeleteId(doc.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -419,14 +428,18 @@ export function DocumentTable({ documents, basePath, documentType }: DocumentTab
                       <Pencil className="h-4 w-4 mr-2" />
                       แก้ไข
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => setDeleteId(doc.id)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      ลบ
-                    </DropdownMenuItem>
+                    {canDelete && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setDeleteId(doc.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          ลบ
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { stockAdjustmentSchema, stockThresholdSchema } from "@/lib/validators";
+import { requireUserAction } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -21,6 +22,7 @@ async function syncProductStockFromVariants(tx: any, productId: string) {
 
 export async function addStock(data: unknown) {
   const validated = stockAdjustmentSchema.parse(data);
+  const user = await requireUserAction();
 
   await prisma.$transaction(async (tx) => {
     if (validated.colorVariantId) {
@@ -47,6 +49,7 @@ export async function addStock(data: unknown) {
           reference: validated.reference || null,
           lotNumber: validated.lotNumber || null,
           balanceAfter: newBalance,
+          createdById: user.id,
         },
       });
 
@@ -74,6 +77,7 @@ export async function addStock(data: unknown) {
           reference: validated.reference || null,
           lotNumber: validated.lotNumber || null,
           balanceAfter: newBalance,
+          createdById: user.id,
         },
       });
     }
@@ -84,6 +88,7 @@ export async function addStock(data: unknown) {
 
 export async function removeStock(data: unknown) {
   const validated = stockAdjustmentSchema.parse(data);
+  const user = await requireUserAction();
 
   await prisma.$transaction(async (tx) => {
     if (validated.colorVariantId) {
@@ -112,6 +117,7 @@ export async function removeStock(data: unknown) {
           reason: validated.reason || null,
           reference: validated.reference || null,
           balanceAfter: newBalance,
+          createdById: user.id,
         },
       });
 
@@ -141,6 +147,7 @@ export async function removeStock(data: unknown) {
           reason: validated.reason || null,
           reference: validated.reference || null,
           balanceAfter: newBalance,
+          createdById: user.id,
         },
       });
     }
@@ -155,6 +162,8 @@ export async function adjustStock(
   reason?: string,
   colorVariantId?: string
 ) {
+  const user = await requireUserAction();
+
   await prisma.$transaction(async (tx) => {
     if (colorVariantId) {
       const variant = await tx.productColorVariant.findUniqueOrThrow({
@@ -178,6 +187,7 @@ export async function adjustStock(
           quantity: Math.abs(delta),
           reason: reason || `ปรับยอดจาก ${variant.stockQuantity} เป็น ${newQuantity}`,
           balanceAfter: newQuantity,
+          createdById: user.id,
         },
       });
 
@@ -203,6 +213,7 @@ export async function adjustStock(
           quantity: Math.abs(delta),
           reason: reason || `ปรับยอดจาก ${product.stockQuantity} เป็น ${newQuantity}`,
           balanceAfter: newQuantity,
+          createdById: user.id,
         },
       });
     }

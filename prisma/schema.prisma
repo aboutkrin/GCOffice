@@ -19,10 +19,17 @@ model Profile {
   firstName    String?  @map("first_name")
   lastName     String?  @map("last_name")
   signatureUrl String?  @map("signature_url")
+  role         UserRole @default(STAFF)
+  status       Status   @default(ACTIVE)
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  documents Document[]
+  documents      Document[]
+  customers      Customer[]      @relation("CustomerCreatedBy")
+  products       Product[]       @relation("ProductCreatedBy")
+  expenses       Expense[]       @relation("ExpenseCreatedBy")
+  vendorCosts    VendorCost[]    @relation("VendorCostCreatedBy")
+  stockMovements StockMovement[] @relation("StockMovementCreatedBy")
 
   @@map("profiles")
 }
@@ -124,6 +131,9 @@ model Product {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdBy   Profile? @relation("ProductCreatedBy", fields: [createdById], references: [id])
+
   stockMovements StockMovement[]
   colorVariants  ProductColorVariant[]
 
@@ -152,6 +162,9 @@ model Customer {
   status    Status   @default(ACTIVE)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdBy   Profile? @relation("CustomerCreatedBy", fields: [createdById], references: [id])
 
   documents Document[]
 
@@ -360,6 +373,9 @@ model Expense {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdBy   Profile? @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+
   @@index([categoryId])
   @@index([expenseDate])
   @@map("expenses")
@@ -389,6 +405,9 @@ model VendorCost {
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdBy   Profile? @relation("VendorCostCreatedBy", fields: [createdById], references: [id])
 
   items VendorCostItem[]
 
@@ -426,6 +445,11 @@ model VendorCostItem {
 enum Status {
   ACTIVE
   INACTIVE
+}
+
+enum UserRole {
+  ADMIN
+  STAFF
 }
 
 enum CustomerType {
@@ -553,7 +577,9 @@ model StockMovement {
   lotNumber    String?           @map("lot_number")
   balanceAfter Int               @map("balance_after")
 
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdBy   Profile? @relation("StockMovementCreatedBy", fields: [createdById], references: [id])
 
   @@index([productId])
   @@index([colorVariantId])

@@ -2,10 +2,12 @@
 
 import { prisma } from "@/lib/prisma";
 import { customerSchema } from "@/lib/validators";
+import { requireUserAction, assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function createCustomer(data: unknown) {
   const validated = customerSchema.parse(data);
+  const user = await requireUserAction();
 
   const customer = await prisma.$transaction(async (tx) => {
     const last = await tx.customer.findFirst({
@@ -17,7 +19,7 @@ export async function createCustomer(data: unknown) {
     const nextCode = `CUS-${String(lastNum + 1).padStart(4, "0")}`;
 
     return tx.customer.create({
-      data: { ...validated, code: nextCode },
+      data: { ...validated, code: nextCode, createdById: user.id },
     });
   });
 
@@ -26,6 +28,7 @@ export async function createCustomer(data: unknown) {
 }
 
 export async function updateCustomer(id: string, data: unknown) {
+  await requireUserAction();
   const validated = customerSchema.parse(data);
   const customer = await prisma.customer.update({
     where: { id },
@@ -36,6 +39,7 @@ export async function updateCustomer(id: string, data: unknown) {
 }
 
 export async function deleteCustomer(id: string) {
+  await assertAdmin();
   await prisma.customer.update({
     where: { id },
     data: { status: "INACTIVE" },

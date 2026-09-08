@@ -3,11 +3,13 @@
 import { prisma } from "@/lib/prisma";
 import { vendorCostSchema } from "@/lib/validators";
 import { serialize } from "@/lib/utils";
+import { assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { ensureVendorCostTables } from "@/data/vendor-costs";
 
 export async function createVendorCost(data: unknown) {
   try {
+    const user = await assertAdmin();
     await ensureVendorCostTables();
     const validated = vendorCostSchema.parse(data);
 
@@ -30,6 +32,7 @@ export async function createVendorCost(data: unknown) {
         shippingPaymentMethod: validated.shippingPaymentMethod,
         shippingPaymentMethodNote: validated.shippingPaymentMethodNote || null,
         notes: validated.notes || null,
+        createdById: user.id,
         items: {
           create: validated.items.map((item) => ({
             sequence: item.sequence,
@@ -60,6 +63,7 @@ export async function createVendorCost(data: unknown) {
 
 export async function updateVendorCost(id: string, data: unknown) {
   try {
+    await assertAdmin();
     const validated = vendorCostSchema.parse(data);
 
     const itemsTotal = validated.items.reduce((sum, item) => sum + item.lineTotal, 0);
@@ -120,6 +124,7 @@ export async function updateVendorCost(id: string, data: unknown) {
 
 export async function deleteVendorCost(id: string) {
   try {
+    await assertAdmin();
     await prisma.vendorCost.delete({
       where: { id },
     });

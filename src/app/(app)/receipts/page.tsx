@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { DocumentPageTabs } from "@/components/documents/document-page-tabs";
 import { MonthPicker } from "@/components/documents/month-picker";
 import { getDocuments } from "@/data/documents";
+import { getCurrentUser } from "@/lib/auth";
 import { Plus } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,10 @@ export default async function ReceiptsPage({
   const year = params.year ? parseInt(params.year) : now.getFullYear();
   const month = params.month ? parseInt(params.month) : now.getMonth() + 1;
 
-  const documents = await getDocuments({ type: "RECEIPT", year, month });
+  const [documents, user] = await Promise.all([
+    getDocuments({ type: "RECEIPT", year, month }),
+    getCurrentUser(),
+  ]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeDocuments = documents.filter((doc: any) => doc.status !== "CANCELLED");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,6 +51,7 @@ export default async function ReceiptsPage({
         cancelledDocuments={cancelledDocuments}
         basePath="/receipts"
         documentType="RECEIPT"
+        canDelete={user?.role === "ADMIN"}
       />
     </div>
   );
