@@ -28,7 +28,7 @@ export type NavItem = {
 };
 
 export const MAIN_NAV: NavItem[] = [
-  { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
+  { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard, adminOnly: true },
   { href: "/quotations", label: "ใบเสนอราคา", icon: FileText },
   { href: "/invoices", label: "ใบแจ้งหนี้", icon: Receipt },
   { href: "/receipts", label: "ใบเสร็จรับเงิน", icon: ReceiptText },
@@ -52,4 +52,11 @@ export const SETTINGS_NAV: NavItem[] = [
 
 export function filterNav(items: NavItem[], role: string): NavItem[] {
   return items.filter((item) => !item.adminOnly || role === "ADMIN");
+}
+
+/** Home page per role: ADMIN lands on the dashboard, STAFF on quotations. */
+export const ROLE_HOME = { ADMIN: "/dashboard", STAFF: "/quotations" } as const;
+
+export function homeFor(role: string): string {
+  return role === "ADMIN" ? ROLE_HOME.ADMIN : ROLE_HOME.STAFF;
 }

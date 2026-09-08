@@ -24,7 +24,7 @@ export default async function AppLayout({
           <AppHeader user={user} role={user.role} />
           <main className="flex-1 overflow-y-auto overscroll-none p-4 md:p-6 pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:pb-6">{children}</main>
         </div>
-        <MobileNav />
+        <MobileNav role={user.role} />
       </ScrollProvider>
     </div>
   );

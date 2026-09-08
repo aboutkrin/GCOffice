@@ -9,7 +9,7 @@ export default function NotFound() {
         ไม่พบหน้าที่คุณต้องการ
       </p>
       <Button asChild className="mt-6">
-        <Link href="/dashboard">กลับหน้าหลัก</Link>
+        <Link href="/">กลับหน้าหลัก</Link>
       </Button>
     </div>
   );

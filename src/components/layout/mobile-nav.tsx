@@ -17,6 +17,7 @@ const mobileNavItems = [
     href: "/dashboard",
     label: "หน้าหลัก",
     icon: LayoutDashboard,
+    adminOnly: true,
   },
   {
     href: "/invoices",
@@ -41,13 +42,14 @@ const mobileNavItems = [
   },
 ];
 
-export function MobileNav() {
+export function MobileNav({ role }: { role: string }) {
   const pathname = usePathname();
+  const items = mobileNavItems.filter((item) => !item.adminOnly || role === "ADMIN");
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t shadow-lg pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)]">
       <div className="flex items-center justify-around h-16">
-        {mobileNavItems.map((item) => {
+        {items.map((item) => {
           const isActive =
             item.isPrimary
               ? pathname === item.href

@@ -2,26 +2,39 @@
 
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
+import { loginSchema } from "@/lib/validators";
 import { redirect } from "next/navigation";
+import { homeFor } from "@/lib/nav";
 
-export async function signIn(formData: { email: string; password: string }) {
+const INVALID_CREDENTIALS = "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง";
+
+export async function signIn(formData: { username: string; password: string }) {
+  const { username, password } = loginSchema.parse(formData);
+
+  const profile = await prisma.profile.findUnique({
+    where: { username },
+    select: { email: true, status: true, role: true },
+  });
+  if (!profile) {
+    return { error: INVALID_CREDENTIALS };
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: formData.email,
-    password: formData.password,
+    email: profile.email,
+    password,
   });
 
   if (error || !data.user) {
-    return { error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" };
+    return { error: INVALID_CREDENTIALS };
   }
 
-  const profile = await prisma.profile.findUnique({ where: { id: data.user.id } });
-  if (profile?.status === "INACTIVE") {
+  if (profile.status === "INACTIVE") {
     await supabase.auth.signOut();
     return { error: "บัญชีนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ" };
   }
 
-  redirect("/dashboard");
+  redirect(homeFor(profile.role));
 }
 
 export async function signOut() {
