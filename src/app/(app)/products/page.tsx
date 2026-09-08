@@ -3,6 +3,7 @@ import { Plus, Tags } from "lucide-react";
 
 import { Status } from "@/generated/prisma/client";
 import { getProducts, getProductCategories } from "@/data/products";
+import { getCurrentUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { ProductTable } from "@/components/products/product-table";
 
@@ -25,7 +26,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     ? (params.status as Status)
     : undefined;
 
-  const [{ products, total }, categories] = await Promise.all([
+  const [{ products, total }, categories, user] = await Promise.all([
     getProducts({
       search: params.search,
       status,
@@ -34,9 +35,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
       perPage: 10,
     }),
     getProductCategories(),
+    getCurrentUser(),
   ]);
 
   const totalPages = Math.ceil(total / 10);
+  const isAdmin = user?.role === "ADMIN";
 
   return (
     <div className="space-y-6">
@@ -48,12 +51,14 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/categories">
-              <Tags className="size-4" />
-              หมวดหมู่
-            </Link>
-          </Button>
+          {isAdmin && (
+            <Button variant="outline" asChild>
+              <Link href="/categories">
+                <Tags className="size-4" />
+                หมวดหมู่
+              </Link>
+            </Button>
+          )}
           <Button asChild>
             <Link href="/products/new">
               <Plus className="size-4" />
@@ -74,6 +79,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
           status: params.status ?? "",
           categoryId: params.categoryId ?? "",
         }}
+        canDelete={isAdmin}
       />
     </div>
   );

@@ -12,7 +12,8 @@ import {
 import { MoreHorizontal, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 
-import { deleteCustomer } from "@/actions/customer-actions";
+import { deleteUser } from "@/actions/user-actions";
+import { USER_ROLE_LABELS, USER_ROLE_COLORS } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,81 +43,43 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const LEAD_TYPE_LABELS: Record<string, string> = {
-  FACEBOOK: "Facebook",
-  INSTAGRAM: "Instagram",
-  LINE_OA: "LINE OA",
-  TIKTOK: "TikTok",
-  WEBSITE: "เว็บไซต์",
-  REFERRAL: "แนะนำ",
-  OTHER: "อื่นๆ",
-};
-
-interface CustomerTableProps {
-  customers: any[];
-  canDelete?: boolean;
+interface UserTableProps {
+  users: any[];
+  currentUserId: string;
 }
 
-export function CustomerTable({ customers, canDelete = false }: CustomerTableProps) {
+export function UserTable({ users, currentUserId }: UserTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const columns: ColumnDef<any>[] = [
     {
-      accessorKey: "code",
-      header: "รหัสลูกค้า",
-      cell: ({ row }) => (
-        <span className="font-mono text-xs">{row.original.code}</span>
-      ),
-    },
-    {
-      accessorKey: "customerName",
+      id: "name",
       header: "ชื่อ",
       cell: ({ row }) => (
         <div>
-          <div className="font-medium">{row.original.customerName}</div>
-          {row.original.contactPerson && (
-            <div className="text-xs text-muted-foreground">
-              ติดต่อ: {row.original.contactPerson}
-            </div>
+          <div className="font-medium">
+            {[row.original.firstName, row.original.lastName].filter(Boolean).join(" ") || "-"}
+          </div>
+          {row.original.id === currentUserId && (
+            <div className="text-xs text-muted-foreground">คุณ</div>
           )}
         </div>
       ),
     },
     {
-      accessorKey: "type",
-      header: "ประเภท",
+      accessorKey: "email",
+      header: "อีเมล",
+    },
+    {
+      accessorKey: "role",
+      header: "สิทธิ์การใช้งาน",
       cell: ({ row }) => (
-        <Badge variant={row.original.type === "COMPANY" ? "default" : "secondary"}>
-          {row.original.type === "COMPANY" ? "นิติบุคคล" : "บุคคลธรรมดา"}
+        <Badge className={USER_ROLE_COLORS[row.original.role] ?? ""}>
+          {USER_ROLE_LABELS[row.original.role] ?? row.original.role}
         </Badge>
       ),
-      enableGlobalFilter: false,
-    },
-    {
-      accessorKey: "companyName",
-      header: "บริษัท",
-      cell: ({ row }) => row.original.companyName ?? "-",
-    },
-    {
-      accessorKey: "taxId",
-      header: "เลขประจำตัวผู้เสียภาษี",
-      cell: ({ row }) => row.original.taxId ?? "-",
-      enableGlobalFilter: false,
-    },
-    {
-      accessorKey: "phone",
-      header: "เบอร์โทร",
-      cell: ({ row }) => row.original.phone ?? "-",
-    },
-    {
-      accessorKey: "leadType",
-      header: "ที่มา",
-      cell: ({ row }) =>
-        row.original.leadType
-          ? LEAD_TYPE_LABELS[row.original.leadType] ?? row.original.leadType
-          : "-",
       enableGlobalFilter: false,
     },
     {
@@ -127,16 +90,6 @@ export function CustomerTable({ customers, canDelete = false }: CustomerTablePro
           {row.original.status === "ACTIVE" ? "ใช้งาน" : "ไม่ใช้งาน"}
         </Badge>
       ),
-      enableGlobalFilter: false,
-    },
-    {
-      id: "createdBy",
-      header: "ผู้สร้าง",
-      cell: ({ row }) => {
-        const c = row.original.createdBy;
-        if (!c) return "-";
-        return [c.firstName, c.lastName].filter(Boolean).join(" ") || c.email;
-      },
       enableGlobalFilter: false,
     },
     {
@@ -151,20 +104,19 @@ export function CustomerTable({ customers, canDelete = false }: CustomerTablePro
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <Link href={`/customers/${row.original.id}`}>
+              <Link href={`/users/${row.original.id}`}>
                 <Pencil className="size-4" />
                 แก้ไข
               </Link>
             </DropdownMenuItem>
-            {canDelete && (
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => setDeleteId(row.original.id)}
-              >
-                <Trash2 className="size-4" />
-                ลบ
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={row.original.id === currentUserId}
+              onClick={() => setDeleteId(row.original.id)}
+            >
+              <Trash2 className="size-4" />
+              ลบ
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -173,7 +125,7 @@ export function CustomerTable({ customers, canDelete = false }: CustomerTablePro
   ];
 
   const table = useReactTable({
-    data: customers,
+    data: users,
     columns,
     state: { globalFilter },
     onGlobalFilterChange: setGlobalFilter,
@@ -181,13 +133,12 @@ export function CustomerTable({ customers, canDelete = false }: CustomerTablePro
     getFilteredRowModel: getFilteredRowModel(),
     globalFilterFn: (row, columnId, filterValue) => {
       const search = filterValue.toLowerCase();
-      const code = String(row.original.code ?? "").toLowerCase();
-      const name = String(row.original.customerName ?? "").toLowerCase();
-      const company = String(row.original.companyName ?? "").toLowerCase();
-      const phone = String(row.original.phone ?? "").toLowerCase();
-      return (
-        code.includes(search) || name.includes(search) || company.includes(search) || phone.includes(search)
-      );
+      const email = String(row.original.email ?? "").toLowerCase();
+      const name = [row.original.firstName, row.original.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return email.includes(search) || name.includes(search);
     },
   });
 
@@ -195,10 +146,10 @@ export function CustomerTable({ customers, canDelete = false }: CustomerTablePro
     if (!deleteId) return;
     startTransition(async () => {
       try {
-        await deleteCustomer(deleteId);
-        toast.success("ลบลูกค้าเรียบร้อยแล้ว");
-      } catch {
-        toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+        await deleteUser(deleteId);
+        toast.success("ลบผู้ใช้งานเรียบร้อยแล้ว");
+      } catch (error: any) {
+        toast.error(error?.message ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
       } finally {
         setDeleteId(null);
       }
@@ -210,7 +161,7 @@ export function CustomerTable({ customers, canDelete = false }: CustomerTablePro
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
-          placeholder="ค้นหาลูกค้า..."
+          placeholder="ค้นหาผู้ใช้งาน..."
           value={globalFilter}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="pl-9"
@@ -225,11 +176,7 @@ export function CustomerTable({ customers, canDelete = false }: CustomerTablePro
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={
-                      ["companyName", "taxId", "leadType", "status", "createdBy"].includes(header.id)
-                        ? "hidden md:table-cell"
-                        : ""
-                    }
+                    className={["role", "status"].includes(header.id) ? "hidden md:table-cell" : ""}
                   >
                     {header.isPlaceholder
                       ? null
@@ -247,9 +194,7 @@ export function CustomerTable({ customers, canDelete = false }: CustomerTablePro
                     <TableCell
                       key={cell.id}
                       className={
-                        ["companyName", "taxId", "leadType", "status", "createdBy"].includes(cell.column.id)
-                          ? "hidden md:table-cell"
-                          : ""
+                        ["role", "status"].includes(cell.column.id) ? "hidden md:table-cell" : ""
                       }
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -260,7 +205,7 @@ export function CustomerTable({ customers, canDelete = false }: CustomerTablePro
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  ไม่พบข้อมูลลูกค้า
+                  ไม่พบข้อมูลผู้ใช้งาน
                 </TableCell>
               </TableRow>
             )}
@@ -273,22 +218,18 @@ export function CustomerTable({ customers, canDelete = false }: CustomerTablePro
           <AlertDialogHeader>
             <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
             <AlertDialogDescription>
-              คุณต้องการลบลูกค้านี้หรือไม่? การดำเนินการนี้จะเปลี่ยนสถานะเป็นไม่ใช้งาน
+              คุณต้องการลบผู้ใช้งานนี้หรือไม่? หากมีเอกสารที่สร้างโดยผู้ใช้นี้อยู่ในระบบ
+              จะไม่สามารถลบได้ กรุณาปิดการใช้งานแทน
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              variant="destructive"
-              disabled={isPending}
-            >
+            <AlertDialogAction onClick={handleDelete} variant="destructive" disabled={isPending}>
               ลบ
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   );
 }

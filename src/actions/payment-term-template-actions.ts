@@ -3,9 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { paymentTermTemplateSchema } from "@/lib/validators";
 import { serialize } from "@/lib/utils";
+import { assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function createPaymentTermTemplate(data: unknown) {
+  await assertAdmin();
   const validated = paymentTermTemplateSchema.parse(data);
   const template = await prisma.paymentTermTemplate.create({
     data: {
@@ -28,6 +30,7 @@ export async function createPaymentTermTemplate(data: unknown) {
 }
 
 export async function updatePaymentTermTemplate(id: string, data: unknown) {
+  await assertAdmin();
   const validated = paymentTermTemplateSchema.parse(data);
 
   // Delete old items and recreate
@@ -57,6 +60,7 @@ export async function updatePaymentTermTemplate(id: string, data: unknown) {
 }
 
 export async function deletePaymentTermTemplate(id: string) {
+  await assertAdmin();
   await prisma.paymentTermTemplate.update({
     where: { id },
     data: { status: "INACTIVE" },
@@ -65,6 +69,7 @@ export async function deletePaymentTermTemplate(id: string) {
 }
 
 export async function permanentDeletePaymentTermTemplate(id: string) {
+  await assertAdmin();
   await prisma.paymentTermTemplate.delete({ where: { id } });
   revalidatePath("/payment-terms");
 }

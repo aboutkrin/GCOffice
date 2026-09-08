@@ -2,13 +2,14 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 
 import { getCustomers } from "@/data/customers";
+import { getCurrentUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { CustomerTable } from "@/components/customers/customer-table";
 
 export const dynamic = 'force-dynamic';
 
 export default async function CustomersPage() {
-  const customers = await getCustomers();
+  const [customers, user] = await Promise.all([getCustomers(), getCurrentUser()]);
 
   return (
     <div className="space-y-6">
@@ -27,7 +28,7 @@ export default async function CustomersPage() {
         </Button>
       </div>
 
-      <CustomerTable customers={customers} />
+      <CustomerTable customers={customers} canDelete={user?.role === "ADMIN"} />
     </div>
   );
 }

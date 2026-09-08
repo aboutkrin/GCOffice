@@ -3,29 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Menu,
-  LogOut,
-  LayoutDashboard,
-  Package,
-  Users,
-  Building2,
-  FileText,
-  Receipt,
-  ClipboardList,
-  Tags,
-  CalendarOff,
-  Settings,
-  ChevronDown,
-  Globe,
-  User,
-  ReceiptText,
-  Printer,
-  Calculator,
-  Truck,
-  Wallet,
-  Warehouse,
-} from "lucide-react";
+import { Menu, LogOut, Settings, ChevronDown, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/actions/auth-actions";
 import { Button } from "@/components/ui/button";
@@ -45,102 +23,20 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { MAIN_NAV, SETTINGS_NAV, filterNav } from "@/lib/nav";
 
 interface AppHeaderProps {
   user: {
     email?: string;
   };
+  role: string;
 }
 
-const mainNavItems = [
-  {
-    href: "/dashboard",
-    label: "แดชบอร์ด",
-    icon: LayoutDashboard,
-  },
-  {
-    href: "/quotations",
-    label: "ใบเสนอราคา",
-    icon: FileText,
-  },
-  {
-    href: "/invoices",
-    label: "ใบแจ้งหนี้",
-    icon: Receipt,
-  },
-  {
-    href: "/receipts",
-    label: "ใบเสร็จรับเงิน",
-    icon: ReceiptText,
-  },
-  {
-    href: "/products",
-    label: "สินค้า",
-    icon: Package,
-  },
-  {
-    href: "/stock",
-    label: "สต็อคสินค้า",
-    icon: Warehouse,
-  },
-  {
-    href: "/customers",
-    label: "ลูกค้า",
-    icon: Users,
-  },
-  {
-    href: "/product-costs",
-    label: "ต้นทุนสินค้า",
-    icon: Calculator,
-  },
-  {
-    href: "/vendor-costs",
-    label: "ต้นทุนใบสั่งซื้อ",
-    icon: Truck,
-  },
-  {
-    href: "/expenses",
-    label: "ค่าใช้จ่ายรายเดือน",
-    icon: Wallet,
-  },
-  {
-    href: "/print-order",
-    label: "พิมพ์ใบส่งของ",
-    icon: Printer,
-  },
-];
-
-const settingsNavItems = [
-  {
-    href: "/categories",
-    label: "หมวดหมู่สินค้า",
-    icon: Tags,
-  },
-  {
-    href: "/payment-terms",
-    label: "เงื่อนไขชำระเงิน",
-    icon: ClipboardList,
-  },
-  {
-    href: "/holidays",
-    label: "วันหยุด",
-    icon: CalendarOff,
-  },
-  {
-    href: "/companies",
-    label: "บริษัท",
-    icon: Building2,
-  },
-  {
-    href: "/website-sync",
-    label: "ซิงค์เว็บไซต์",
-    icon: Globe,
-  },
-];
-
-export function AppHeader({ user }: AppHeaderProps) {
+export function AppHeader({ user, role }: AppHeaderProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const mainNavItems = filterNav(MAIN_NAV, role);
+  const settingsNavItems = filterNav(SETTINGS_NAV, role);
   const isSettingsActive = settingsNavItems.some(
     (item) =>
       pathname === item.href || pathname.startsWith(item.href + "/")
@@ -189,6 +85,7 @@ export function AppHeader({ user }: AppHeaderProps) {
             })}
 
             {/* การตั้งค่า submenu */}
+            {settingsNavItems.length > 0 && (
             <div>
               <button
                 onClick={() => setSettingsOpen(!settingsOpen)}
@@ -236,6 +133,7 @@ export function AppHeader({ user }: AppHeaderProps) {
                 </div>
               )}
             </div>
+            )}
           </nav>
         </SheetContent>
       </Sheet>

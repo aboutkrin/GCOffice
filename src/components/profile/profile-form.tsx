@@ -52,15 +52,11 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   function onSubmit(data: ProfileFormData) {
     startTransition(async () => {
       try {
-        const result = await updateProfile(data);
-        if (result && "error" in result) {
-          toast.error(result.error);
-          return;
-        }
+        await updateProfile(data);
         toast.success("บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว");
         router.refresh();
-      } catch {
-        toast.error("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+      } catch (error: any) {
+        toast.error(error?.message ?? "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
       }
     });
   }

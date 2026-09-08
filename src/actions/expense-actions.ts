@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { expenseSchema, expenseCategorySchema } from "@/lib/validators";
 import { serialize } from "@/lib/utils";
+import { assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 async function ensureExpenseTables() {
@@ -80,6 +81,7 @@ async function ensureExpenseTables() {
 
 export async function createExpense(data: unknown) {
   try {
+    const user = await assertAdmin();
     await ensureExpenseTables();
     const validated = expenseSchema.parse(data);
 
@@ -91,6 +93,7 @@ export async function createExpense(data: unknown) {
         categoryId: validated.categoryId,
         paymentMethod: validated.paymentMethod,
         notes: validated.notes,
+        createdById: user.id,
       },
     });
 
@@ -107,6 +110,7 @@ export async function createExpense(data: unknown) {
 
 export async function updateExpense(id: string, data: unknown) {
   try {
+    await assertAdmin();
     const validated = expenseSchema.parse(data);
 
     const expense = await prisma.expense.update({
@@ -134,6 +138,7 @@ export async function updateExpense(id: string, data: unknown) {
 
 export async function deleteExpense(id: string) {
   try {
+    await assertAdmin();
     await prisma.expense.delete({
       where: { id },
     });
@@ -149,6 +154,7 @@ export async function deleteExpense(id: string) {
 
 export async function createExpenseCategory(data: unknown) {
   try {
+    await assertAdmin();
     await ensureExpenseTables();
     const validated = expenseCategorySchema.parse(data);
 
@@ -171,6 +177,7 @@ export async function createExpenseCategory(data: unknown) {
 
 export async function deleteExpenseCategory(id: string) {
   try {
+    await assertAdmin();
     const existing = await prisma.expenseCategory.findUnique({
       where: { id },
       include: { _count: { select: { expenses: true } } },

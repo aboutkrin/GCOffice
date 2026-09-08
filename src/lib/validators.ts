@@ -288,3 +288,23 @@ export type ColorVariantFormData = z.infer<typeof colorVariantSchema>;
 export type ColorVariantInputFormData = z.infer<typeof colorVariantInputSchema>;
 export type StockAdjustmentFormData = z.infer<typeof stockAdjustmentSchema>;
 export type StockThresholdFormData = z.infer<typeof stockThresholdSchema>;
+
+export const userCreateSchema = z.object({
+  email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง"),
+  password: z.string().min(8, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"),
+  firstName: z.string().min(1, "กรุณาระบุชื่อ"),
+  lastName: z.string().optional(),
+  role: z.enum(["ADMIN", "STAFF"], { error: "กรุณาเลือกสิทธิ์การใช้งาน" }),
+  status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+});
+
+export const userUpdateSchema = z.object({
+  firstName: z.string().min(1, "กรุณาระบุชื่อ"),
+  lastName: z.string().optional(),
+  role: z.enum(["ADMIN", "STAFF"], { error: "กรุณาเลือกสิทธิ์การใช้งาน" }),
+  status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
+  password: z.string().min(8, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร").optional().or(z.literal("")),
+});
+
+export type UserCreateFormData = z.infer<typeof userCreateSchema>;
+export type UserUpdateFormData = z.infer<typeof userUpdateSchema>;

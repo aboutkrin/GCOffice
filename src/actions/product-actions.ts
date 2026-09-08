@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { productSchema, updateProductSchema, productCategorySchema, colorVariantInputSchema } from "@/lib/validators";
 import { generateProductSku } from "@/lib/sku-generator";
 import { serialize } from "@/lib/utils";
+import { requireUserAction, assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -23,6 +24,7 @@ async function assertNotWebsiteProduct(id: string) {
 
 export async function createProduct(data: unknown) {
   const validated = productSchema.parse(data);
+  const user = await requireUserAction();
   const product = await prisma.$transaction(async (tx) => {
     const sku = await generateProductSku(validated.categoryId, tx);
     return tx.product.create({
@@ -34,6 +36,7 @@ export async function createProduct(data: unknown) {
         basePrice: validated.basePrice,
         imageUrl: validated.imageUrl,
         status: validated.status,
+        createdById: user.id,
       },
     });
   });
@@ -42,6 +45,7 @@ export async function createProduct(data: unknown) {
 }
 
 export async function updateProduct(id: string, data: unknown) {
+  await requireUserAction();
   const validated = updateProductSchema.parse(data);
   const product = await prisma.product.update({
     where: { id },
@@ -59,6 +63,7 @@ export async function updateProduct(id: string, data: unknown) {
 }
 
 export async function deleteProduct(id: string) {
+  await assertAdmin();
   await assertNotWebsiteProduct(id);
   await prisma.product.update({
     where: { id },
@@ -68,6 +73,7 @@ export async function deleteProduct(id: string) {
 }
 
 export async function permanentDeleteProduct(id: string) {
+  await assertAdmin();
   await assertNotWebsiteProduct(id);
   await prisma.product.delete({ where: { id } });
   revalidatePath("/products");
@@ -76,6 +82,7 @@ export async function permanentDeleteProduct(id: string) {
 }
 
 export async function createProductCategory(data: unknown) {
+  await assertAdmin();
   const validated = productCategorySchema.parse(data);
   const category = await prisma.productCategory.create({
     data: {
@@ -89,6 +96,7 @@ export async function createProductCategory(data: unknown) {
 }
 
 export async function updateProductCategory(id: string, data: unknown) {
+  await assertAdmin();
   const validated = productCategorySchema.parse(data);
 
   const existing = await prisma.productCategory.findUnique({
@@ -120,6 +128,7 @@ export async function deleteProductCategory(
   id: string,
   options?: { forceDeleteProducts?: boolean }
 ) {
+  await assertAdmin();
   const existing = await prisma.productCategory.findUnique({
     where: { id },
     include: { _count: { select: { products: true } } },
@@ -232,6 +241,7 @@ export async function saveProductColorVariants(
   productId: string,
   variants: unknown[]
 ) {
+  await requireUserAction();
   const validated = z.array(colorVariantInputSchema).parse(variants);
 
   await prisma.$transaction(async (tx) => {
@@ -247,6 +257,7 @@ export async function updateProductWithColorVariants(
   data: unknown,
   variants: unknown[]
 ) {
+  await requireUserAction();
   const validatedProduct = updateProductSchema.parse(data);
   const validatedVariants = z.array(colorVariantInputSchema).parse(variants);
 
@@ -291,6 +302,7 @@ export async function createProductWithColorVariants(
 ) {
   const validatedProduct = productSchema.parse(data);
   const validatedVariants = z.array(colorVariantInputSchema).parse(variants);
+  const user = await requireUserAction();
 
   const product = await prisma.$transaction(async (tx) => {
     const sku = await generateProductSku(validatedProduct.categoryId, tx);
@@ -303,6 +315,7 @@ export async function createProductWithColorVariants(
         basePrice: validatedProduct.basePrice,
         imageUrl: validatedProduct.imageUrl,
         status: validatedProduct.status,
+        createdById: user.id,
       },
     });
     if (validatedVariants.length > 0) {
@@ -335,6 +348,7 @@ export async function updateProductCost(
     shippingCostPerBox?: number | null;
   }
 ) {
+  await assertAdmin();
   const product = await prisma.product.update({
     where: { id },
     data: {

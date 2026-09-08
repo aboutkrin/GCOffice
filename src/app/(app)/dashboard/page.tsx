@@ -13,6 +13,7 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge";
 import { getDashboardStats, getYearlyStats, getMonthlyRevenueAndCost, getDeliverySchedule, getHolidaysForMonth } from "@/data/dashboard";
+import { getCurrentUser } from "@/lib/auth";
 import { YearlyStatsCards } from "@/components/dashboard/yearly-stats-cards";
 import { RevenueExpenseSection } from "@/components/dashboard/revenue-expense-section";
 import { DeliverySchedule } from "@/components/dashboard/delivery-schedule";
@@ -24,10 +25,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const { year: currentYear, month: currentMonth } = getThaiNow();
+  const user = await getCurrentUser();
+  const isAdmin = user?.role === "ADMIN";
   const [stats, yearlyStats, revenueExpense, deliverySchedule, holidays] = await Promise.all([
     getDashboardStats(),
     getYearlyStats(currentYear),
-    getMonthlyRevenueAndCost(currentYear),
+    isAdmin ? getMonthlyRevenueAndCost(currentYear) : Promise.resolve(null),
     getDeliverySchedule(currentYear, currentMonth),
     getHolidaysForMonth(currentYear, currentMonth),
   ]);
@@ -113,11 +116,13 @@ export default async function DashboardPage() {
       {/* Yearly Stats */}
       <YearlyStatsCards initialData={yearlyStats} />
 
-      {/* Revenue & Expense + Profit Charts */}
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-4">ภาพรวมรายรับและรายจ่ายตลอดทั้งปี</h2>
-        <RevenueExpenseSection initialData={revenueExpense} />
-      </div>
+      {/* Revenue & Expense + Profit Charts (ADMIN only) */}
+      {isAdmin && revenueExpense && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold mb-4">ภาพรวมรายรับและรายจ่ายตลอดทั้งปี</h2>
+          <RevenueExpenseSection initialData={revenueExpense} />
+        </div>
+      )}
 
       {/* Delivery Schedule */}
       <div className="mt-8">

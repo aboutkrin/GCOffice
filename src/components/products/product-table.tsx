@@ -72,6 +72,7 @@ interface ProductTableProps {
     status: string;
     categoryId: string;
   };
+  canDelete?: boolean;
 }
 
 export function ProductTable({
@@ -81,6 +82,7 @@ export function ProductTable({
   page,
   totalPages,
   filters,
+  canDelete = false,
 }: ProductTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -183,6 +185,15 @@ export function ProductTable({
       header: "รหัส",
     },
     {
+      id: "createdBy",
+      header: "ผู้สร้าง",
+      cell: ({ row }) => {
+        const c = row.original.createdBy;
+        if (!c) return "-";
+        return [c.firstName, c.lastName].filter(Boolean).join(" ") || c.email;
+      },
+    },
+    {
       id: "actions",
       header: "จัดการ",
       cell: ({ row }) => (
@@ -200,7 +211,7 @@ export function ProductTable({
               </Link>
             </DropdownMenuItem>
             {/* Website-synced products are removed on goodchoiceth.com, not here */}
-            {row.original.source !== "WEBSITE" &&
+            {canDelete && row.original.source !== "WEBSITE" &&
               (row.original.status === "ACTIVE" ? (
                 <DropdownMenuItem
                   variant="destructive"
@@ -333,7 +344,7 @@ export function ProductTable({
                   <TableHead
                     key={header.id}
                     className={
-                      ["imageUrl", "basePrice", "status", "sku"].includes(header.id)
+                      ["imageUrl", "basePrice", "status", "sku", "createdBy"].includes(header.id)
                         ? "hidden md:table-cell"
                         : ""
                     }
@@ -354,7 +365,7 @@ export function ProductTable({
                     <TableCell
                       key={cell.id}
                       className={
-                        ["imageUrl", "basePrice", "status", "sku"].includes(cell.column.id)
+                        ["imageUrl", "basePrice", "status", "sku", "createdBy"].includes(cell.column.id)
                           ? "hidden md:table-cell"
                           : ""
                       }
