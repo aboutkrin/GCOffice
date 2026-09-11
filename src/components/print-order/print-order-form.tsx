@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 import { Printer, FileDown, ImageIcon, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,9 +10,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { CustomerSelect } from "@/components/customers/customer-select";
+import { savePrintOrderSettings } from "@/actions/print-order-settings-actions";
 
 interface PrintOrderFormProps {
   customers: any[];
+  initialShopInfo: ShopInfo;
 }
 
 interface ShopInfo {
@@ -479,46 +481,16 @@ function generatePrintHTML(shop: ShopInfo, customer: CustomerInfo): string {
 </html>`;
 }
 
-const SHOP_INFO_STORAGE_KEY = "print-order-shop-info";
-
-function loadShopInfo(): ShopInfo {
-  if (typeof window === "undefined") {
-    return { address: "", logoUrl: "", phone: "", lineOa: "", instagram: "", facebook: "", tiktok: "" };
-  }
-  try {
-    const saved = localStorage.getItem(SHOP_INFO_STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return {
-        address: parsed.address ?? "",
-        logoUrl: parsed.logoUrl ?? "",
-        phone: parsed.phone ?? "",
-        lineOa: parsed.lineOa ?? "",
-        instagram: parsed.instagram ?? "",
-        facebook: parsed.facebook ?? "",
-        tiktok: parsed.tiktok ?? "",
-      };
-    }
-  } catch {
-    // ignore
-  }
-  return { address: "", logoUrl: "", phone: "", lineOa: "", instagram: "", facebook: "", tiktok: "" };
-}
-
-export function PrintOrderForm({ customers }: PrintOrderFormProps) {
+export function PrintOrderForm({ customers, initialShopInfo }: PrintOrderFormProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSavingShopInfo, setIsSavingShopInfo] = useState(false);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
 
-  const [shopInfo, setShopInfo] = useState<ShopInfo>(() => loadShopInfo());
+  const [shopInfo, setShopInfo] = useState<ShopInfo>(initialShopInfo);
 
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
-
-  // Load saved shop info on mount
-  useEffect(() => {
-    setShopInfo(loadShopInfo());
-  }, []);
 
   const handleShopFieldChange = useCallback(
     (field: keyof ShopInfo, value: string) => {
@@ -527,12 +499,15 @@ export function PrintOrderForm({ customers }: PrintOrderFormProps) {
     []
   );
 
-  const handleSaveShopInfo = useCallback(() => {
+  const handleSaveShopInfo = useCallback(async () => {
+    setIsSavingShopInfo(true);
     try {
-      localStorage.setItem(SHOP_INFO_STORAGE_KEY, JSON.stringify(shopInfo));
+      await savePrintOrderSettings(shopInfo);
       toast.success("บันทึกข้อมูลร้านสำเร็จ");
     } catch {
       toast.error("ไม่สามารถบันทึกข้อมูลร้านได้");
+    } finally {
+      setIsSavingShopInfo(false);
     }
   }, [shopInfo]);
 
@@ -644,8 +619,13 @@ export function PrintOrderForm({ customers }: PrintOrderFormProps) {
             variant="outline"
             size="sm"
             onClick={handleSaveShopInfo}
+            disabled={isSavingShopInfo}
           >
-            <Save className="size-4" />
+            {isSavingShopInfo ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
             บันทึกข้อมูลร้าน
           </Button>
         </div>

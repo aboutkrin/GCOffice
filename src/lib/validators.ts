@@ -63,6 +63,16 @@ export const companySchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE"]).default("ACTIVE"),
 });
 
+export const printOrderSettingsSchema = z.object({
+  address: z.string().optional(),
+  phone: z.string().optional(),
+  lineOa: z.string().optional(),
+  instagram: z.string().optional(),
+  facebook: z.string().optional(),
+  tiktok: z.string().optional(),
+  logoUrl: z.string().optional(),
+});
+
 export const lineItemSchema = z.object({
   sequence: z.number(),
   productSku: z.string().optional(),
