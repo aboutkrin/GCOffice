@@ -1,10 +1,14 @@
 import { getCustomers } from "@/data/customers";
+import { getPrintOrderSettings } from "@/data/print-order-settings";
 import { PrintOrderForm } from "@/components/print-order/print-order-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function PrintOrderPage() {
-  const customers = await getCustomers({ status: "ACTIVE" });
+  const [customers, shopInfo] = await Promise.all([
+    getCustomers({ status: "ACTIVE" }),
+    getPrintOrderSettings(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -15,7 +19,7 @@ export default async function PrintOrderPage() {
         </p>
       </div>
 
-      <PrintOrderForm customers={customers} />
+      <PrintOrderForm customers={customers} initialShopInfo={shopInfo} />
     </div>
   );
 }

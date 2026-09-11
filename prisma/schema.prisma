@@ -73,6 +73,26 @@ model Company {
 }
 
 // ============================================================
+// PRINT ORDER SETTINGS
+// Shared shop-info shown on the "print delivery note" (พิมพ์ใบส่งของ)
+// page. Single row shared by everyone who prints delivery notes.
+// ============================================================
+
+model PrintOrderSettings {
+  id        String   @id @default("default")
+  address   String?  @db.Text
+  phone     String?
+  lineOa    String?  @map("line_oa")
+  instagram String?
+  facebook  String?
+  tiktok    String?
+  logoUrl   String?  @map("logo_url")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("print_order_settings")
+}
+
+// ============================================================
 // PRODUCT
 // ============================================================
 
