@@ -27,6 +27,9 @@ export async function createUser(data: unknown) {
   });
 
   if (error || !created.user) {
+    if (error?.code === "email_exists") {
+      throw new Error("อีเมลนี้ถูกใช้งานแล้ว");
+    }
     throw new Error(error?.message ?? "ไม่สามารถสร้างผู้ใช้งานได้");
   }
 
