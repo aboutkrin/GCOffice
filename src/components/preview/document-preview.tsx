@@ -83,6 +83,7 @@ export interface DocumentData {
   shippingLocation?: string | null;
   freeShipping?: boolean;
   freeShippingLocation?: string | null;
+  pickupAtShowroom?: boolean;
   grandTotal: number;
   footerNotes?: string;
   productionDays?: string;
@@ -304,6 +305,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           shippingLocation={doc.shippingLocation}
           freeShipping={doc.freeShipping}
           freeShippingLocation={doc.freeShippingLocation}
+          pickupAtShowroom={doc.pickupAtShowroom}
           grandTotal={doc.grandTotal}
         />
         <PreviewPayment

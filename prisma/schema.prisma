@@ -233,6 +233,7 @@ model Document {
   shippingLocation     String?  @map("shipping_location") @db.Text
   freeShipping         Boolean  @default(false) @map("free_shipping")
   freeShippingLocation String?  @map("free_shipping_location") @db.Text
+  pickupAtShowroom     Boolean  @default(false) @map("pickup_at_showroom")
   grandTotal     Decimal       @default(0) @map("grand_total") @db.Decimal(12, 2)
 
   footerNotes       String?   @map("footer_notes") @db.Text

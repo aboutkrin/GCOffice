@@ -128,6 +128,7 @@ export const documentSchema = z.object({
   shippingLocation: z.string().optional(),
   freeShipping: z.boolean().default(false),
   freeShippingLocation: z.string().optional(),
+  pickupAtShowroom: z.boolean().default(false),
   footerNotes: z.string().optional(),
   productionDays: z.string().optional(),
   productionDaysMin: z.coerce.number().int().min(1, "ต้องมากกว่า 0").optional().nullable(),

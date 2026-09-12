@@ -15,6 +15,7 @@ interface PreviewSummaryProps {
   shippingLocation?: string | null;
   freeShipping?: boolean;
   freeShippingLocation?: string | null;
+  pickupAtShowroom?: boolean;
   grandTotal: number;
 }
 
@@ -30,6 +31,7 @@ export function PreviewSummary({
   shippingLocation,
   freeShipping = false,
   freeShippingLocation,
+  pickupAtShowroom = false,
   grandTotal,
 }: PreviewSummaryProps) {
   const hasDiscount = Number(discountAmount) > 0;
@@ -136,17 +138,24 @@ export function PreviewSummary({
       </div>
 
       {/* Shipping location note */}
-      {!freeShipping && shippingCost > 0 && shippingLocation?.trim() && (
+      {!pickupAtShowroom && !freeShipping && shippingCost > 0 && shippingLocation?.trim() && (
         <div className="mt-1.5 text-right text-[11px] font-semibold text-red-600">
           * จัดส่งไปที่ {shippingLocation.trim()} *
         </div>
       )}
 
       {/* Free shipping note */}
-      {freeShipping && (
+      {!pickupAtShowroom && freeShipping && (
         <div className="mt-1.5 text-right text-[11px] font-semibold text-red-600">
           * จัดส่งฟรี
           {freeShippingLocation?.trim() ? `ที่ ${freeShippingLocation.trim()}` : ""} *
+        </div>
+      )}
+
+      {/* Pickup at showroom note */}
+      {pickupAtShowroom && (
+        <div className="mt-1.5 text-right text-[11px] font-semibold text-red-600">
+          * รับสินค้าที่โชว์รูม *
         </div>
       )}
     </div>

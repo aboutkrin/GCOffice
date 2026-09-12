@@ -3,7 +3,7 @@
 import { DecimalInput } from "@/components/ui/decimal-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Truck, MapPin } from "lucide-react";
+import { Truck, MapPin, Store } from "lucide-react";
 
 /** ตัวเลือกด่วนสำหรับสถานที่จัดส่ง */
 export const BANGKOK_METRO_LOCATION = "กรุงเทพ และ ปริมณฑล";
@@ -111,6 +111,8 @@ interface ShippingSectionProps {
   onFreeShippingChange: (value: boolean) => void;
   freeShippingLocation?: string;
   onFreeShippingLocationChange?: (value: string) => void;
+  pickupAtShowroom?: boolean;
+  onPickupAtShowroomChange?: (value: boolean) => void;
   customerAddress?: string;
   error?: string;
 }
@@ -124,9 +126,13 @@ export function ShippingSection({
   onFreeShippingChange,
   freeShippingLocation = "",
   onFreeShippingLocationChange,
+  pickupAtShowroom = false,
+  onPickupAtShowroomChange,
   customerAddress = "",
   error,
 }: ShippingSectionProps) {
+  const disabled = freeShipping || pickupAtShowroom;
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 mb-2">
@@ -137,33 +143,64 @@ export function ShippingSection({
       </div>
       <div className="flex items-center gap-3">
         <DecimalInput
-          value={freeShipping ? "" : (shippingCost || "")}
+          value={disabled ? "" : (shippingCost || "")}
           onChange={onShippingCostChange}
           placeholder="0.00"
           className="w-[200px]"
-          disabled={freeShipping}
+          disabled={disabled}
         />
         <span className="text-sm text-muted-foreground">{"บาท"}</span>
       </div>
-      <div className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          id="freeShipping"
-          checked={freeShipping}
-          onChange={(e) => {
-            onFreeShippingChange(e.target.checked);
-            if (e.target.checked) onShippingCostChange(0);
-          }}
-          className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer"
-        />
-        <label
-          htmlFor="freeShipping"
-          className="text-sm cursor-pointer select-none"
-        >
-          {"จัดส่งฟรี"}
-        </label>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="freeShipping"
+            checked={freeShipping}
+            disabled={pickupAtShowroom}
+            onChange={(e) => {
+              onFreeShippingChange(e.target.checked);
+              if (e.target.checked) onShippingCostChange(0);
+            }}
+            className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+          />
+          <label
+            htmlFor="freeShipping"
+            className={
+              pickupAtShowroom
+                ? "text-sm select-none text-muted-foreground"
+                : "text-sm cursor-pointer select-none"
+            }
+          >
+            {"จัดส่งฟรี"}
+          </label>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="pickupAtShowroom"
+            checked={pickupAtShowroom}
+            disabled={freeShipping}
+            onChange={(e) => {
+              onPickupAtShowroomChange?.(e.target.checked);
+              if (e.target.checked) onShippingCostChange(0);
+            }}
+            className="h-4 w-4 rounded border-gray-300 accent-primary cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+          />
+          <label
+            htmlFor="pickupAtShowroom"
+            className={
+              freeShipping
+                ? "text-sm select-none text-muted-foreground flex items-center gap-1"
+                : "text-sm cursor-pointer select-none flex items-center gap-1"
+            }
+          >
+            <Store className="h-3.5 w-3.5" />
+            {"รับเองที่โชว์รูม"}
+          </label>
+        </div>
       </div>
-      {!freeShipping && shippingCost > 0 && (
+      {!freeShipping && !pickupAtShowroom && shippingCost > 0 && (
         <ShippingLocationField
           id="shippingLocation"
           label="สถานที่จัดส่ง"
@@ -180,6 +217,11 @@ export function ShippingSection({
           onChange={(val) => onFreeShippingLocationChange?.(val)}
           customerAddress={customerAddress}
         />
+      )}
+      {pickupAtShowroom && (
+        <p className="text-sm font-medium text-red-600">
+          {"* รับสินค้าที่โชว์รูม *"}
+        </p>
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
