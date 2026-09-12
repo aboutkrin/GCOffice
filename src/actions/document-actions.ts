@@ -57,7 +57,7 @@ export async function createDocument(data: unknown) {
     );
 
     // Include shipping in subtotal before discount (same as frontend use-pricing.ts)
-    const shippingCost = validated.shippingCost || 0;
+    const shippingCost = validated.pickupAtShowroom ? 0 : (validated.shippingCost || 0);
     const subtotalWithShipping = subtotal + shippingCost;
 
     let discountAmount = 0;
@@ -104,13 +104,14 @@ export async function createDocument(data: unknown) {
           vatRate: validated.vatRate,
           vatAmount,
           shippingCost,
-          shippingLocation: !validated.freeShipping && shippingCost > 0
+          shippingLocation: !validated.pickupAtShowroom && !validated.freeShipping && shippingCost > 0
             ? validated.shippingLocation?.trim() || null
             : null,
-          freeShipping: validated.freeShipping,
-          freeShippingLocation: validated.freeShipping
+          freeShipping: !validated.pickupAtShowroom && validated.freeShipping,
+          freeShippingLocation: !validated.pickupAtShowroom && validated.freeShipping
             ? validated.freeShippingLocation?.trim() || null
             : null,
+          pickupAtShowroom: validated.pickupAtShowroom,
           grandTotal,
           footerNotes: validated.footerNotes,
           productionDays: validated.productionDays,
@@ -209,7 +210,7 @@ export async function updateDocument(id: string, data: unknown) {
       0
     );
 
-    const shippingCost = validated.shippingCost || 0;
+    const shippingCost = validated.pickupAtShowroom ? 0 : (validated.shippingCost || 0);
     const subtotalWithShipping = subtotal + shippingCost;
 
     let discountAmount = 0;
@@ -261,13 +262,14 @@ export async function updateDocument(id: string, data: unknown) {
           vatRate: validated.vatRate,
           vatAmount,
           shippingCost,
-          shippingLocation: !validated.freeShipping && shippingCost > 0
+          shippingLocation: !validated.pickupAtShowroom && !validated.freeShipping && shippingCost > 0
             ? validated.shippingLocation?.trim() || null
             : null,
-          freeShipping: validated.freeShipping,
-          freeShippingLocation: validated.freeShipping
+          freeShipping: !validated.pickupAtShowroom && validated.freeShipping,
+          freeShippingLocation: !validated.pickupAtShowroom && validated.freeShipping
             ? validated.freeShippingLocation?.trim() || null
             : null,
+          pickupAtShowroom: validated.pickupAtShowroom,
           grandTotal,
           footerNotes: validated.footerNotes,
           productionDays: validated.productionDays,

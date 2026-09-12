@@ -125,6 +125,9 @@ export function DocumentForm({
   const [freeShippingLocation, setFreeShippingLocation] = useState<string>(
     initialData?.freeShippingLocation || ""
   );
+  const [pickupAtShowroom, setPickupAtShowroom] = useState<boolean>(
+    initialData ? (initialData.pickupAtShowroom ?? false) : false
+  );
   const [shippingError, setShippingError] = useState<string>("");
   const [paymentTermsError, setPaymentTermsError] = useState<string>("");
   const [productionDaysText, setProductionDaysText] = useState<string>("");
@@ -339,6 +342,7 @@ export function DocumentForm({
     setFreeShipping(q.freeShipping ?? false);
     setShippingLocation(q.shippingLocation || "");
     setFreeShippingLocation(q.freeShippingLocation || "");
+    setPickupAtShowroom(q.pickupAtShowroom ?? false);
     setProductionDaysMin(q.productionDaysMin ?? null);
     setProductionDaysMax(q.productionDaysMax ?? null);
     setSkipWeekends(q.skipWeekends ?? false);
@@ -398,6 +402,7 @@ export function DocumentForm({
     setFreeShipping(inv.freeShipping ?? false);
     setShippingLocation(inv.shippingLocation || "");
     setFreeShippingLocation(inv.freeShippingLocation || "");
+    setPickupAtShowroom(inv.pickupAtShowroom ?? false);
     setProductionDaysMin(inv.productionDaysMin ?? null);
     setProductionDaysMax(inv.productionDaysMax ?? null);
     setSkipWeekends(inv.skipWeekends ?? false);
@@ -417,10 +422,11 @@ export function DocumentForm({
       discountValue,
       vatEnabled: formData.vatEnabled,
       vatRate: formData.vatRate,
-      shippingCost: freeShipping ? 0 : shippingCost,
-      shippingLocation: !freeShipping && shippingCost > 0 ? shippingLocation || undefined : undefined,
-      freeShipping,
-      freeShippingLocation: freeShipping ? freeShippingLocation || undefined : undefined,
+      shippingCost: pickupAtShowroom || freeShipping ? 0 : shippingCost,
+      shippingLocation: !pickupAtShowroom && !freeShipping && shippingCost > 0 ? shippingLocation || undefined : undefined,
+      freeShipping: !pickupAtShowroom && freeShipping,
+      freeShippingLocation: !pickupAtShowroom && freeShipping ? freeShippingLocation || undefined : undefined,
+      pickupAtShowroom,
       footerNotes: footerNotes || undefined,
       productionDays: productionDaysText || undefined,
       productionDaysMin: productionDaysMin ?? undefined,
@@ -481,8 +487,8 @@ export function DocumentForm({
     }
 
     // Validate shipping
-    if (!freeShipping && shippingCost <= 0) {
-      setShippingError("กรุณาระบุค่าจัดส่ง หรือเลือก จัดส่งฟรี");
+    if (!pickupAtShowroom && !freeShipping && shippingCost <= 0) {
+      setShippingError("กรุณาระบุค่าจัดส่ง หรือเลือก จัดส่งฟรี หรือ รับเองที่โชว์รูม");
       const el = document.getElementById("shipping-section");
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
@@ -785,6 +791,11 @@ export function DocumentForm({
               }}
               freeShippingLocation={freeShippingLocation}
               onFreeShippingLocationChange={setFreeShippingLocation}
+              pickupAtShowroom={pickupAtShowroom}
+              onPickupAtShowroomChange={(val) => {
+                setPickupAtShowroom(val);
+                if (val) setShippingError("");
+              }}
               customerAddress={selectedCustomerAddress}
               error={shippingError}
             />
