@@ -37,7 +37,7 @@ export function DocumentPreviewPage({ document }: DocumentPreviewPageProps) {
       {/* Export Toolbar */}
       <ExportToolbar
         documentRef={previewRef}
-        filename={document.documentNumber}
+        filename={document.documentNumber ?? "ร่าง"}
         documentId={document.id}
         currentStatus={document.status}
         documentType={document.type}

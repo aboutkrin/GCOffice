@@ -154,13 +154,14 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
           return;
         }
 
-        const file = new File([blob], `${shareDocData.documentNumber}.jpg`, {
+        const shareDocNumber = shareDocData.documentNumber ?? "ร่าง";
+        const file = new File([blob], `${shareDocNumber}.jpg`, {
           type: "image/jpeg",
         });
 
         const shared = await shareFile({
-          title: shareDocData.documentNumber,
-          text: `เอกสาร ${shareDocData.documentNumber}`,
+          title: shareDocNumber,
+          text: `เอกสาร ${shareDocNumber}`,
           files: [file],
         });
 
@@ -239,7 +240,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
             {documents.map((doc) => (
               <TableRow key={doc.id}>
                 <TableCell className="font-medium">
-                  <div>{doc.documentNumber}</div>
+                  <div>{doc.documentNumber ?? "ร่าง"}</div>
                   {doc.customInvoiceNumber && (
                     <div className="text-xs text-muted-foreground">{doc.customInvoiceNumber}</div>
                   )}
@@ -352,7 +353,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
           >
             <div className="flex items-center justify-between">
               <span className="font-medium text-sm">
-                {doc.documentNumber}
+                {doc.documentNumber ?? "ร่าง"}
                 {doc.customInvoiceNumber && (
                   <span className="text-xs text-muted-foreground ml-2">({doc.customInvoiceNumber})</span>
                 )}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, LogOut, Settings, ChevronDown, User } from "lucide-react";
+import { Menu, LogOut, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/actions/auth-actions";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { MAIN_NAV, SETTINGS_NAV, filterNav } from "@/lib/nav";
+import { MAIN_NAV, SETTINGS_GROUP, filterNav, isNavGroup } from "@/lib/nav";
+import { NavGroup } from "@/components/layout/nav-group";
 
 interface AppHeaderProps {
   user: {
@@ -36,13 +37,8 @@ interface AppHeaderProps {
 export function AppHeader({ user, role }: AppHeaderProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const mainNavItems = filterNav(MAIN_NAV, role);
-  const settingsNavItems = filterNav(SETTINGS_NAV, role);
-  const isSettingsActive = settingsNavItems.some(
-    (item) =>
-      pathname === item.href || pathname.startsWith(item.href + "/")
-  );
-  const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);
+  const mainNavEntries = filterNav(MAIN_NAV, role);
+  const settingsGroup = filterNav([SETTINGS_GROUP], role).find(isNavGroup);
 
   const displayName = user.username || user.email;
   const userInitial = displayName ? displayName.charAt(0).toUpperCase() : "U";
@@ -62,16 +58,27 @@ export function AppHeader({ user, role }: AppHeaderProps) {
             <SheetTitle className="text-left">GCOffice</SheetTitle>
           </SheetHeader>
           <nav className="flex-1 overflow-y-auto space-y-1 p-4">
-            {mainNavItems.map((item) => {
+            {mainNavEntries.map((entry) => {
+              if (isNavGroup(entry)) {
+                return (
+                  <NavGroup
+                    key={entry.label}
+                    group={entry}
+                    pathname={pathname}
+                    onNavigate={() => setMenuOpen(false)}
+                  />
+                );
+              }
+
               const isActive =
-                pathname === item.href ||
-                pathname.startsWith(item.href + "/");
-              const Icon = item.icon;
+                pathname === entry.href ||
+                pathname.startsWith(entry.href + "/");
+              const Icon = entry.icon;
 
               return (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={entry.href}
+                  href={entry.href}
                   onClick={() => setMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
@@ -81,60 +88,17 @@ export function AppHeader({ user, role }: AppHeaderProps) {
                   )}
                 >
                   <Icon className="size-4" />
-                  {item.label}
+                  {entry.label}
                 </Link>
               );
             })}
 
-            {/* การตั้งค่า submenu */}
-            {settingsNavItems.length > 0 && (
-            <div>
-              <button
-                onClick={() => setSettingsOpen(!settingsOpen)}
-                className={cn(
-                  "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                  isSettingsActive
-                    ? "text-accent-foreground font-medium"
-                    : "text-muted-foreground hover:bg-accent/50"
-                )}
-              >
-                <Settings className="size-4" />
-                <span className="flex-1 text-left">การตั้งค่า</span>
-                <ChevronDown
-                  className={cn(
-                    "size-4 transition-transform",
-                    settingsOpen ? "rotate-0" : "-rotate-90"
-                  )}
-                />
-              </button>
-              {settingsOpen && (
-                <div className="ml-4 space-y-1 mt-1">
-                  {settingsNavItems.map((item) => {
-                    const isActive =
-                      pathname === item.href ||
-                      pathname.startsWith(item.href + "/");
-                    const Icon = item.icon;
-
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setMenuOpen(false)}
-                        className={cn(
-                          "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                          isActive
-                            ? "bg-accent text-accent-foreground font-medium"
-                            : "text-muted-foreground hover:bg-accent/50"
-                        )}
-                      >
-                        <Icon className="size-4" />
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            {settingsGroup && (
+              <NavGroup
+                group={settingsGroup}
+                pathname={pathname}
+                onNavigate={() => setMenuOpen(false)}
+              />
             )}
           </nav>
         </SheetContent>

@@ -329,7 +329,7 @@ export async function getInventorySummary() {
         entry.totalOrdered += item.quantity;
         entry.orders.push({
           documentId: doc.id,
-          documentNumber: doc.documentNumber,
+          documentNumber: doc.documentNumber ?? "ร่าง",
           customerName,
           quantity: item.quantity,
           documentDate: doc.documentDate.toISOString(),

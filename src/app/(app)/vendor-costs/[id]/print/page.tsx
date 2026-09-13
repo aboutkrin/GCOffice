@@ -26,7 +26,7 @@ export default async function VendorCostPrintRoute({
     const doc = await getDocumentById(vendorCost.document.id);
     if (doc) {
       invoice = {
-        documentNumber: doc.documentNumber,
+        documentNumber: doc.documentNumber ?? "ร่าง",
         documentDate: String(doc.documentDate),
         grandTotal: Number(doc.grandTotal),
         customerSnapshot: doc.customerSnapshot as {
@@ -107,7 +107,7 @@ export default async function VendorCostPrintRoute({
       }),
       document: vendorCost.document
         ? {
-            documentNumber: vendorCost.document.documentNumber,
+            documentNumber: vendorCost.document.documentNumber ?? "ร่าง",
             customer: vendorCost.document.customer,
           }
         : undefined,
