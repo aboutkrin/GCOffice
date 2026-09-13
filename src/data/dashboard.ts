@@ -495,7 +495,7 @@ export async function getDeliverySchedule(
         : baseName;
       return {
         id: doc.id,
-        documentNumber: doc.documentNumber,
+        documentNumber: doc.documentNumber ?? "ร่าง",
         customerName,
         status: doc.status,
         deliveryDateStart: doc.deliveryDateStart!.toISOString(),

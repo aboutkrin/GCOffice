@@ -20,13 +20,14 @@ function formatZodError(error: ZodError): string {
     .join(", ");
 }
 
-export async function createDocument(data: unknown) {
+export async function createDocument(data: unknown, options?: { asDraft?: boolean }) {
   try {
     const validated = documentSchema.parse(data);
 
     const user = await requireUserAction();
 
-    const documentNumber = await generateDocumentNumber(validated.type);
+    const asDraft = options?.asDraft ?? false;
+    const documentNumber = asDraft ? null : await generateDocumentNumber(validated.type);
 
     // For RECEIPT type, generate custom invoice number if not provided
     let customInvoiceNumber: string | undefined;
@@ -70,6 +71,7 @@ export async function createDocument(data: unknown) {
       INVOICE: DocumentStatus.BILLED,
       RECEIPT: DocumentStatus.PAID,
     };
+    const status = asDraft ? DocumentStatus.DRAFT : statusMap[validated.type];
 
     // Normalize documentDate to UTC noon (client may have already done this, but ensure consistency)
     const documentDate = toUTCNoon(new Date(validated.documentDate));
@@ -79,7 +81,7 @@ export async function createDocument(data: unknown) {
       const doc = await tx.document.create({
         data: {
           type: validated.type,
-          status: statusMap[validated.type],
+          status,
           documentNumber,
           customInvoiceNumber: customInvoiceNumber || undefined,
           documentDate,
@@ -354,7 +356,7 @@ export async function updateDocumentStatus(
   // Fetch current status to determine reservation actions
   const currentDocument = await prisma.document.findUniqueOrThrow({
     where: { id },
-    select: { status: true, reservesStock: true },
+    select: { status: true, type: true, reservesStock: true, documentNumber: true },
   });
 
   const oldStatus = currentDocument.status;
@@ -373,10 +375,23 @@ export async function updateDocumentStatus(
   // that only changes via goods receive / issue / stock count.
   const enteringConfirmed = newStatus === DocumentStatus.CONFIRMED && oldStatus !== DocumentStatus.CONFIRMED;
 
+  // Finalizing a draft: the running document number is only burned the moment
+  // it leaves DRAFT for a real status (cancelling a draft outright still
+  // doesn't consume one).
+  const needsDocumentNumber =
+    oldStatus === DocumentStatus.DRAFT &&
+    newStatus !== DocumentStatus.DRAFT &&
+    newStatus !== DocumentStatus.CANCELLED &&
+    !currentDocument.documentNumber;
+  const documentNumber = needsDocumentNumber
+    ? await generateDocumentNumber(currentDocument.type)
+    : undefined;
+
   const document = await prisma.document.update({
     where: { id },
     data: {
       status: newStatus,
+      ...(documentNumber ? { documentNumber } : {}),
       ...(enteringConfirmed ? { reservesStock: true } : {}),
     },
   });

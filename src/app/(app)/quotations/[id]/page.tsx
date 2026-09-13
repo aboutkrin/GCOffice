@@ -34,7 +34,7 @@ export default async function QuotationEditPage({
     <div>
       <PageHeader
         title="แก้ไขใบเสนอราคา"
-        description={`เลขที่: ${document.documentNumber}`}
+        description={`เลขที่: ${document.documentNumber ?? "ร่าง"}`}
       />
 
       <DocumentForm

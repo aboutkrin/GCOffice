@@ -18,7 +18,7 @@ interface CustomerSnapshot {
 interface PreviewCustomerProps {
   customer: CustomerSnapshot;
   documentDate: Date;
-  documentNumber: string;
+  documentNumber: string | null;
   customInvoiceNumber?: string | null;
   documentType?: string;
 }
@@ -110,7 +110,7 @@ export function PreviewCustomer({
             <>
               <span className="font-semibold text-right text-black">เลขที่</span>
               <span className="text-black">:</span>
-              <span>{documentNumber}</span>
+              <span>{documentNumber ?? "ร่าง"}</span>
               {customInvoiceNumber && (
                 <>
                   <span className="font-semibold text-right text-black">เลขที่บิล</span>

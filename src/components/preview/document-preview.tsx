@@ -66,7 +66,7 @@ interface PaymentTerm {
 export interface DocumentData {
   id: string;
   type: "QUOTATION" | "INVOICE" | "RECEIPT";
-  documentNumber: string;
+  documentNumber: string | null;
   customInvoiceNumber?: string | null;
   status: "DRAFT" | "QUOTED" | "CONFIRMED" | "SAMPLE" | "BILLED" | "PAID" | "CANCELLED";
   documentDate: Date;
@@ -137,7 +137,7 @@ function ContinuationHeader({
   company: CompanySnapshot;
   documentType: string;
   vatEnabled?: boolean;
-  documentNumber: string;
+  documentNumber: string | null;
   documentDate: Date;
 }) {
   const isLongName = company.name.length > 25;
@@ -168,7 +168,7 @@ function ContinuationHeader({
           {documentTypeLabel(documentType, vatEnabled)} (ต่อ)
         </div>
         <div className="text-[9px] text-gray-500">
-          เลขที่ {documentNumber} · {formatThaiDate(new Date(documentDate))}
+          เลขที่ {documentNumber ?? "ร่าง"} · {formatThaiDate(new Date(documentDate))}
         </div>
       </div>
     </div>
