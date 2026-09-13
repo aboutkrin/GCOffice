@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { generateProductSku } from "@/lib/sku-generator";
+import { buildVariantStockCode } from "@/lib/stock-code";
 import type { Prisma, SyncTrigger } from "@/generated/prisma/client";
 
 import {
@@ -91,6 +92,7 @@ interface CategoryRow {
 interface ProductRow {
   id: string;
   sku: string;
+  stockCode: string;
   name: string;
   source: string;
   status: string;
@@ -109,6 +111,7 @@ interface VariantRow {
   imageUrl: string | null;
   sortOrder: number;
   sku: string | null;
+  stockCode: string;
   websiteActive: boolean;
   websiteStockStatus: string | null;
 }
@@ -122,6 +125,7 @@ const VARIANT_ROW_SELECT = {
   imageUrl: true,
   sortOrder: true,
   sku: true,
+  stockCode: true,
   websiteActive: true,
   websiteStockStatus: true,
 } as const;
@@ -167,6 +171,7 @@ async function buildContext(
       select: {
         id: true,
         sku: true,
+        stockCode: true,
         name: true,
         source: true,
         status: true,
@@ -442,6 +447,7 @@ function planVariants(
 async function applyVariantPlan(
   tx: Tx,
   productId: string,
+  productStockCode: string,
   plan: VariantPlan,
   ctx: SyncContext
 ): Promise<void> {
@@ -490,7 +496,10 @@ async function applyVariantPlan(
   }
 
   if (plan.toCreate.length > 0) {
+    const assignedCodes = (ctx.variantsByProductId.get(productId) ?? []).map((v) => v.stockCode);
     for (const data of plan.toCreate) {
+      const stockCode = buildVariantStockCode(productStockCode, assignedCodes);
+      assignedCodes.push(stockCode);
       const created = await tx.productColorVariant.create({
         data: {
           productId,
@@ -499,6 +508,7 @@ async function applyVariantPlan(
           imageUrl: data.imageUrl,
           sortOrder: data.sortOrder,
           sku: data.sku,
+          stockCode,
           websiteVariantId: data.websiteVariantId,
           websiteActive: data.websiteActive,
           websiteStockStatus: data.websiteStockStatus,
@@ -560,6 +570,7 @@ async function upsertCatalogProduct(
       ctx.productsBySku.set(sku, {
         id: `dry-run-${mapped.websiteProductId}`,
         sku,
+        stockCode: sku,
         name: mapped.name,
         source: "WEBSITE",
         status: mapped.status,
@@ -614,7 +625,7 @@ async function upsertCatalogProduct(
         });
         const plan = planVariants(cp, existing, ctx.variantsByProductId.get(existing.id) ?? []);
         if (plan.unmatched) ctx.details.unmatchedColours.push(plan.unmatched);
-        await applyVariantPlan(tx, existing.id, plan, ctx);
+        await applyVariantPlan(tx, existing.id, existing.stockCode, plan, ctx);
 
         existing.websiteProductId = mapped.websiteProductId;
         existing.source = "WEBSITE";
@@ -628,16 +639,17 @@ async function upsertCatalogProduct(
 
       const sku = await resolveNewSku(mapped, categoryId, ctx, tx);
       const created = await tx.product.create({
-        data: { sku, ...websiteOwned },
+        data: { sku, stockCode: sku, ...websiteOwned },
         select: { id: true },
       });
 
       const plan = planVariants(cp, { sku, name: mapped.name }, []);
-      await applyVariantPlan(tx, created.id, plan, ctx);
+      await applyVariantPlan(tx, created.id, sku, plan, ctx);
 
       const row: ProductRow = {
         id: created.id,
         sku,
+        stockCode: sku,
         name: mapped.name,
         source: "WEBSITE",
         status: mapped.status,

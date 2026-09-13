@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { productSchema, updateProductSchema, productCategorySchema, colorVariantInputSchema } from "@/lib/validators";
 import { generateProductSku } from "@/lib/sku-generator";
+import { buildVariantStockCode } from "@/lib/stock-code";
 import { serialize } from "@/lib/utils";
 import { requireUserAction, assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -30,6 +31,7 @@ export async function createProduct(data: unknown) {
     return tx.product.create({
       data: {
         sku,
+        stockCode: sku,
         name: validated.name,
         description: validated.description,
         categoryId: validated.categoryId,
@@ -168,7 +170,7 @@ async function saveColorVariantsInTransaction(
   // GCOffice-owned field) may change.
   const existing = await tx.productColorVariant.findMany({
     where: { productId },
-    select: { id: true, websiteVariantId: true },
+    select: { id: true, websiteVariantId: true, stockCode: true },
   });
   const existingIds = new Set(existing.map((v) => v.id));
   const websiteOwnedIds = new Set(
@@ -211,19 +213,29 @@ async function saveColorVariantsInTransaction(
     });
   }
 
-  // Batch create new variants
+  // Batch create new variants — each gets an immutable stockCode, assigned in
+  // order so codes never collide within this batch.
   const toCreate = validated.filter((v) => !v.id || !existingIds.has(v.id));
   if (toCreate.length > 0) {
-    await tx.productColorVariant.createMany({
-      data: toCreate.map((variant) => ({
+    const product = await tx.product.findUniqueOrThrow({
+      where: { id: productId },
+      select: { stockCode: true },
+    });
+    const assignedCodes = existing.map((v) => v.stockCode);
+    const newData = toCreate.map((variant) => {
+      const stockCode = buildVariantStockCode(product.stockCode, assignedCodes);
+      assignedCodes.push(stockCode);
+      return {
         productId,
         name: variant.name,
         colorHex: variant.colorHex || null,
         imageUrl: variant.imageUrl || null,
         price: variant.price ?? null,
         sortOrder: variant.sortOrder,
-      })),
+        stockCode,
+      };
     });
+    await tx.productColorVariant.createMany({ data: newData });
   }
 
   // Sync aggregate stock
@@ -309,6 +321,7 @@ export async function createProductWithColorVariants(
     const created = await tx.product.create({
       data: {
         sku,
+        stockCode: sku,
         name: validatedProduct.name,
         description: validatedProduct.description,
         categoryId: validatedProduct.categoryId,
@@ -332,6 +345,11 @@ export async function createProductWithColorVariants(
 export async function searchProductsAction(query: string, categoryId?: string) {
   const { searchProducts } = await import("@/data/products");
   return searchProducts(query, categoryId);
+}
+
+export async function searchProductsWithStockAction(query: string, categoryId?: string) {
+  const { searchProductsWithStock } = await import("@/data/products");
+  return searchProductsWithStock(query, categoryId);
 }
 
 export async function getProductCategoriesAction() {

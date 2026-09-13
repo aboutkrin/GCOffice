@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { STOCK_STATUS_LABELS, STOCK_STATUS_COLORS } from "@/lib/constants";
 import { StockMovementTable } from "@/components/stock/stock-movement-table";
+import { AvailabilityBadge } from "@/components/stock/availability-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,13 @@ export default async function ProductStockPage({
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{product.stockQuantity}</p>
+            <AvailabilityBadge
+              onHand={product.stockQuantity}
+              reserved={product.reserved ?? 0}
+              available={product.available ?? product.stockQuantity}
+              variant="full"
+              className="mt-1"
+            />
           </CardContent>
         </Card>
         <Card>
@@ -122,6 +130,13 @@ export default async function ProductStockPage({
                         {STOCK_STATUS_LABELS[variantStatus]}
                       </Badge>
                     </div>
+                    <AvailabilityBadge
+                      onHand={variant.stockQuantity}
+                      reserved={variant.reserved ?? 0}
+                      available={variant.available ?? variant.stockQuantity}
+                      variant="full"
+                      className="mt-1 block"
+                    />
                   </CardContent>
                 </Card>
               );

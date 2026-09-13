@@ -25,12 +25,14 @@ model Profile {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  documents      Document[]
-  customers      Customer[]      @relation("CustomerCreatedBy")
-  products       Product[]       @relation("ProductCreatedBy")
-  expenses       Expense[]       @relation("ExpenseCreatedBy")
-  vendorCosts    VendorCost[]    @relation("VendorCostCreatedBy")
-  stockMovements StockMovement[] @relation("StockMovementCreatedBy")
+  documents             Document[]
+  customers             Customer[]      @relation("CustomerCreatedBy")
+  products              Product[]       @relation("ProductCreatedBy")
+  expenses              Expense[]       @relation("ExpenseCreatedBy")
+  vendorCosts           VendorCost[]    @relation("VendorCostCreatedBy")
+  stockMovements        StockMovement[] @relation("StockMovementCreatedBy")
+  stockDocumentsCreated StockDocument[] @relation("StockDocumentCreatedBy")
+  stockDocumentsPosted  StockDocument[] @relation("StockDocumentPostedBy")
 
   @@map("profiles")
 }
@@ -145,8 +147,11 @@ model Product {
   lastSyncedAt     DateTime? @map("last_synced_at")
 
   // Stock tracking
-  stockQuantity     Int @default(0) @map("stock_quantity")
-  lowStockThreshold Int @default(5) @map("low_stock_threshold")
+  stockQuantity     Int    @default(0) @map("stock_quantity")
+  lowStockThreshold Int    @default(5) @map("low_stock_threshold")
+  /// Immutable scan/label identity. Backfilled from sku, then never rewritten
+  /// (independent of sku, which may change; catalog sync must never touch this).
+  stockCode         String @unique @map("stock_code")
 
   status    Status   @default(ACTIVE)
   createdAt DateTime @default(now()) @map("created_at")
@@ -155,8 +160,10 @@ model Product {
   createdById String?  @map("created_by_id") @db.Uuid
   createdBy   Profile? @relation("ProductCreatedBy", fields: [createdById], references: [id])
 
-  stockMovements StockMovement[]
-  colorVariants  ProductColorVariant[]
+  stockMovements     StockMovement[]
+  colorVariants      ProductColorVariant[]
+  documentLineItems  DocumentLineItem[]
+  stockDocumentLines StockDocumentLine[]
 
   @@map("products")
 }
@@ -258,12 +265,20 @@ model Document {
   sourceInvoice   Document?  @relation("ReceiptFromInvoice", fields: [sourceInvoiceId], references: [id])
   receipts        Document[] @relation("ReceiptFromInvoice")
 
+  /// Set true the first time this document is confirmed under the reservation
+  /// system (see src/data/stock-availability.ts). Documents confirmed before
+  /// this feature shipped stay false — they already deducted stock the old
+  /// way and are treated as already issued, not re-reserved. Re-confirming
+  /// an old document is the escape hatch to opt it in.
+  reservesStock Boolean @default(false) @map("reserves_stock")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  lineItems    DocumentLineItem[]
-  paymentTerms DocumentPaymentTerm[]
-  vendorCosts  VendorCost[]
+  lineItems        DocumentLineItem[]
+  paymentTerms     DocumentPaymentTerm[]
+  vendorCosts      VendorCost[]
+  stockIssues      StockDocument[]       @relation("StockIssueForDocument")
 
   @@index([type, status])
   @@index([documentDate])
@@ -289,10 +304,22 @@ model DocumentLineItem {
   unitPrice    Decimal  @map("unit_price") @db.Decimal(12, 2)
   lineTotal    Decimal  @map("line_total") @db.Decimal(12, 2)
 
+  /// Stable identity backing reservation/issue matching. Nullable: legacy rows
+  /// backfilled by (sku) / (productId, name); may stay null when unmatched
+  /// (deleted product, renamed colour before backfill).
+  productId      String?              @map("product_id")
+  product        Product?             @relation(fields: [productId], references: [id], onDelete: SetNull)
+  colorVariantId String?              @map("color_variant_id")
+  colorVariant   ProductColorVariant? @relation(fields: [colorVariantId], references: [id], onDelete: SetNull)
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  stockDocumentLines StockDocumentLine[]
+
   @@index([documentId])
+  @@index([productId])
+  @@index([colorVariantId])
   @@map("document_line_items")
 }
 
@@ -565,8 +592,12 @@ model ProductColorVariant {
   price     Decimal? @db.Decimal(12, 2)
   sortOrder Int      @default(0) @map("sort_order")
 
-  stockQuantity     Int @default(0) @map("stock_quantity")
-  lowStockThreshold Int @default(5) @map("low_stock_threshold")
+  stockQuantity     Int    @default(0) @map("stock_quantity")
+  lowStockThreshold Int    @default(5) @map("low_stock_threshold")
+  /// Immutable scan/label identity: "<product.stockCode>#<nn>", nn assigned
+  /// once at creation and never reused. Survives colour renames (name is
+  /// website-owned and overwritten by catalog sync — see CLAUDE.md).
+  stockCode         String @unique @map("stock_code")
 
   // Website catalog sync — website-owned when websiteVariantId is set
   sku                String?
@@ -577,7 +608,9 @@ model ProductColorVariant {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  stockMovements StockMovement[]
+  stockMovements     StockMovement[]
+  documentLineItems  DocumentLineItem[]
+  stockDocumentLines StockDocumentLine[]
 
   @@unique([productId, name])
   @@index([productId])
@@ -599,6 +632,18 @@ model StockMovement {
   lotNumber    String?           @map("lot_number")
   balanceAfter Int               @map("balance_after")
 
+  stockDocumentId     String?            @map("stock_document_id")
+  stockDocument       StockDocument?     @relation(fields: [stockDocumentId], references: [id])
+  stockDocumentLineId String?            @map("stock_document_line_id")
+  stockDocumentLine   StockDocumentLine? @relation(fields: [stockDocumentLineId], references: [id])
+
+  /// Set on the compensating movement created when a POSTED stock document is
+  /// cancelled. The @unique makes reversal idempotent at the database level —
+  /// a second cancel attempt cannot double-reverse the same movement.
+  reversesMovementId String?         @unique @map("reverses_movement_id")
+  reversesMovement   StockMovement?  @relation("MovementReversal", fields: [reversesMovementId], references: [id])
+  reversedBy         StockMovement?  @relation("MovementReversal")
+
   createdAt   DateTime @default(now()) @map("created_at")
   createdById String?  @map("created_by_id") @db.Uuid
   createdBy   Profile? @relation("StockMovementCreatedBy", fields: [createdById], references: [id])
@@ -606,7 +651,120 @@ model StockMovement {
   @@index([productId])
   @@index([colorVariantId])
   @@index([createdAt])
+  @@index([stockDocumentId])
   @@map("stock_movements")
+}
+
+// ============================================================
+// STOCK DOCUMENTS (goods receive / goods issue / stock count)
+// ============================================================
+
+enum StockDocumentType {
+  RECEIVE
+  ISSUE
+  COUNT
+}
+
+enum StockDocumentStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+model StockDocumentCounter {
+  id        String            @id @default(cuid())
+  type      StockDocumentType
+  yearMonth String            @map("year_month")
+  counter   Int               @default(0)
+
+  @@unique([type, yearMonth])
+  @@map("stock_document_counters")
+}
+
+model StockDocument {
+  id             String              @id @default(cuid())
+  type           StockDocumentType
+  documentNumber String              @unique @map("document_number")
+  status         StockDocumentStatus @default(DRAFT)
+  documentDate   DateTime            @map("document_date") @db.Date
+
+  /// ISSUE against a quotation's outstanding line items; null = free-form issue
+  sourceDocumentId String?   @map("source_document_id")
+  sourceDocument   Document? @relation("StockIssueForDocument", fields: [sourceDocumentId], references: [id])
+
+  note      String? @db.Text
+  reference String? // supplier invoice / PO number / delivery note number
+  lotNumber String? @map("lot_number")
+
+  createdById String  @map("created_by_id") @db.Uuid
+  createdBy   Profile @relation("StockDocumentCreatedBy", fields: [createdById], references: [id])
+
+  postedAt   DateTime? @map("posted_at")
+  postedById String?   @map("posted_by_id") @db.Uuid
+  postedBy   Profile?  @relation("StockDocumentPostedBy", fields: [postedById], references: [id])
+
+  cancelledAt   DateTime? @map("cancelled_at")
+  cancelledById String?   @map("cancelled_by_id") @db.Uuid
+
+  /// Set on the reversal document created when a POSTED document is cancelled.
+  reversalOfId String?        @unique @map("reversal_of_id")
+  reversalOf   StockDocument? @relation("StockDocReversal", fields: [reversalOfId], references: [id])
+  reversedBy   StockDocument? @relation("StockDocReversal")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lines     StockDocumentLine[]
+  movements StockMovement[]
+
+  @@index([type, status])
+  @@index([documentDate])
+  @@index([sourceDocumentId])
+  @@map("stock_documents")
+}
+
+model StockDocumentLine {
+  id              String        @id @default(cuid())
+  stockDocumentId String        @map("stock_document_id")
+  stockDocument   StockDocument @relation(fields: [stockDocumentId], references: [id], onDelete: Cascade)
+
+  sequence Int
+
+  productId      String               @map("product_id")
+  product        Product              @relation(fields: [productId], references: [id])
+  colorVariantId String?              @map("color_variant_id")
+  colorVariant   ProductColorVariant? @relation(fields: [colorVariantId], references: [id])
+
+  // Snapshots for printing/history even if the product is later renamed
+  productSku       String  @map("product_sku")
+  productName      String  @map("product_name")
+  colorVariantName String? @map("color_variant_name")
+  stockCode        String  @map("stock_code")
+
+  /// RECEIVE: quantity received. ISSUE: quantity issued. COUNT: quantity counted.
+  quantity Int
+  /// COUNT only: on-hand at the moment the line was scanned (informational).
+  systemQuantity Int? @map("system_quantity")
+
+  /// ISSUE against a document: the DocumentLineItem this line fulfils.
+  sourceLineItemId String?           @map("source_line_item_id")
+  sourceLineItem   DocumentLineItem? @relation(fields: [sourceLineItemId], references: [id])
+  /// ISSUE against a document: ordered qty snapshot, drives the tick-off UI.
+  orderedQuantity  Int?              @map("ordered_quantity")
+
+  lotNumber String? @map("lot_number")
+  note      String? @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  movements StockMovement[]
+
+  @@unique([stockDocumentId, productId, colorVariantId, sourceLineItemId])
+  @@index([stockDocumentId])
+  @@index([productId, colorVariantId])
+  @@index([sourceLineItemId])
+  @@map("stock_document_lines")
 }
 
 // ============================================================

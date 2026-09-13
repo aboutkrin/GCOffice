@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { History, FileText, ClipboardList } from "lucide-react";
+import { History, FileText, ClipboardList, PackagePlus, PackageMinus, ClipboardCheck, QrCode } from "lucide-react";
 
 import { getStockOverview, getStockStats } from "@/data/stock";
 import { getProductCategories } from "@/data/products";
@@ -38,14 +38,38 @@ export default async function StockPage({ searchParams }: StockPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">สต็อคสินค้า</h1>
           <p className="text-muted-foreground text-sm">
             จัดการสต็อคสินค้าทั้งหมด
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link href="/stock/receive">
+              <PackagePlus className="size-4" />
+              รับเข้า
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/stock/issue">
+              <PackageMinus className="size-4" />
+              เบิกออก
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/stock/count">
+              <ClipboardCheck className="size-4" />
+              ตรวจนับ
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/stock/labels">
+              <QrCode className="size-4" />
+              พิมพ์ QR
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href="/stock/summary">
               <ClipboardList className="size-4" />

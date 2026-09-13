@@ -9,16 +9,7 @@ import { DocumentStatus, PaymentTermType } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { toUTCNoon } from "@/lib/thai-date";
 import { ZodError } from "zod";
-import {
-  deductStockForDocument,
-  restoreStockForDocument,
-  type StockShortage,
-} from "@/actions/stock-actions";
-
-const STOCK_DEDUCTED_STATUSES: DocumentStatus[] = [
-  DocumentStatus.CONFIRMED,
-  DocumentStatus.SHIPPED,
-];
+import { checkAvailabilityForDocument, type StockShortage } from "@/data/stock-availability";
 
 function formatZodError(error: ZodError): string {
   return error.issues
@@ -142,7 +133,7 @@ export async function createDocument(data: unknown) {
       // Bulk-insert line items with createMany (avoids oversized nested query)
       await tx.documentLineItem.createMany({
         data: validated.lineItems.map(
-          (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; colorVariantSku?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
+          (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; colorVariantSku?: string; productId?: string | null; colorVariantId?: string | null; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
             documentId: doc.id,
             sequence: item.sequence,
             productSku: item.productSku,
@@ -150,6 +141,8 @@ export async function createDocument(data: unknown) {
             productImage: item.productImage,
             colorVariantName: item.colorVariantName,
             colorVariantSku: item.colorVariantSku,
+            productId: item.productId || null,
+            colorVariantId: item.colorVariantId || null,
             showImage: item.showImage,
             details: item.details,
             quantity: item.quantity,
@@ -295,7 +288,7 @@ export async function updateDocument(id: string, data: unknown) {
       // Bulk-insert line items with createMany (avoids oversized nested query)
       await tx.documentLineItem.createMany({
         data: validated.lineItems.map(
-          (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; colorVariantSku?: string; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
+          (item: { sequence: number; productSku?: string; productName: string; productImage?: string; colorVariantName?: string; colorVariantSku?: string; productId?: string | null; colorVariantId?: string | null; showImage: boolean; details?: string; quantity: number; unitPrice: number }) => ({
             documentId: id,
             sequence: item.sequence,
             productSku: item.productSku,
@@ -303,6 +296,8 @@ export async function updateDocument(id: string, data: unknown) {
             productImage: item.productImage,
             colorVariantName: item.colorVariantName,
             colorVariantSku: item.colorVariantSku,
+            productId: item.productId || null,
+            colorVariantId: item.colorVariantId || null,
             showImage: item.showImage,
             details: item.details,
             quantity: item.quantity,
@@ -356,10 +351,10 @@ export async function updateDocumentStatus(
 ) {
   await requireUserAction();
 
-  // Fetch current status to determine stock actions
+  // Fetch current status to determine reservation actions
   const currentDocument = await prisma.document.findUniqueOrThrow({
     where: { id },
-    select: { status: true },
+    select: { status: true, reservesStock: true },
   });
 
   const oldStatus = currentDocument.status;
@@ -370,30 +365,30 @@ export async function updateDocumentStatus(
     await assertAdmin();
   }
 
-  // Update the status
+  // Confirming opts the document into the reservation system (see
+  // src/data/stock-availability.ts). Once true this never reverts — a
+  // cancelled document simply drops out of the reserving statuses
+  // (CONFIRMED/SHIPPED), so its reservation disappears from the derived query
+  // without any stock movement being written. Nothing here touches on-hand:
+  // that only changes via goods receive / issue / stock count.
+  const enteringConfirmed = newStatus === DocumentStatus.CONFIRMED && oldStatus !== DocumentStatus.CONFIRMED;
+
   const document = await prisma.document.update({
     where: { id },
-    data: { status: newStatus },
+    data: {
+      status: newStatus,
+      ...(enteringConfirmed ? { reservesStock: true } : {}),
+    },
   });
 
-  // Stock deduction/restore logic
+  // Advisory-only: report what would be short, never blocking and never writing.
   let shortages: StockShortage[] = [];
-
-  const wasDeducted = STOCK_DEDUCTED_STATUSES.includes(oldStatus);
-  const shouldDeduct = newStatus === DocumentStatus.CONFIRMED && !wasDeducted;
-  const shouldRestore = newStatus === DocumentStatus.CANCELLED && wasDeducted;
-
-  if (shouldDeduct) {
-    const result = await deductStockForDocument(id);
+  if (enteringConfirmed) {
+    const result = await checkAvailabilityForDocument(id);
     shortages = result.shortages;
-  } else if (shouldRestore) {
-    await restoreStockForDocument(id);
   }
 
-  if (shouldDeduct || shouldRestore) {
-    revalidatePath("/stock");
-  }
-
+  revalidatePath("/stock");
   revalidatePath("/quotations");
   revalidatePath("/invoices");
   revalidatePath("/receipts");
@@ -448,24 +443,15 @@ export async function getNextCustomInvoiceNumber(documentDate: Date) {
 export async function deleteDocument(id: string) {
   await assertAdmin();
 
-  // Fetch current status to check if stock needs restoring
-  const currentDocument = await prisma.document.findUniqueOrThrow({
-    where: { id },
-    select: { status: true },
-  });
-
+  // Cancelling drops the document out of the reserving statuses, so its
+  // reservation (if any) simply disappears from the derived query. Nothing
+  // to restore — on-hand was never touched by confirming in the first place.
   await prisma.document.update({
     where: { id },
     data: { status: "CANCELLED" },
   });
 
-  // Restore stock if the document had stock deducted
-  const wasDeducted = STOCK_DEDUCTED_STATUSES.includes(currentDocument.status);
-  if (wasDeducted) {
-    await restoreStockForDocument(id);
-    revalidatePath("/stock");
-  }
-
+  revalidatePath("/stock");
   revalidatePath("/quotations");
   revalidatePath("/invoices");
   revalidatePath("/receipts");

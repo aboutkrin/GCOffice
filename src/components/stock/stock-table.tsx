@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/table";
 
 import { StockAdjustmentDialog } from "./stock-adjustment-dialog";
+import { AvailabilityBadge } from "./availability-badge";
 
 interface StockTableProps {
   products: any[];
@@ -184,6 +185,17 @@ export function StockTable({
         <span className="font-mono font-medium">
           {row.original.stockQuantity}
         </span>
+      ),
+    },
+    {
+      id: "available",
+      header: "พร้อมขาย",
+      cell: ({ row }) => (
+        <AvailabilityBadge
+          onHand={row.original.stockQuantity}
+          reserved={row.original.reserved ?? 0}
+          available={row.original.available ?? row.original.stockQuantity}
+        />
       ),
     },
     {
@@ -396,6 +408,13 @@ export function StockTable({
                             <span className="font-mono font-medium">
                               {variant.stockQuantity}
                             </span>
+                          </TableCell>
+                          <TableCell>
+                            <AvailabilityBadge
+                              onHand={variant.stockQuantity}
+                              reserved={variant.reserved ?? 0}
+                              available={variant.available ?? variant.stockQuantity}
+                            />
                           </TableCell>
                           <TableCell>
                             <Badge className={STOCK_STATUS_COLORS[variantStatus]}>

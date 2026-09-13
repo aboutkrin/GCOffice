@@ -16,6 +16,7 @@ import {
   Truck,
   Printer,
   Warehouse,
+  PackagePlus,
   UserCog,
 } from "lucide-react";
 
@@ -35,6 +36,7 @@ export const MAIN_NAV: NavItem[] = [
   { href: "/customers", label: "ลูกค้า", icon: Users },
   { href: "/products", label: "สินค้า", icon: Package },
   { href: "/stock", label: "สต็อคสินค้า", icon: Warehouse },
+  { href: "/stock/receive", label: "รับเข้า/เบิกออก", icon: PackagePlus },
   { href: "/product-costs", label: "ต้นทุนสินค้า", icon: Calculator, adminOnly: true },
   { href: "/vendor-costs", label: "ต้นทุนใบสั่งซื้อ", icon: Truck, adminOnly: true },
   { href: "/expenses", label: "ค่าใช้จ่ายรายเดือน", icon: Wallet, adminOnly: true },
