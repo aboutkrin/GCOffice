@@ -1,10 +1,7 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-
 import { getStockDocuments } from "@/data/stock-documents";
-import { Button } from "@/components/ui/button";
 import { StockDocumentTable } from "@/components/stock/stock-document-table";
 import { NewStockDocumentButton } from "@/components/stock/new-stock-document-button";
+import { StockDocTabs } from "@/components/stock/stock-doc-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -26,20 +23,15 @@ export default async function ReceivePage({ searchParams }: ReceivePageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/stock">
-              <ArrowLeft className="size-4" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">รับเข้าสินค้า</h1>
-            <p className="text-muted-foreground text-sm">ประวัติและสร้างเอกสารรับเข้าสินค้า</p>
-          </div>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">รับเข้าสินค้า</h1>
+          <p className="text-muted-foreground text-sm">ประวัติและสร้างเอกสารรับเข้าสินค้า</p>
         </div>
         <NewStockDocumentButton type="RECEIVE" label="รับเข้าใหม่" basePath="receive" />
       </div>
+
+      <StockDocTabs active="receive" />
 
       <StockDocumentTable
         documents={documents}
