@@ -2,8 +2,12 @@
 
 import { prisma } from "@/lib/prisma";
 import { stockAdjustmentSchema, stockThresholdSchema } from "@/lib/validators";
-import { requireUserAction } from "@/lib/auth";
+import { requireUserAction, assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { resolveStockCode as resolveStockCodeInternal } from "@/lib/stock-code";
+
+// Re-exported so existing callers (document-actions.ts, shortage UI) keep compiling.
+export type { StockShortage } from "@/data/stock-availability";
 
 /**
  * Sync product.stockQuantity with sum of all variant stock quantities.
@@ -20,11 +24,27 @@ async function syncProductStockFromVariants(tx: any, productId: string) {
   });
 }
 
+/**
+ * A product whose colours are tracked as variants must never receive a
+ * product-level movement — Product.stockQuantity is a rollup SUM of its
+ * variants and the next syncProductStockFromVariants call would silently
+ * erase it.
+ */
+async function assertVariantRequiredIfAny(tx: any, productId: string, colorVariantId?: string) {
+  if (colorVariantId) return;
+  const variantCount = await tx.productColorVariant.count({ where: { productId } });
+  if (variantCount > 0) {
+    throw new Error("สินค้านี้มีตัวเลือกสี กรุณาเลือกสีก่อนปรับสต็อค");
+  }
+}
+
 export async function addStock(data: unknown) {
   const validated = stockAdjustmentSchema.parse(data);
   const user = await requireUserAction();
 
   await prisma.$transaction(async (tx) => {
+    await assertVariantRequiredIfAny(tx, validated.productId, validated.colorVariantId);
+
     if (validated.colorVariantId) {
       // Variant-level stock
       const variant = await tx.productColorVariant.findUniqueOrThrow({
@@ -91,6 +111,8 @@ export async function removeStock(data: unknown) {
   const user = await requireUserAction();
 
   await prisma.$transaction(async (tx) => {
+    await assertVariantRequiredIfAny(tx, validated.productId, validated.colorVariantId);
+
     if (validated.colorVariantId) {
       const variant = await tx.productColorVariant.findUniqueOrThrow({
         where: { id: validated.colorVariantId },
@@ -116,6 +138,7 @@ export async function removeStock(data: unknown) {
           quantity: validated.quantity,
           reason: validated.reason || null,
           reference: validated.reference || null,
+          lotNumber: validated.lotNumber || null,
           balanceAfter: newBalance,
           createdById: user.id,
         },
@@ -146,6 +169,7 @@ export async function removeStock(data: unknown) {
           quantity: validated.quantity,
           reason: validated.reason || null,
           reference: validated.reference || null,
+          lotNumber: validated.lotNumber || null,
           balanceAfter: newBalance,
           createdById: user.id,
         },
@@ -165,6 +189,8 @@ export async function adjustStock(
   const user = await requireUserAction();
 
   await prisma.$transaction(async (tx) => {
+    await assertVariantRequiredIfAny(tx, productId, colorVariantId);
+
     if (colorVariantId) {
       const variant = await tx.productColorVariant.findUniqueOrThrow({
         where: { id: colorVariantId },
@@ -222,207 +248,6 @@ export async function adjustStock(
   revalidatePath("/stock");
 }
 
-// ============================================================
-// Document-driven stock deduction & restore
-// ============================================================
-
-export interface StockShortage {
-  productSku: string;
-  productName: string;
-  colorVariantName: string | null;
-  requested: number;
-  available: number;
-  shortage: number;
-}
-
-/**
- * Deduct stock for every line item in a document.
- * If stock is insufficient, deducts what's available and tracks shortages.
- */
-export async function deductStockForDocument(documentId: string) {
-  const document = await prisma.document.findUniqueOrThrow({
-    where: { id: documentId },
-    include: { lineItems: { orderBy: { sequence: "asc" } } },
-  });
-
-  const shortages: StockShortage[] = [];
-
-  await prisma.$transaction(async (tx) => {
-    for (const item of document.lineItems) {
-      if (!item.productSku) continue;
-
-      const product = await tx.product.findUnique({
-        where: { sku: item.productSku },
-        select: {
-          id: true,
-          stockQuantity: true,
-          colorVariants: {
-            select: { id: true, name: true, stockQuantity: true },
-          },
-        },
-      });
-      if (!product) continue;
-
-      const reason = `ตัดสต็อคจากเอกสาร ${document.documentNumber}`;
-      const reference = document.documentNumber;
-
-      if (item.colorVariantName) {
-        const variant = product.colorVariants.find(
-          (v) => v.name === item.colorVariantName
-        );
-        if (!variant) continue;
-
-        const deductQty = Math.min(item.quantity, variant.stockQuantity);
-        if (item.quantity > variant.stockQuantity) {
-          shortages.push({
-            productSku: item.productSku,
-            productName: item.productName,
-            colorVariantName: item.colorVariantName,
-            requested: item.quantity,
-            available: variant.stockQuantity,
-            shortage: item.quantity - variant.stockQuantity,
-          });
-        }
-
-        if (deductQty > 0) {
-          const newBalance = variant.stockQuantity - deductQty;
-          await tx.productColorVariant.update({
-            where: { id: variant.id },
-            data: { stockQuantity: newBalance },
-          });
-          await tx.stockMovement.create({
-            data: {
-              productId: product.id,
-              colorVariantId: variant.id,
-              type: "OUT",
-              quantity: deductQty,
-              reason,
-              reference,
-              balanceAfter: newBalance,
-            },
-          });
-          await syncProductStockFromVariants(tx, product.id);
-        }
-      } else {
-        const deductQty = Math.min(item.quantity, product.stockQuantity);
-        if (item.quantity > product.stockQuantity) {
-          shortages.push({
-            productSku: item.productSku,
-            productName: item.productName,
-            colorVariantName: null,
-            requested: item.quantity,
-            available: product.stockQuantity,
-            shortage: item.quantity - product.stockQuantity,
-          });
-        }
-
-        if (deductQty > 0) {
-          const newBalance = product.stockQuantity - deductQty;
-          await tx.product.update({
-            where: { id: product.id },
-            data: { stockQuantity: newBalance },
-          });
-          await tx.stockMovement.create({
-            data: {
-              productId: product.id,
-              type: "OUT",
-              quantity: deductQty,
-              reason,
-              reference,
-              balanceAfter: newBalance,
-            },
-          });
-        }
-      }
-    }
-  });
-
-  revalidatePath("/stock");
-  return { success: true, shortages };
-}
-
-/**
- * Restore stock that was previously deducted for a document.
- * Finds all OUT movements referencing the document number and reverses them.
- */
-export async function restoreStockForDocument(documentId: string) {
-  const document = await prisma.document.findUniqueOrThrow({
-    where: { id: documentId },
-    select: { documentNumber: true },
-  });
-
-  const movements = await prisma.stockMovement.findMany({
-    where: {
-      reference: document.documentNumber,
-      type: "OUT",
-    },
-  });
-
-  if (movements.length === 0) return;
-
-  await prisma.$transaction(async (tx) => {
-    const syncProductIds = new Set<string>();
-
-    for (const movement of movements) {
-      const reason = `คืนสต็อคจากการยกเลิกเอกสาร ${document.documentNumber}`;
-
-      if (movement.colorVariantId) {
-        const variant = await tx.productColorVariant.findUnique({
-          where: { id: movement.colorVariantId },
-          select: { stockQuantity: true },
-        });
-        if (!variant) continue;
-
-        const newBalance = variant.stockQuantity + movement.quantity;
-        await tx.productColorVariant.update({
-          where: { id: movement.colorVariantId },
-          data: { stockQuantity: newBalance },
-        });
-        await tx.stockMovement.create({
-          data: {
-            productId: movement.productId,
-            colorVariantId: movement.colorVariantId,
-            type: "IN",
-            quantity: movement.quantity,
-            reason,
-            reference: document.documentNumber,
-            balanceAfter: newBalance,
-          },
-        });
-        syncProductIds.add(movement.productId);
-      } else {
-        const product = await tx.product.findUnique({
-          where: { id: movement.productId },
-          select: { stockQuantity: true },
-        });
-        if (!product) continue;
-
-        const newBalance = product.stockQuantity + movement.quantity;
-        await tx.product.update({
-          where: { id: movement.productId },
-          data: { stockQuantity: newBalance },
-        });
-        await tx.stockMovement.create({
-          data: {
-            productId: movement.productId,
-            type: "IN",
-            quantity: movement.quantity,
-            reason,
-            reference: document.documentNumber,
-            balanceAfter: newBalance,
-          },
-        });
-      }
-    }
-
-    for (const productId of syncProductIds) {
-      await syncProductStockFromVariants(tx, productId);
-    }
-  });
-
-  revalidatePath("/stock");
-}
-
 export async function updateStockThreshold(
   productId: string,
   threshold: number,
@@ -447,4 +272,38 @@ export async function updateStockThreshold(
   }
 
   revalidatePath("/stock");
+}
+
+export async function resolveStockCodeAction(code: string) {
+  return resolveStockCodeInternal(code);
+}
+
+/**
+ * Rebuilds Product.stockQuantity as the sum of its variants' stock, for
+ * every product that has variants. Heals rollups left stale by any bug in
+ * the variant-mutation paths (see CLAUDE.md / the stock plan for context).
+ */
+export async function recalculateStockRollups() {
+  await assertAdmin();
+
+  const products = await prisma.product.findMany({
+    where: { colorVariants: { some: {} } },
+    select: { id: true },
+  });
+
+  let updated = 0;
+  for (const product of products) {
+    const result = await prisma.productColorVariant.aggregate({
+      where: { productId: product.id },
+      _sum: { stockQuantity: true },
+    });
+    await prisma.product.update({
+      where: { id: product.id },
+      data: { stockQuantity: result._sum.stockQuantity ?? 0 },
+    });
+    updated++;
+  }
+
+  revalidatePath("/stock");
+  return { updated };
 }

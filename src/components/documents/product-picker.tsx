@@ -20,12 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  searchProductsAction,
+  searchProductsWithStockAction,
   getProductCategoriesAction,
 } from "@/actions/product-actions";
 import { Search, Package, ArrowLeft } from "lucide-react";
 import { formatNumber } from "@/lib/thai-currency";
 import { WEBSITE_INACTIVE_LABEL } from "@/lib/constants";
+import { AvailabilityBadge } from "@/components/stock/availability-badge";
 
 interface ColorVariant {
   id: string;
@@ -34,6 +35,8 @@ interface ColorVariant {
   imageUrl?: string | null;
   price?: number | null;
   stockQuantity: number;
+  reserved?: number;
+  available?: number;
   /** false = the website stopped selling this colour; still selectable here. */
   websiteActive?: boolean;
   websiteVariantId?: number | null;
@@ -47,6 +50,9 @@ interface Product {
   name: string;
   basePrice: number;
   imageUrl?: string | null;
+  stockQuantity?: number;
+  reserved?: number;
+  available?: number;
   colorVariants?: ColorVariant[];
 }
 
@@ -63,6 +69,9 @@ interface ProductPickerProps {
     imageUrl?: string;
     colorVariantName?: string;
     colorVariantSku?: string;
+    productId?: string;
+    colorVariantId?: string;
+    availableQuantity?: number;
   }) => void;
   children?: React.ReactNode;
 }
@@ -89,7 +98,7 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
     const timeout = setTimeout(async () => {
       setLoading(true);
       try {
-        const result = await searchProductsAction(
+        const result = await searchProductsWithStockAction(
           query,
           categoryId || undefined
         );
@@ -123,6 +132,9 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
       imageUrl: variant?.imageUrl || product.imageUrl || undefined,
       colorVariantName: variant?.name,
       colorVariantSku: variant?.sku ?? undefined,
+      productId: product.id,
+      colorVariantId: variant?.id,
+      availableQuantity: variant ? variant.available : product.available,
     });
     setOpen(false);
     resetState();
@@ -232,9 +244,12 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        สต็อค: {variant.stockQuantity}
-                      </p>
+                      <AvailabilityBadge
+                        onHand={variant.stockQuantity}
+                        reserved={variant.reserved ?? 0}
+                        available={variant.available ?? variant.stockQuantity}
+                        variant="full"
+                      />
                     </div>
                     <span className="text-sm font-medium shrink-0">
                       {formatNumber(displayPrice)} บาท
@@ -322,6 +337,13 @@ export function ProductPicker({ onSelect, children }: ProductPickerProps) {
                         <p className="text-xs text-muted-foreground">
                           SKU: {product.sku}
                         </p>
+                        {product.stockQuantity != null && (
+                          <AvailabilityBadge
+                            onHand={product.stockQuantity}
+                            reserved={product.reserved ?? 0}
+                            available={product.available ?? product.stockQuantity}
+                          />
+                        )}
                       </div>
                       <span className="text-sm font-medium shrink-0">
                         {formatNumber(product.basePrice)} บาท

@@ -10,6 +10,11 @@ export interface LineItem {
   productImage?: string;
   colorVariantName?: string;
   colorVariantSku?: string;
+  /** Stable identity backing reservation/issue matching (see product-picker.tsx). */
+  productId?: string;
+  colorVariantId?: string;
+  /** Available quantity at the moment this line was picked/hydrated; informational only. */
+  availableQuantity?: number;
   showImage: boolean;
   details?: string;
   quantity: number;
@@ -73,6 +78,9 @@ export function useLineItems(initial: LineItem[] = []) {
         imageUrl?: string;
         colorVariantName?: string;
         colorVariantSku?: string;
+        productId?: string;
+        colorVariantId?: string;
+        availableQuantity?: number;
       }
     ) => {
       setItems((prev) =>
@@ -85,6 +93,9 @@ export function useLineItems(initial: LineItem[] = []) {
             productImage: product.imageUrl,
             colorVariantName: product.colorVariantName,
             colorVariantSku: product.colorVariantSku,
+            productId: product.productId,
+            colorVariantId: product.colorVariantId,
+            availableQuantity: product.availableQuantity,
             unitPrice: Number(product.basePrice),
             lineTotal: item.quantity * Number(product.basePrice),
           };

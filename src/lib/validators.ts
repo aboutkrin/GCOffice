@@ -80,6 +80,9 @@ export const lineItemSchema = z.object({
   productImage: z.string().optional(),
   colorVariantName: z.string().optional(),
   colorVariantSku: z.string().optional(),
+  /** Stable identity backing reservation/issue matching (see product-picker.tsx). */
+  productId: z.string().optional().nullable(),
+  colorVariantId: z.string().optional().nullable(),
   showImage: z.boolean().default(true),
   details: z.string().optional(),
   quantity: z.coerce.number().int().min(1, "จำนวนต้องมากกว่า 0"),
@@ -299,6 +302,58 @@ export type ColorVariantFormData = z.infer<typeof colorVariantSchema>;
 export type ColorVariantInputFormData = z.infer<typeof colorVariantInputSchema>;
 export type StockAdjustmentFormData = z.infer<typeof stockAdjustmentSchema>;
 export type StockThresholdFormData = z.infer<typeof stockThresholdSchema>;
+
+// ============================================================
+// STOCK DOCUMENTS (goods receive / goods issue / stock count)
+// ============================================================
+
+export const createStockDocumentSchema = z.object({
+  type: z.enum(["RECEIVE", "ISSUE", "COUNT"]),
+  documentDate: z.coerce.date(),
+  note: z.string().optional(),
+  reference: z.string().optional(),
+  lotNumber: z.string().optional(),
+  sourceDocumentId: z.string().optional().nullable(),
+});
+
+export const stockScanSchema = z.object({
+  code: z.string().min(1, "กรุณาสแกนหรือกรอกรหัส"),
+  quantity: z.coerce.number().int().min(1, "จำนวนต้องมากกว่า 0").default(1),
+});
+
+export const stockDocumentLineSchema = z.object({
+  productId: z.string().min(1, "กรุณาเลือกสินค้า"),
+  colorVariantId: z.string().optional().nullable(),
+  quantity: z.coerce.number().int(),
+  lotNumber: z.string().optional(),
+  note: z.string().optional(),
+  sourceLineItemId: z.string().optional().nullable(),
+});
+
+export const stockCountLineSchema = z.object({
+  productId: z.string().min(1, "กรุณาเลือกสินค้า"),
+  colorVariantId: z.string().optional().nullable(),
+  quantity: z.coerce.number().int().min(0, "จำนวนต้องไม่ติดลบ"),
+  note: z.string().optional(),
+});
+
+export const labelPrintSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        productId: z.string(),
+        colorVariantId: z.string().optional().nullable(),
+        copies: z.coerce.number().int().min(1).max(99).default(1),
+      })
+    )
+    .min(1, "กรุณาเลือกสินค้าอย่างน้อย 1 รายการ"),
+});
+
+export type CreateStockDocumentFormData = z.infer<typeof createStockDocumentSchema>;
+export type StockScanFormData = z.infer<typeof stockScanSchema>;
+export type StockDocumentLineFormData = z.infer<typeof stockDocumentLineSchema>;
+export type StockCountLineFormData = z.infer<typeof stockCountLineSchema>;
+export type LabelPrintFormData = z.infer<typeof labelPrintSchema>;
 
 const usernameField = z
   .string()

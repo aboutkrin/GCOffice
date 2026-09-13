@@ -1,6 +1,6 @@
 "use client";
 
-import { Package, PackageCheck, PackageX, AlertTriangle } from "lucide-react";
+import { Package, PackageCheck, PackageX, AlertTriangle, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface StockStatsCardsProps {
@@ -10,6 +10,7 @@ interface StockStatsCardsProps {
     lowStock: number;
     outOfStock: number;
     totalReorderQuantity: number;
+    totalReserved?: number;
   };
 }
 
@@ -43,10 +44,21 @@ export function StockStatsCards({ stats }: StockStatsCardsProps) {
       color: "text-red-600",
       bg: "bg-red-50",
     },
+    ...(stats.totalReserved != null
+      ? [
+          {
+            label: "จองทั้งหมด",
+            value: stats.totalReserved,
+            icon: Lock,
+            color: "text-purple-600",
+            bg: "bg-purple-50",
+          },
+        ]
+      : []),
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
       {cards.map((card) => (
         <Card key={card.label}>
           <CardContent className="flex items-center gap-3 p-4">

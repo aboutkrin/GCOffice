@@ -138,3 +138,37 @@ export const STOCK_STATUS_COLORS: Record<string, string> = {
   LOW_STOCK: "bg-amber-100 text-amber-800",
   OUT_OF_STOCK: "bg-red-100 text-red-800",
 };
+
+export const STOCK_DOCUMENT_TYPE_LABELS: Record<string, string> = {
+  RECEIVE: "รับเข้า",
+  ISSUE: "เบิกออก",
+  COUNT: "ตรวจนับ",
+};
+
+export const STOCK_DOCUMENT_TYPE_COLORS: Record<string, string> = {
+  RECEIVE: "bg-green-100 text-green-800",
+  ISSUE: "bg-red-100 text-red-800",
+  COUNT: "bg-blue-100 text-blue-800",
+};
+
+export const STOCK_DOCUMENT_TYPE_OPTIONS = ["RECEIVE", "ISSUE", "COUNT"] as const;
+
+export const STOCK_DOCUMENT_STATUS_LABELS: Record<string, string> = {
+  DRAFT: "ร่าง",
+  POSTED: "บันทึกแล้ว",
+  CANCELLED: "ยกเลิก",
+};
+
+export const STOCK_DOCUMENT_STATUS_COLORS: Record<string, string> = {
+  DRAFT: "bg-gray-100 text-gray-800",
+  POSTED: "bg-green-100 text-green-800",
+  CANCELLED: "bg-red-100 text-red-800",
+};
+
+export const STOCK_DOCUMENT_STATUS_OPTIONS = ["DRAFT", "POSTED", "CANCELLED"] as const;
+
+export const STOCK_AVAILABILITY_LABELS = {
+  onHand: "คงเหลือ",
+  reserved: "จอง",
+  available: "พร้อมขาย",
+} as const;

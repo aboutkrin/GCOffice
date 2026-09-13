@@ -33,8 +33,21 @@ interface LineItemTableProps {
       imageUrl?: string;
       colorVariantName?: string;
       colorVariantSku?: string;
+      productId?: string;
+      colorVariantId?: string;
+      availableQuantity?: number;
     }
   ) => void;
+}
+
+/** Warn, never block — this business confirms orders it intends to restock for. */
+function AvailabilityWarning({ item }: { item: LineItem }) {
+  if (item.availableQuantity == null || item.quantity <= item.availableQuantity) return null;
+  return (
+    <p className="text-xs text-amber-600 mt-0.5">
+      เกินจำนวนพร้อมขาย (พร้อมขาย {item.availableQuantity})
+    </p>
+  );
 }
 
 export function LineItemTable({
@@ -109,6 +122,7 @@ export function LineItemTable({
                       )}
                     </p>
                   )}
+                  <AvailabilityWarning item={item} />
                 </TableCell>
                 <TableCell>
                   <Input
@@ -214,6 +228,7 @@ export function LineItemTable({
                       )}
                 </p>
               )}
+              <AvailabilityWarning item={item} />
               {item.productImage && (
                 <div className="mt-2">
                   <ProductThumb

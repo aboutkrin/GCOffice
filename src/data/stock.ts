@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/utils";
-import { DocumentStatus, DocumentType } from "@/generated/prisma/client";
+import { DocumentStatus, DocumentType, Prisma } from "@/generated/prisma/client";
+import {
+  availabilityKey,
+  getAvailabilityForProducts,
+  getReservationMap,
+} from "./stock-availability";
 
 export async function getStockOverview(params?: {
   search?: string;
@@ -21,22 +26,11 @@ export async function getStockOverview(params?: {
     ];
   }
   if (params?.stockFilter === "low_stock") {
-    where.stockQuantity = { gt: 0 };
-    where.AND = [
-      {
-        stockQuantity: {
-          lte: prisma.product.fields.lowStockThreshold,
-        },
-      },
-    ];
-    // Use raw filter for comparing two columns
-    delete where.stockQuantity;
-    delete where.AND;
-    where.AND = [
-      { stockQuantity: { gt: 0 } },
-      // Prisma doesn't support column-to-column comparison directly,
-      // so we'll filter in the application layer below
-    ];
+    // Prisma 7 supports column-to-column comparison via field references.
+    where.stockQuantity = {
+      gt: 0,
+      lte: prisma.product.fields.lowStockThreshold,
+    };
   } else if (params?.stockFilter === "out_of_stock") {
     where.stockQuantity = 0;
   }
@@ -70,15 +64,25 @@ export async function getStockOverview(params?: {
       prisma.product.count({ where }),
     ]);
 
-    // For low_stock filter, do post-filter (Prisma can't compare two columns)
-    let filtered = data;
-    if (params?.stockFilter === "low_stock") {
-      filtered = data.filter(
-        (p) => p.stockQuantity > 0 && p.stockQuantity <= p.lowStockThreshold
-      );
-    }
+    const reservationMap = await getReservationMap(data.map((p) => p.id));
+    const products = data.map((p) => {
+      // Sum reservations across the bare product key and every colour variant —
+      // the product row's total is what a salesperson sees before drilling into colours.
+      const keys = [availabilityKey(p.id, null), ...p.colorVariants.map((v) => availabilityKey(p.id, v.id))];
+      const reserved = keys.reduce((sum, k) => sum + (reservationMap.get(k) ?? 0), 0);
+      const colorVariants = p.colorVariants.map((v) => {
+        const vReserved = reservationMap.get(availabilityKey(p.id, v.id)) ?? 0;
+        return { ...v, reserved: vReserved, available: v.stockQuantity - vReserved };
+      });
+      return {
+        ...p,
+        colorVariants,
+        reserved,
+        available: p.stockQuantity - reserved,
+      };
+    });
 
-    return { products: serialize(filtered), total: params?.stockFilter === "low_stock" ? filtered.length : total };
+    return { products: serialize(products), total };
   } catch {
     return { products: [], total: 0 };
   }
@@ -86,35 +90,31 @@ export async function getStockOverview(params?: {
 
 export async function getStockStats() {
   try {
-    const [totalProducts, outOfStock] = await Promise.all([
+    const [totalProducts, outOfStock, lowStock, reorderResult] = await Promise.all([
       prisma.product.count({ where: { status: "ACTIVE" } }),
       prisma.product.count({ where: { status: "ACTIVE", stockQuantity: 0 } }),
+      prisma.product.count({
+        where: {
+          status: "ACTIVE",
+          stockQuantity: { gt: 0, lte: prisma.product.fields.lowStockThreshold },
+        },
+      }),
+      prisma.$queryRaw<{ total: number }[]>(Prisma.sql`
+        SELECT COALESCE(SUM(GREATEST(0, low_stock_threshold - stock_quantity)), 0)::int AS total
+        FROM products WHERE status = 'ACTIVE'
+      `),
     ]);
 
-    // For low stock, we need to fetch and compare columns
-    const lowStockProducts = await prisma.product.findMany({
-      where: { status: "ACTIVE", stockQuantity: { gt: 0 } },
-      select: { stockQuantity: true, lowStockThreshold: true },
-    });
-    const lowStock = lowStockProducts.filter(
-      (p) => p.stockQuantity <= p.lowStockThreshold
-    ).length;
-
-    // Calculate total reorder quantity for all products below threshold
-    const allBelowThreshold = await prisma.product.findMany({
-      where: { status: "ACTIVE" },
-      select: { stockQuantity: true, lowStockThreshold: true },
-    });
-    const totalReorderQuantity = allBelowThreshold.reduce(
-      (sum, p) => sum + Math.max(0, p.lowStockThreshold - p.stockQuantity),
-      0
-    );
-
+    const totalReorderQuantity = reorderResult[0]?.total ?? 0;
     const inStock = totalProducts - outOfStock - lowStock;
 
-    return { totalProducts, inStock, lowStock, outOfStock, totalReorderQuantity };
+    const reservationMap = await getReservationMap();
+    let totalReserved = 0;
+    for (const reserved of reservationMap.values()) totalReserved += reserved;
+
+    return { totalProducts, inStock, lowStock, outOfStock, totalReorderQuantity, totalReserved };
   } catch {
-    return { totalProducts: 0, inStock: 0, lowStock: 0, outOfStock: 0, totalReorderQuantity: 0 };
+    return { totalProducts: 0, inStock: 0, lowStock: 0, outOfStock: 0, totalReorderQuantity: 0, totalReserved: 0 };
   }
 }
 
@@ -122,6 +122,9 @@ export async function getStockMovements(params?: {
   productId?: string;
   colorVariantId?: string;
   type?: string;
+  stockDocumentId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
   page?: number;
   perPage?: number;
 }) {
@@ -129,6 +132,12 @@ export async function getStockMovements(params?: {
   if (params?.productId) where.productId = params.productId;
   if (params?.colorVariantId) where.colorVariantId = params.colorVariantId;
   if (params?.type) where.type = params.type;
+  if (params?.stockDocumentId) where.stockDocumentId = params.stockDocumentId;
+  if (params?.dateFrom || params?.dateTo) {
+    where.createdAt = {};
+    if (params.dateFrom) where.createdAt.gte = params.dateFrom;
+    if (params.dateTo) where.createdAt.lte = params.dateTo;
+  }
 
   const page = params?.page ?? 1;
   const perPage = params?.perPage ?? 20;
@@ -143,6 +152,12 @@ export async function getStockMovements(params?: {
           },
           colorVariant: {
             select: { id: true, name: true, colorHex: true },
+          },
+          createdBy: {
+            select: { id: true, fullName: true, username: true },
+          },
+          stockDocument: {
+            select: { id: true, documentNumber: true, type: true },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -189,7 +204,7 @@ export async function getInStockProducts() {
 
 export async function getInventorySummary() {
   try {
-    // 1. Fetch all confirmed/shipped quotations with line items
+    // 1. Fetch all confirmed/shipped quotations that opted into reservation
     const documents = await prisma.document.findMany({
       where: {
         type: DocumentType.QUOTATION,
@@ -202,6 +217,8 @@ export async function getInventorySummary() {
         customerSnapshot: true,
         lineItems: {
           select: {
+            productId: true,
+            colorVariantId: true,
             productSku: true,
             productName: true,
             productImage: true,
@@ -212,40 +229,35 @@ export async function getInventorySummary() {
       },
     });
 
-    // 2. Collect all unique product SKUs from line items
-    const skuSet = new Set<string>();
+    // 2. Collect all unique product ids referenced (matched ones only)
+    const productIds = new Set<string>();
     for (const doc of documents) {
       for (const item of doc.lineItems) {
-        if (item.productSku) skuSet.add(item.productSku);
+        if (item.productId) productIds.add(item.productId);
       }
     }
 
-    // 3. Fetch current stock for these products
-    const products = await prisma.product.findMany({
-      where: { sku: { in: Array.from(skuSet) } },
-      select: {
-        id: true,
-        sku: true,
-        name: true,
-        imageUrl: true,
-        stockQuantity: true,
-        colorVariants: {
-          select: {
-            id: true,
-            name: true,
-            sku: true,
-            stockQuantity: true,
+    // 3. Fetch current stock + reservation for these products
+    const [products, reservationMap] = await Promise.all([
+      prisma.product.findMany({
+        where: { id: { in: Array.from(productIds) } },
+        select: {
+          id: true,
+          sku: true,
+          name: true,
+          imageUrl: true,
+          stockQuantity: true,
+          colorVariants: {
+            select: { id: true, name: true, sku: true, stockQuantity: true },
           },
         },
-      },
-    });
+      }),
+      getReservationMap(Array.from(productIds)),
+    ]);
 
-    const productBySku = new Map(products.map((p) => [p.sku, p]));
+    const productById = new Map(products.map((p) => [p.id, p]));
 
-    // 4. Aggregate demand per product+variant
-    const aggregateKey = (sku: string, variant: string | null) =>
-      variant ? `${sku}::${variant}` : sku;
-
+    // 4. Aggregate demand per product+variant, keyed by stable ids
     const demandMap = new Map<
       string,
       {
@@ -257,6 +269,7 @@ export async function getInventorySummary() {
         colorVariantName: string | null;
         colorVariantSku: string | null;
         currentStock: number;
+        reserved: number;
         totalOrdered: number;
         orders: {
           documentId: string;
@@ -267,6 +280,7 @@ export async function getInventorySummary() {
         }[];
       }
     >();
+    const unmatchedLines: { productSku: string | null; productName: string }[] = [];
 
     for (const doc of documents) {
       const snapshot = doc.customerSnapshot as Record<string, unknown>;
@@ -276,35 +290,36 @@ export async function getInventorySummary() {
         "-";
 
       for (const item of doc.lineItems) {
-        if (!item.productSku) continue;
-        const product = productBySku.get(item.productSku);
+        if (!item.productId) {
+          if (item.productSku) {
+            unmatchedLines.push({ productSku: item.productSku, productName: item.productName });
+          }
+          continue;
+        }
+        const product = productById.get(item.productId);
         if (!product) continue;
 
-        const key = aggregateKey(item.productSku, item.colorVariantName);
+        const key = availabilityKey(item.productId, item.colorVariantId);
 
         if (!demandMap.has(key)) {
-          // Determine current stock for this product/variant
           let currentStock = product.stockQuantity;
-          let colorVariantId: string | null = null;
           let colorVariantSku: string | null = null;
-          if (item.colorVariantName) {
-            const variant = product.colorVariants.find(
-              (v) => v.name === item.colorVariantName
-            );
+          if (item.colorVariantId) {
+            const variant = product.colorVariants.find((v) => v.id === item.colorVariantId);
             currentStock = variant?.stockQuantity ?? 0;
-            colorVariantId = variant?.id ?? null;
             colorVariantSku = variant?.sku ?? null;
           }
 
           demandMap.set(key, {
-            productId: product.id,
-            productSku: item.productSku,
+            productId: item.productId,
+            productSku: item.productSku ?? product.sku,
             productName: item.productName,
             productImage: item.productImage || product.imageUrl,
-            colorVariantId,
+            colorVariantId: item.colorVariantId,
             colorVariantName: item.colorVariantName,
             colorVariantSku,
             currentStock,
+            reserved: reservationMap.get(key) ?? 0,
             totalOrdered: 0,
             orders: [],
           });
@@ -322,9 +337,10 @@ export async function getInventorySummary() {
       }
     }
 
-    // 5. Compute shortages and stats
+    // 5. Compute shortages (against on-hand) and stats
     const items = Array.from(demandMap.values()).map((item) => ({
       ...item,
+      issued: item.totalOrdered - item.reserved,
       shortage: Math.max(0, item.totalOrdered - item.currentStock),
     }));
 
@@ -341,7 +357,7 @@ export async function getInventorySummary() {
       totalShortageQuantity: items.reduce((sum, i) => sum + i.shortage, 0),
     };
 
-    return { items: serialize(items), stats };
+    return { items: serialize(items), stats, unmatchedLines: serialize(unmatchedLines) };
   } catch {
     return {
       items: [],
@@ -350,6 +366,7 @@ export async function getInventorySummary() {
         totalShortageItems: 0,
         totalShortageQuantity: 0,
       },
+      unmatchedLines: [],
     };
   }
 }
@@ -365,7 +382,24 @@ export async function getProductStock(productId: string) {
         },
       },
     });
-    return serialize(product);
+    if (!product) return null;
+
+    const availability = await getAvailabilityForProducts([productId]);
+    const colorVariants = product.colorVariants.map((v) => {
+      const a = availability.get(availabilityKey(productId, v.id));
+      return { ...v, reserved: a?.reserved ?? 0, available: (a?.onHand ?? v.stockQuantity) - (a?.reserved ?? 0) };
+    });
+    // Total reserved for the product = the bare key plus every colour variant's reservation.
+    const productReserved =
+      (availability.get(availabilityKey(productId, null))?.reserved ?? 0) +
+      colorVariants.reduce((sum, v) => sum + v.reserved, 0);
+
+    return serialize({
+      ...product,
+      reserved: productReserved,
+      available: product.stockQuantity - productReserved,
+      colorVariants,
+    });
   } catch {
     return null;
   }

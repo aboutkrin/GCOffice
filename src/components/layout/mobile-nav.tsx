@@ -8,7 +8,7 @@ import {
   FilePlus,
   Users,
   FileText,
-  Warehouse,
+  ScanLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,9 +36,9 @@ const mobileNavItems = [
     icon: Package,
   },
   {
-    href: "/stock",
-    label: "สต็อค",
-    icon: Warehouse,
+    href: "/stock/scan",
+    label: "สแกน",
+    icon: ScanLine,
   },
 ];
 

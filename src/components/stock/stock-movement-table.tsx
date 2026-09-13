@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   useReactTable,
@@ -149,6 +150,31 @@ export function StockMovementTable({
       header: "Lot",
       cell: ({ row }) => row.original.lotNumber ?? "-",
     },
+    {
+      id: "stockDocument",
+      header: "เอกสาร",
+      cell: ({ row }) => {
+        const doc = row.original.stockDocument;
+        if (!doc) return "-";
+        const hrefByType: Record<string, string> = {
+          RECEIVE: "receive",
+          ISSUE: "issue",
+          COUNT: "count",
+        };
+        const base = hrefByType[doc.type] ?? "receive";
+        return (
+          <Link href={`/stock/${base}/${doc.id}`} className="text-primary hover:underline">
+            {doc.documentNumber}
+          </Link>
+        );
+      },
+    },
+    {
+      id: "createdBy",
+      header: "ผู้ทำรายการ",
+      cell: ({ row }) =>
+        row.original.createdBy?.fullName || row.original.createdBy?.username || "-",
+    },
   ];
 
   const table = useReactTable({
@@ -193,7 +219,7 @@ export function StockMovementTable({
                   <TableHead
                     key={header.id}
                     className={
-                      ["reason", "reference", "lotNumber"].includes(header.id)
+                      ["reason", "reference", "lotNumber", "stockDocument", "createdBy"].includes(header.id)
                         ? "hidden md:table-cell"
                         : ""
                     }
@@ -214,7 +240,7 @@ export function StockMovementTable({
                     <TableCell
                       key={cell.id}
                       className={
-                        ["reason", "reference", "lotNumber"].includes(cell.column.id)
+                        ["reason", "reference", "lotNumber", "stockDocument", "createdBy"].includes(cell.column.id)
                           ? "hidden md:table-cell"
                           : ""
                       }

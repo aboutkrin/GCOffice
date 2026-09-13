@@ -127,6 +127,37 @@ export async function searchProducts(query: string, categoryId?: string) {
   }
 }
 
+/** Same as searchProducts, plus reserved/available per product and per colour variant. */
+export async function searchProductsWithStock(query: string, categoryId?: string) {
+  const products = await searchProducts(query, categoryId);
+  if (!Array.isArray(products) || products.length === 0) return products;
+
+  const { getAvailabilityForProducts, availabilityKey } = await import(
+    "./stock-availability"
+  );
+  const availability = await getAvailabilityForProducts(products.map((p: any) => p.id));
+
+  return products.map((p: any) => {
+    const colorVariants = (p.colorVariants ?? []).map((v: any) => {
+      const a = availability.get(availabilityKey(p.id, v.id));
+      return {
+        ...v,
+        reserved: a?.reserved ?? 0,
+        available: a?.available ?? v.stockQuantity,
+      };
+    });
+    const bare = availability.get(availabilityKey(p.id, null));
+    const totalReserved =
+      (bare?.reserved ?? 0) + colorVariants.reduce((sum: number, v: any) => sum + v.reserved, 0);
+    return {
+      ...p,
+      colorVariants,
+      reserved: totalReserved,
+      available: p.stockQuantity - totalReserved,
+    };
+  });
+}
+
 export interface ProductForCost {
   id: string;
   sku: string;

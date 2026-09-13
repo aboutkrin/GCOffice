@@ -50,6 +50,8 @@ interface SummaryItem {
   colorVariantSku?: string | null;
   currentStock: number;
   totalOrdered: number;
+  reserved?: number;
+  issued?: number;
   shortage: number;
   orders: OrderDetail[];
 }
@@ -168,6 +170,7 @@ export function InventorySummaryTable({
               <TableHead>สินค้า</TableHead>
               <TableHead className="text-right">สต็อคปัจจุบัน</TableHead>
               <TableHead className="text-right">สั่งซื้อรวม</TableHead>
+              <TableHead className="text-right">จองแล้ว</TableHead>
               <TableHead className="text-right">ต้องสั่งเพิ่ม</TableHead>
               <TableHead>สถานะ</TableHead>
               <TableHead className="w-20">ดำเนินการ</TableHead>
@@ -228,6 +231,11 @@ export function InventorySummaryTable({
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
+                        <span className="font-mono text-muted-foreground">
+                          {item.reserved ?? item.totalOrdered}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
                         {item.shortage > 0 ? (
                           <span className="font-mono font-medium text-red-600">
                             {item.shortage}
@@ -276,7 +284,7 @@ export function InventorySummaryTable({
                       <>
                         <TableRow className="bg-muted/30">
                           <TableCell />
-                          <TableCell colSpan={7} className="p-0">
+                          <TableCell colSpan={8} className="p-0">
                             <div className="px-4 py-2">
                               <p className="text-xs font-medium text-muted-foreground mb-2">
                                 รายละเอียดคำสั่งซื้อ ({item.orders.length} รายการ)
@@ -324,7 +332,7 @@ export function InventorySummaryTable({
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
+                <TableCell colSpan={9} className="h-24 text-center">
                   ไม่พบข้อมูลคำสั่งซื้อ
                 </TableCell>
               </TableRow>
