@@ -142,6 +142,8 @@ interface SyncContext {
   productsByWcId: Map<number, ProductRow>;
   productsBySku: Map<string, ProductRow>;
   variantsByProductId: Map<string, VariantRow[]>;
+  /** All variants with a websiteVariantId, keyed by that id, regardless of which product they currently belong to. Lets a variant that moved to a different product on the website be reparented instead of hitting the unique constraint on a create. */
+  variantsByWebsiteId: Map<number, VariantRow>;
   /** GCOffice product ids seen (matched or created) during this run. */
   seenProductIds: Set<string>;
   details: CatalogSyncDetails;
@@ -198,6 +200,7 @@ async function buildContext(
     productsByWcId: new Map(),
     productsBySku: new Map(),
     variantsByProductId: new Map(),
+    variantsByWebsiteId: new Map(),
     seenProductIds: new Set(),
     details: emptyDetails(),
   };
@@ -216,6 +219,7 @@ async function buildContext(
     const list = ctx.variantsByProductId.get(v.productId);
     if (list) list.push(v);
     else ctx.variantsByProductId.set(v.productId, [v]);
+    if (v.websiteVariantId !== null) ctx.variantsByWebsiteId.set(v.websiteVariantId, v);
   }
 
   return ctx;
@@ -374,6 +378,13 @@ function matchExistingProduct(
 interface VariantPlan {
   toUpdate: { row: VariantRow; data: MappedCatalogVariant; renameBlocked: boolean }[];
   toCreate: MappedCatalogVariant[];
+  /** Website variants matched by websiteVariantId to a row that currently belongs to a different product (the website reassigned that colour to this product). Reparented rather than recreated, which would hit the unique constraint on websiteVariantId. */
+  toMove: {
+    row: VariantRow;
+    data: MappedCatalogVariant;
+    fromProductId: string;
+    renameBlocked: boolean;
+  }[];
   unmatched: UnmatchedColours | null;
 }
 
@@ -385,8 +396,9 @@ interface VariantPlan {
  */
 function planVariants(
   cp: CatalogProduct,
-  productRow: { sku: string; name: string },
-  existing: VariantRow[]
+  productRow: { id: string; sku: string; name: string },
+  existing: VariantRow[],
+  ctx: SyncContext
 ): VariantPlan {
   const byWebsiteId = new Map<number, VariantRow>();
   const byExactName = new Map<string, VariantRow>();
@@ -398,7 +410,7 @@ function planVariants(
   }
 
   const claimed = new Set<string>();
-  const plan: VariantPlan = { toUpdate: [], toCreate: [], unmatched: null };
+  const plan: VariantPlan = { toUpdate: [], toCreate: [], toMove: [], unmatched: null };
   const unmatchedWebsiteNames: string[] = [];
 
   const websiteVariants = [...cp.variants].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -422,10 +434,22 @@ function planVariants(
       const renameBlocked =
         match.name !== mapped.name && nameOwner !== undefined && nameOwner.id !== match.id;
       plan.toUpdate.push({ row: match, data: mapped, renameBlocked });
-    } else {
-      plan.toCreate.push(mapped);
-      unmatchedWebsiteNames.push(mapped.name);
+      continue;
     }
+
+    // Not attached to this product locally. The website may have reassigned
+    // this colour from another product rather than created a new one — a
+    // create here would collide on the unique websiteVariantId.
+    const elsewhere = ctx.variantsByWebsiteId.get(mapped.websiteVariantId);
+    if (elsewhere && elsewhere.productId !== productRow.id) {
+      const nameOwner = byExactName.get(mapped.name);
+      const renameBlocked = nameOwner !== undefined && nameOwner.id !== elsewhere.id;
+      plan.toMove.push({ row: elsewhere, data: mapped, fromProductId: elsewhere.productId, renameBlocked });
+      continue;
+    }
+
+    plan.toCreate.push(mapped);
+    unmatchedWebsiteNames.push(mapped.name);
   }
 
   const unmatchedGcNames = existing
@@ -495,6 +519,52 @@ async function applyVariantPlan(
     row.websiteStockStatus = data.websiteStockStatus;
   }
 
+  const affectedProductIds = new Set<string>();
+
+  for (const { row, data, fromProductId, renameBlocked } of plan.toMove) {
+    if (renameBlocked) {
+      console.warn(
+        `[catalog-sync] colour "${row.name}" moving from product ${fromProductId} to ${productId} not renamed to "${data.name}": name already used`
+      );
+    }
+    await tx.productColorVariant.update({
+      where: { id: row.id },
+      data: {
+        productId,
+        ...(renameBlocked ? {} : { name: data.name }),
+        colorHex: data.colorHex,
+        imageUrl: data.imageUrl,
+        sortOrder: data.sortOrder,
+        sku: data.sku,
+        websiteVariantId: data.websiteVariantId,
+        websiteActive: data.websiteActive,
+        websiteStockStatus: data.websiteStockStatus,
+      },
+    });
+
+    const fromList = ctx.variantsByProductId.get(fromProductId);
+    if (fromList) {
+      const idx = fromList.findIndex((v) => v.id === row.id);
+      if (idx !== -1) fromList.splice(idx, 1);
+    }
+    row.productId = productId;
+    if (!renameBlocked) row.name = data.name;
+    row.colorHex = data.colorHex;
+    row.imageUrl = data.imageUrl;
+    row.sortOrder = data.sortOrder;
+    row.sku = data.sku;
+    row.websiteVariantId = data.websiteVariantId;
+    row.websiteActive = data.websiteActive;
+    row.websiteStockStatus = data.websiteStockStatus;
+    const toList = ctx.variantsByProductId.get(productId);
+    if (toList) toList.push(row);
+    else ctx.variantsByProductId.set(productId, [row]);
+    ctx.variantsByWebsiteId.set(data.websiteVariantId, row);
+
+    affectedProductIds.add(fromProductId);
+    affectedProductIds.add(productId);
+  }
+
   if (plan.toCreate.length > 0) {
     const assignedCodes = (ctx.variantsByProductId.get(productId) ?? []).map((v) => v.stockCode);
     for (const data of plan.toCreate) {
@@ -518,16 +588,23 @@ async function applyVariantPlan(
       const list = ctx.variantsByProductId.get(productId);
       if (list) list.push(created);
       else ctx.variantsByProductId.set(productId, [created]);
+      if (created.websiteVariantId !== null) {
+        ctx.variantsByWebsiteId.set(created.websiteVariantId, created);
+      }
     }
 
-    // Mirrors saveColorVariantsInTransaction: once a product has colours, its
-    // stock is the sum of the colours' stock.
+    affectedProductIds.add(productId);
+  }
+
+  // Mirrors saveColorVariantsInTransaction: once a product has colours, its
+  // stock is the sum of the colours' stock.
+  for (const affectedId of affectedProductIds) {
     const agg = await tx.productColorVariant.aggregate({
-      where: { productId },
+      where: { productId: affectedId },
       _sum: { stockQuantity: true },
     });
     await tx.product.update({
-      where: { id: productId },
+      where: { id: affectedId },
       data: { stockQuantity: agg._sum.stockQuantity ?? 0 },
     });
   }
@@ -560,7 +637,7 @@ async function upsertCatalogProduct(
       existing.websiteProductId = mapped.websiteProductId;
       ctx.productsByWebsiteId.set(mapped.websiteProductId, existing);
       ctx.details.toUpdate++;
-      const plan = planVariants(cp, existing, ctx.variantsByProductId.get(existing.id) ?? []);
+      const plan = planVariants(cp, existing, ctx.variantsByProductId.get(existing.id) ?? [], ctx);
       if (plan.unmatched) ctx.details.unmatchedColours.push(plan.unmatched);
       return "updated";
     }
@@ -623,7 +700,12 @@ async function upsertCatalogProduct(
           where: { id: existing.id },
           data: websiteOwned,
         });
-        const plan = planVariants(cp, existing, ctx.variantsByProductId.get(existing.id) ?? []);
+        const plan = planVariants(
+          cp,
+          existing,
+          ctx.variantsByProductId.get(existing.id) ?? [],
+          ctx
+        );
         if (plan.unmatched) ctx.details.unmatchedColours.push(plan.unmatched);
         await applyVariantPlan(tx, existing.id, existing.stockCode, plan, ctx);
 
@@ -643,7 +725,7 @@ async function upsertCatalogProduct(
         select: { id: true },
       });
 
-      const plan = planVariants(cp, { sku, name: mapped.name }, []);
+      const plan = planVariants(cp, { id: created.id, sku, name: mapped.name }, [], ctx);
       await applyVariantPlan(tx, created.id, sku, plan, ctx);
 
       const row: ProductRow = {
