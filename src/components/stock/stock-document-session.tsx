@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -26,11 +26,14 @@ import {
   STOCK_DOCUMENT_STATUS_COLORS,
 } from "@/lib/constants";
 
-import { ScanInput } from "./scan-input";
+import { ScanInput, type ScanInputHandle } from "./scan-input";
+import { ScanQuantityPrompt } from "./scan-quantity-prompt";
 import { StockDocumentLineRow } from "./stock-document-line-row";
 import { StockCountVarianceSummary } from "./stock-count-variance-summary";
+import { resolveStockCodeAction } from "@/actions/stock-actions";
+import type { StockCodeResolution } from "@/lib/stock-code";
 import {
-  scanStockDocumentLine,
+  addStockDocumentLine,
   postStockDocument,
   cancelStockDocument,
   deleteStockDocumentDraft,
@@ -49,17 +52,49 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
   const [confirmPost, setConfirmPost] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pendingScan, setPendingScan] = useState<{
+    resolution: Extract<StockCodeResolution, { kind: "variant" | "product" }>;
+    fromCamera: boolean;
+  } | null>(null);
+  const scanInputRef = useRef<ScanInputHandle>(null);
 
   const isDraft = document.status === "DRAFT";
   const isIssueFromDocument = document.type === "ISSUE" && !!document.sourceDocumentId;
 
-  const handleScan = async (code: string) => {
-    const result = await scanStockDocumentLine(document.id, { code, quantity: 1 });
-    if (result.needsVariant) {
-      throw new Error(`"${result.resolution.productName}" มีหลายสี กรุณาเลือกสีจากหน้ารายการสินค้า`);
+  const handleScan = async (code: string, meta: { fromCamera: boolean }) => {
+    const resolution = await resolveStockCodeAction(code);
+    if (resolution.kind === "not-found") {
+      throw new Error(`ไม่พบสินค้าจากรหัส "${code}"`);
     }
-    router.refresh();
+    if (resolution.kind === "ambiguous") {
+      throw new Error("รหัสนี้ตรงกับหลายรายการ กรุณาเลือกสินค้าด้วยตนเอง");
+    }
+    if (resolution.kind === "product-needs-variant") {
+      throw new Error(`"${resolution.productName}" มีหลายสี กรุณาเลือกสีจากหน้ารายการสินค้า`);
+    }
+    setPendingScan({ resolution, fromCamera: meta.fromCamera });
   };
+
+  const handleConfirmQuantity = (quantity: number) => {
+    if (!pendingScan) return;
+    const { resolution, fromCamera } = pendingScan;
+    startTransition(async () => {
+      try {
+        await addStockDocumentLine(document.id, {
+          productId: resolution.productId,
+          colorVariantId: resolution.kind === "variant" ? resolution.colorVariantId : undefined,
+          quantity,
+        });
+        setPendingScan(null);
+        if (fromCamera) scanInputRef.current?.openCamera();
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+      }
+    });
+  };
+
+  const handleCancelScan = () => setPendingScan(null);
 
   const handlePost = () => {
     startTransition(async () => {
@@ -154,8 +189,21 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
 
       {isDraft && (
         <Card>
-          <CardContent className="pt-6">
-            <ScanInput onScan={handleScan} disabled={isPending} />
+          <CardContent className="pt-6 space-y-3">
+            <ScanInput
+              ref={scanInputRef}
+              onScan={handleScan}
+              disabled={isPending || !!pendingScan}
+            />
+            {pendingScan && (
+              <ScanQuantityPrompt
+                resolution={pendingScan.resolution}
+                documentType={document.type}
+                pending={isPending}
+                onConfirm={handleConfirmQuantity}
+                onCancel={handleCancelScan}
+              />
+            )}
           </CardContent>
         </Card>
       )}
