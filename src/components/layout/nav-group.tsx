@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { NavGroup as NavGroupType } from "@/lib/nav";
+import type { NavGroup as NavGroupType, NavItem } from "@/lib/nav";
 
 interface NavGroupProps {
   group: NavGroupType;
@@ -13,12 +13,21 @@ interface NavGroupProps {
   onNavigate?: () => void;
 }
 
-function isItemActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(href + "/");
+// Exact match or subpath — but yield to a sibling whose href is a more specific
+// prefix of the path, so "/stock" isn't also lit while on "/stock/receive".
+function isItemActive(pathname: string, item: NavItem, siblings: NavItem[]) {
+  if (pathname === item.href) return true;
+  if (!pathname.startsWith(item.href + "/")) return false;
+  return !siblings.some(
+    (s) =>
+      s.href !== item.href &&
+      s.href.startsWith(item.href + "/") &&
+      (pathname === s.href || pathname.startsWith(s.href + "/"))
+  );
 }
 
 export function NavGroup({ group, pathname, onNavigate }: NavGroupProps) {
-  const isActive = group.items.some((item) => isItemActive(pathname, item.href));
+  const isActive = group.items.some((item) => isItemActive(pathname, item, group.items));
   const [open, setOpen] = useState(isActive);
   const Icon = group.icon;
 
@@ -43,7 +52,7 @@ export function NavGroup({ group, pathname, onNavigate }: NavGroupProps) {
       {open && (
         <div className="ml-4 space-y-1 mt-1">
           {group.items.map((item) => {
-            const active = isItemActive(pathname, item.href);
+            const active = isItemActive(pathname, item, group.items);
             const ItemIcon = item.icon;
 
             return (

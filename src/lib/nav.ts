@@ -17,6 +17,10 @@ import {
   Printer,
   Warehouse,
   PackagePlus,
+  PackageMinus,
+  ClipboardCheck,
+  QrCode,
+  History,
   UserCog,
   Settings,
 } from "lucide-react";
@@ -55,13 +59,25 @@ export const MAIN_NAV: NavEntry[] = [
     ],
   },
   {
-    label: "สินค้าและสต็อค",
+    label: "สินค้า",
     icon: Package,
     items: [
       { href: "/products", label: "สินค้า", icon: Package },
-      { href: "/stock", label: "สต็อคสินค้า", icon: Warehouse },
-      { href: "/stock/receive", label: "รับเข้า/เบิกออก", icon: PackagePlus },
       { href: "/print-order", label: "พิมพ์ใบส่งของ", icon: Printer },
+    ],
+  },
+  {
+    label: "สต็อคสินค้า",
+    icon: Warehouse,
+    items: [
+      { href: "/stock", label: "ภาพรวมสต็อค", icon: Warehouse },
+      { href: "/stock/receive", label: "รับเข้า", icon: PackagePlus },
+      { href: "/stock/issue", label: "เบิกออก", icon: PackageMinus },
+      { href: "/stock/count", label: "ตรวจนับ", icon: ClipboardCheck },
+      { href: "/stock/labels", label: "พิมพ์ QR", icon: QrCode },
+      { href: "/stock/summary", label: "สรุปคำสั่งซื้อ", icon: ClipboardList },
+      { href: "/stock/report", label: "พิมพ์สต็อค", icon: FileText },
+      { href: "/stock/history", label: "ประวัติทั้งหมด", icon: History },
     ],
   },
   {
