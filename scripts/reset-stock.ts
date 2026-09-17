@@ -1,7 +1,7 @@
 // Clears stock movement history and zeroes stock quantities ahead of a
 // full warehouse recount. Product/variant catalog rows are untouched.
 // Usage: npm run reset-stock
-import { prisma } from "../src/lib/prisma.ts";
+import { prisma } from "../src/lib/prisma";
 
 async function main() {
   const result = await prisma.$transaction(async (tx) => {
