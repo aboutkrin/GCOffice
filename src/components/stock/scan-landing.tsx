@@ -57,7 +57,7 @@ export function ScanLanding() {
 
       <Card>
         <CardContent className="pt-6">
-          <ScanInput onScan={handleScan} />
+          <ScanInput onScan={handleScan} closeCameraOnScan />
         </CardContent>
       </Card>
 

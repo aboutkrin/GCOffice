@@ -12,6 +12,8 @@ interface ScanInputProps {
   placeholder?: string;
   autoFocus?: boolean;
   disabled?: boolean;
+  /** Close the camera sheet after a successful scan — for single-shot flows where the result replaces the scanner rather than a growing list. */
+  closeCameraOnScan?: boolean;
 }
 
 const DUPLICATE_WINDOW_MS = 1200;
@@ -43,7 +45,7 @@ function beep() {
  * focused text input, committed on Enter or fast-input idle) and a phone
  * camera (opened in a sheet, lazy-loaded only when used).
  */
-export function ScanInput({ onScan, placeholder, autoFocus = true, disabled }: ScanInputProps) {
+export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, closeCameraOnScan }: ScanInputProps) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,6 +65,15 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled }: S
     inputRef.current?.focus();
     return () => document.removeEventListener("visibilitychange", refocus);
   }, [autoFocus]);
+
+  // Re-focus once re-enabled — e.g. after a quantity prompt (rendered by the
+  // parent while `disabled`) is confirmed or cancelled, so the next scan can
+  // go straight into the input with no extra tap.
+  useEffect(() => {
+    if (!disabled && autoFocus) {
+      inputRef.current?.focus();
+    }
+  }, [disabled, autoFocus]);
 
   const commit = useCallback(
     async (code: string, opts?: { forceDuplicate?: boolean }) => {
@@ -91,6 +102,7 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled }: S
         await onScan(trimmed);
         beep();
         if (navigator.vibrate) navigator.vibrate(40);
+        if (closeCameraOnScan) setCameraOpen(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
       } finally {
@@ -98,7 +110,7 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled }: S
         inputRef.current?.focus();
       }
     },
-    [onScan]
+    [onScan, closeCameraOnScan]
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

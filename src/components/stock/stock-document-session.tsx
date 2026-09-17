@@ -27,10 +27,13 @@ import {
 } from "@/lib/constants";
 
 import { ScanInput } from "./scan-input";
+import { ScanQuantityPrompt } from "./scan-quantity-prompt";
 import { StockDocumentLineRow } from "./stock-document-line-row";
 import { StockCountVarianceSummary } from "./stock-count-variance-summary";
+import { resolveStockCodeAction } from "@/actions/stock-actions";
+import type { StockCodeResolution } from "@/lib/stock-code";
 import {
-  scanStockDocumentLine,
+  addStockDocumentLine,
   postStockDocument,
   cancelStockDocument,
   deleteStockDocumentDraft,
@@ -49,17 +52,46 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
   const [confirmPost, setConfirmPost] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pendingScan, setPendingScan] = useState<
+    Extract<StockCodeResolution, { kind: "variant" | "product" }> | null
+  >(null);
 
   const isDraft = document.status === "DRAFT";
   const isIssueFromDocument = document.type === "ISSUE" && !!document.sourceDocumentId;
 
   const handleScan = async (code: string) => {
-    const result = await scanStockDocumentLine(document.id, { code, quantity: 1 });
-    if (result.needsVariant) {
-      throw new Error(`"${result.resolution.productName}" มีหลายสี กรุณาเลือกสีจากหน้ารายการสินค้า`);
+    const resolution = await resolveStockCodeAction(code);
+    if (resolution.kind === "not-found") {
+      throw new Error(`ไม่พบสินค้าจากรหัส "${code}"`);
     }
-    router.refresh();
+    if (resolution.kind === "ambiguous") {
+      throw new Error("รหัสนี้ตรงกับหลายรายการ กรุณาเลือกสินค้าด้วยตนเอง");
+    }
+    if (resolution.kind === "product-needs-variant") {
+      throw new Error(`"${resolution.productName}" มีหลายสี กรุณาเลือกสีจากหน้ารายการสินค้า`);
+    }
+    setPendingScan(resolution);
   };
+
+  const handleConfirmQuantity = (quantity: number) => {
+    if (!pendingScan) return;
+    const resolution = pendingScan;
+    startTransition(async () => {
+      try {
+        await addStockDocumentLine(document.id, {
+          productId: resolution.productId,
+          colorVariantId: resolution.kind === "variant" ? resolution.colorVariantId : undefined,
+          quantity,
+        });
+        setPendingScan(null);
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+      }
+    });
+  };
+
+  const handleCancelScan = () => setPendingScan(null);
 
   const handlePost = () => {
     startTransition(async () => {
@@ -154,8 +186,21 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
 
       {isDraft && (
         <Card>
-          <CardContent className="pt-6">
-            <ScanInput onScan={handleScan} disabled={isPending} />
+          <CardContent className="pt-6 space-y-3">
+            <ScanInput
+              onScan={handleScan}
+              disabled={isPending || !!pendingScan}
+              closeCameraOnScan
+            />
+            {pendingScan && (
+              <ScanQuantityPrompt
+                resolution={pendingScan}
+                documentType={document.type}
+                pending={isPending}
+                onConfirm={handleConfirmQuantity}
+                onCancel={handleCancelScan}
+              />
+            )}
           </CardContent>
         </Card>
       )}

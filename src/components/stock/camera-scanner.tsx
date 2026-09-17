@@ -34,6 +34,7 @@ export function CameraScanner({ open, onOpenChange, onDetect }: CameraScannerPro
   const lastDetectedRef = useRef<{ code: string; at: number } | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [flash, setFlash] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -105,6 +106,8 @@ export function CameraScanner({ open, onOpenChange, onDetect }: CameraScannerPro
               return;
             }
             lastDetectedRef.current = { code: value, at: now };
+            setFlash(true);
+            setTimeout(() => setFlash(false), 400);
             onDetect(value);
           })
           .catch(() => {
@@ -146,7 +149,11 @@ export function CameraScanner({ open, onOpenChange, onDetect }: CameraScannerPro
             </div>
           )}
           {status === "ready" && (
-            <div className="pointer-events-none absolute inset-8 rounded-lg border-2 border-white/70" />
+            <div
+              className={`pointer-events-none absolute inset-8 rounded-lg border-2 transition-colors ${
+                flash ? "border-green-400 bg-green-400/20" : "border-white/70"
+              }`}
+            />
           )}
         </div>
       </SheetContent>
