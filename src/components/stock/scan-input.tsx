@@ -123,6 +123,20 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, clo
     [onScan, closeCameraOnScan]
   );
 
+  // CameraScanner's capture loop restarts (stops and re-requests the camera
+  // stream) whenever its `onDetect` prop identity changes. `commit` above is
+  // recreated on every render (it closes over `onScan`, which callers pass
+  // as a fresh inline function), so handing it to CameraScanner directly
+  // would restart the camera mid-scan on every state update `commit` makes
+  // (setBusy/setValue/setCameraOpen) — including right when we're trying to
+  // close it after a successful scan. Route through a ref so the function
+  // identity handed to CameraScanner never changes.
+  const commitRef = useRef(commit);
+  commitRef.current = commit;
+  const handleCameraDetect = useCallback((code: string) => {
+    commitRef.current(code, { fromCamera: true });
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const next = e.target.value;
     setValue(next);
@@ -184,7 +198,7 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, clo
       <CameraScanner
         open={cameraOpen}
         onOpenChange={setCameraOpen}
-        onDetect={(code) => commit(code, { fromCamera: true })}
+        onDetect={handleCameraDetect}
       />
     </div>
   );
