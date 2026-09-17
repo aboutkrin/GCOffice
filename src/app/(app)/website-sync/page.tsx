@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { ConnectionStatusCard } from "@/components/website-sync/connection-status-card";
 import { SyncHistoryTable } from "@/components/website-sync/sync-history-table";
+import { ColorVariantCleanupCard } from "@/components/website-sync/color-variant-cleanup-card";
 
 export const dynamic = "force-dynamic";
 // The sync buttons are Server Actions invoked from this page, so they run under
@@ -30,6 +31,8 @@ export default async function WebsiteSyncPage() {
       </div>
 
       <ConnectionStatusCard />
+
+      <ColorVariantCleanupCard />
 
       <Card>
         <CardHeader>

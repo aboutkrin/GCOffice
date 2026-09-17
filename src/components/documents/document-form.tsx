@@ -464,7 +464,7 @@ export function DocumentForm({
     };
   };
 
-  const handleSave = async (formData: FormData) => {
+  const handleSave = async (formData: FormData, asDraft = false) => {
     if (type === "INVOICE" && !isEditing && !sourceQuotationId) {
       alert("กรุณาเลือกใบเสนอราคาที่ยืนยันแล้ว");
       return;
@@ -512,7 +512,7 @@ export function DocumentForm({
       try {
         result = isEditing
           ? await updateDocument(initialData.id, data)
-          : await createDocument(data);
+          : await createDocument(data, { asDraft });
       } catch (actionError: any) {
         // Server action transport error (network, serialization, etc.)
         console.error("Server action failed:", actionError);
@@ -552,7 +552,7 @@ export function DocumentForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSave)} className="space-y-6">
+      <form onSubmit={form.handleSubmit((data) => handleSave(data))} className="space-y-6">
         {/* Section 1: Header Info */}
         <Card>
           <CardHeader>
@@ -899,6 +899,26 @@ export function DocumentForm({
           >
             ยกเลิก
           </Button>
+          {!isEditing && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={form.handleSubmit((data) => handleSave(data, true))}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  กำลังบันทึก...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  บันทึกร่าง
+                </>
+              )}
+            </Button>
+          )}
           <Button type="submit" disabled={saving}>
             {saving ? (
               <>

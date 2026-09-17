@@ -34,7 +34,7 @@ export default async function ReceiptEditPage({
     <div>
       <PageHeader
         title="แก้ไขใบเสร็จรับเงิน"
-        description={`เลขที่: ${document.documentNumber}`}
+        description={`เลขที่: ${document.documentNumber ?? "ร่าง"}`}
       />
 
       <DocumentForm

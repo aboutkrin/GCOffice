@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MAIN_NAV, SETTINGS_NAV, filterNav, homeFor } from "@/lib/nav";
+import { MAIN_NAV, SETTINGS_GROUP, filterNav, homeFor, isNavGroup } from "@/lib/nav";
+import { NavGroup } from "@/components/layout/nav-group";
 
 interface AppSidebarProps {
   role: string;
@@ -13,13 +12,8 @@ interface AppSidebarProps {
 
 export function AppSidebar({ role }: AppSidebarProps) {
   const pathname = usePathname();
-  const mainNavItems = filterNav(MAIN_NAV, role);
-  const settingsNavItems = filterNav(SETTINGS_NAV, role);
-  const isSettingsActive = settingsNavItems.some(
-    (item) =>
-      pathname === item.href || pathname.startsWith(item.href + "/")
-  );
-  const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);
+  const mainNavEntries = filterNav(MAIN_NAV, role);
+  const settingsGroup = filterNav([SETTINGS_GROUP], role).find(isNavGroup);
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col bg-card border-r">
@@ -32,15 +26,19 @@ export function AppSidebar({ role }: AppSidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto space-y-1 p-4">
-        {mainNavItems.map((item) => {
+        {mainNavEntries.map((entry) => {
+          if (isNavGroup(entry)) {
+            return <NavGroup key={entry.label} group={entry} pathname={pathname} />;
+          }
+
           const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
-          const Icon = item.icon;
+            pathname === entry.href || pathname.startsWith(entry.href + "/");
+          const Icon = entry.icon;
 
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={entry.href}
+              href={entry.href}
               className={cn(
                 "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                 isActive
@@ -49,60 +47,12 @@ export function AppSidebar({ role }: AppSidebarProps) {
               )}
             >
               <Icon className="size-4" />
-              {item.label}
+              {entry.label}
             </Link>
           );
         })}
 
-        {/* การตั้งค่า submenu */}
-        {settingsNavItems.length > 0 && (
-          <div>
-            <button
-              onClick={() => setSettingsOpen(!settingsOpen)}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                isSettingsActive
-                  ? "text-accent-foreground font-medium"
-                  : "text-muted-foreground hover:bg-accent/50"
-              )}
-            >
-              <Settings className="size-4" />
-              <span className="flex-1 text-left">การตั้งค่า</span>
-              <ChevronDown
-                className={cn(
-                  "size-4 transition-transform",
-                  settingsOpen ? "rotate-0" : "-rotate-90"
-                )}
-              />
-            </button>
-            {settingsOpen && (
-              <div className="ml-4 space-y-1 mt-1">
-                {settingsNavItems.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    pathname.startsWith(item.href + "/");
-                  const Icon = item.icon;
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-                        isActive
-                          ? "bg-accent text-accent-foreground font-medium"
-                          : "text-muted-foreground hover:bg-accent/50"
-                      )}
-                    >
-                      <Icon className="size-4" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        {settingsGroup && <NavGroup group={settingsGroup} pathname={pathname} />}
       </nav>
     </aside>
   );
