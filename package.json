@@ -7,7 +7,8 @@
     "build": "prisma migrate deploy; next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "reset-stock": "tsx scripts/reset-stock.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -64,6 +65,7 @@
     "prisma": "^7.3.0",
     "serwist": "^9.5.3",
     "tailwindcss": "^4",
+    "tsx": "^4.19.2",
     "typescript": "5.9.3"
   }
 }
