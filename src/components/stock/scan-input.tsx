@@ -53,6 +53,7 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, clo
   const inputRef = useRef<HTMLInputElement>(null);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCommit = useRef<{ code: string; at: number } | null>(null);
+  const reopenCameraRef = useRef(false);
 
   useEffect(() => {
     if (!autoFocus) return;
@@ -66,17 +67,23 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, clo
     return () => document.removeEventListener("visibilitychange", refocus);
   }, [autoFocus]);
 
-  // Re-focus once re-enabled — e.g. after a quantity prompt (rendered by the
-  // parent while `disabled`) is confirmed or cancelled, so the next scan can
-  // go straight into the input with no extra tap.
+  // Re-enabled once a quantity prompt (rendered by the parent while
+  // `disabled`) is confirmed or cancelled. Reopen the camera if that's what
+  // the previous scan came from, so a warehouse worker can keep scanning
+  // without tapping the camera button again each time; otherwise just
+  // refocus the text input for the next keyboard-wedge scan.
   useEffect(() => {
-    if (!disabled && autoFocus) {
-      inputRef.current?.focus();
+    if (disabled) return;
+    if (reopenCameraRef.current) {
+      reopenCameraRef.current = false;
+      setCameraOpen(true);
+      return;
     }
+    if (autoFocus) inputRef.current?.focus();
   }, [disabled, autoFocus]);
 
   const commit = useCallback(
-    async (code: string, opts?: { forceDuplicate?: boolean }) => {
+    async (code: string, opts?: { forceDuplicate?: boolean; fromCamera?: boolean }) => {
       const trimmed = code.trim();
       if (!trimmed) return;
 
@@ -102,7 +109,10 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, clo
         await onScan(trimmed);
         beep();
         if (navigator.vibrate) navigator.vibrate(40);
-        if (closeCameraOnScan) setCameraOpen(false);
+        if (opts?.fromCamera && closeCameraOnScan) {
+          reopenCameraRef.current = true;
+          setCameraOpen(false);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
       } finally {
@@ -174,7 +184,7 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, clo
       <CameraScanner
         open={cameraOpen}
         onOpenChange={setCameraOpen}
-        onDetect={(code) => commit(code)}
+        onDetect={(code) => commit(code, { fromCamera: true })}
       />
     </div>
   );
