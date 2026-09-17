@@ -34,8 +34,12 @@ export function ScanQuantityPrompt({
 }: ScanQuantityPromptProps) {
   const [quantity, setQuantity] = useState(1);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // The camera sheet just closed — make sure this doesn't end up off-screen
+    // below the fold on a phone.
+    containerRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
     inputRef.current?.focus();
     inputRef.current?.select();
   }, []);
@@ -46,7 +50,7 @@ export function ScanQuantityPrompt({
   };
 
   return (
-    <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+    <div ref={containerRef} className="rounded-lg border bg-muted/30 p-4 space-y-3">
       <div className="flex items-center gap-3">
         <div className="rounded bg-muted flex items-center justify-center size-10 shrink-0 text-muted-foreground">
           <Package className="size-5" />

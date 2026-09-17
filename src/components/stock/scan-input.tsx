@@ -1,19 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { ScanLine, Camera, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CameraScanner } from "./camera-scanner";
 
+export interface ScanInputHandle {
+  /** Reopen the camera sheet (e.g. after a scanned item's quantity is confirmed). */
+  openCamera: () => void;
+}
+
 interface ScanInputProps {
   /** Called with the raw scanned/typed code. Return a promise if async; a thrown/rejected value shows as an inline error. */
-  onScan: (code: string) => Promise<void> | void;
+  onScan: (code: string, meta: { fromCamera: boolean }) => Promise<void> | void;
   placeholder?: string;
   autoFocus?: boolean;
   disabled?: boolean;
-  /** Close the camera sheet after a successful scan — for single-shot flows where the result replaces the scanner rather than a growing list. */
-  closeCameraOnScan?: boolean;
+  ref?: React.Ref<ScanInputHandle>;
 }
 
 const DUPLICATE_WINDOW_MS = 1200;
@@ -45,7 +49,7 @@ function beep() {
  * focused text input, committed on Enter or fast-input idle) and a phone
  * camera (opened in a sheet, lazy-loaded only when used).
  */
-export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, closeCameraOnScan }: ScanInputProps) {
+export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, ref }: ScanInputProps) {
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +57,10 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, clo
   const inputRef = useRef<HTMLInputElement>(null);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCommit = useRef<{ code: string; at: number } | null>(null);
-  const reopenCameraRef = useRef(false);
+
+  useImperativeHandle(ref, () => ({
+    openCamera: () => setCameraOpen(true),
+  }));
 
   useEffect(() => {
     if (!autoFocus) return;
@@ -67,19 +74,13 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, clo
     return () => document.removeEventListener("visibilitychange", refocus);
   }, [autoFocus]);
 
-  // Re-enabled once a quantity prompt (rendered by the parent while
-  // `disabled`) is confirmed or cancelled. Reopen the camera if that's what
-  // the previous scan came from, so a warehouse worker can keep scanning
-  // without tapping the camera button again each time; otherwise just
-  // refocus the text input for the next keyboard-wedge scan.
+  // Re-focus once re-enabled — e.g. after a quantity prompt (rendered by the
+  // parent while `disabled`) is confirmed or cancelled, so the next
+  // keyboard-wedge scan can go straight into the input with no extra tap.
   useEffect(() => {
-    if (disabled) return;
-    if (reopenCameraRef.current) {
-      reopenCameraRef.current = false;
-      setCameraOpen(true);
-      return;
+    if (!disabled && autoFocus) {
+      inputRef.current?.focus();
     }
-    if (autoFocus) inputRef.current?.focus();
   }, [disabled, autoFocus]);
 
   const commit = useCallback(
@@ -106,13 +107,9 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, clo
       setBusy(true);
       setValue("");
       try {
-        await onScan(trimmed);
+        await onScan(trimmed, { fromCamera: !!opts?.fromCamera });
         beep();
         if (navigator.vibrate) navigator.vibrate(40);
-        if (opts?.fromCamera && closeCameraOnScan) {
-          reopenCameraRef.current = true;
-          setCameraOpen(false);
-        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
       } finally {
@@ -120,21 +117,26 @@ export function ScanInput({ onScan, placeholder, autoFocus = true, disabled, clo
         inputRef.current?.focus();
       }
     },
-    [onScan, closeCameraOnScan]
+    [onScan]
   );
 
-  // CameraScanner's capture loop restarts (stops and re-requests the camera
-  // stream) whenever its `onDetect` prop identity changes. `commit` above is
-  // recreated on every render (it closes over `onScan`, which callers pass
-  // as a fresh inline function), so handing it to CameraScanner directly
-  // would restart the camera mid-scan on every state update `commit` makes
-  // (setBusy/setValue/setCameraOpen) — including right when we're trying to
-  // close it after a successful scan. Route through a ref so the function
-  // identity handed to CameraScanner never changes.
-  const commitRef = useRef(commit);
-  commitRef.current = commit;
+  // The camera must close the instant a code is decoded, regardless of what
+  // resolving it later turns out to do (succeed, throw, whatever) — closing
+  // can't wait on that async result, or a failing scan leaves the camera
+  // open forever, re-detecting the same label every frame. Held in a ref so
+  // the function identity handed to CameraScanner never changes — otherwise
+  // its capture effect (keyed on identity) restarts the camera stream on
+  // every render `commit` causes, fighting the close.
+  const handleDetectRef = useRef((code: string) => {
+    setCameraOpen(false);
+    commit(code, { fromCamera: true });
+  });
+  handleDetectRef.current = (code: string) => {
+    setCameraOpen(false);
+    commit(code, { fromCamera: true });
+  };
   const handleCameraDetect = useCallback((code: string) => {
-    commitRef.current(code, { fromCamera: true });
+    handleDetectRef.current(code);
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

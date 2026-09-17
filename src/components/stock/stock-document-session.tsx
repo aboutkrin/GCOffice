@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -26,7 +26,7 @@ import {
   STOCK_DOCUMENT_STATUS_COLORS,
 } from "@/lib/constants";
 
-import { ScanInput } from "./scan-input";
+import { ScanInput, type ScanInputHandle } from "./scan-input";
 import { ScanQuantityPrompt } from "./scan-quantity-prompt";
 import { StockDocumentLineRow } from "./stock-document-line-row";
 import { StockCountVarianceSummary } from "./stock-count-variance-summary";
@@ -52,14 +52,16 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
   const [confirmPost, setConfirmPost] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [pendingScan, setPendingScan] = useState<
-    Extract<StockCodeResolution, { kind: "variant" | "product" }> | null
-  >(null);
+  const [pendingScan, setPendingScan] = useState<{
+    resolution: Extract<StockCodeResolution, { kind: "variant" | "product" }>;
+    fromCamera: boolean;
+  } | null>(null);
+  const scanInputRef = useRef<ScanInputHandle>(null);
 
   const isDraft = document.status === "DRAFT";
   const isIssueFromDocument = document.type === "ISSUE" && !!document.sourceDocumentId;
 
-  const handleScan = async (code: string) => {
+  const handleScan = async (code: string, meta: { fromCamera: boolean }) => {
     const resolution = await resolveStockCodeAction(code);
     if (resolution.kind === "not-found") {
       throw new Error(`ไม่พบสินค้าจากรหัส "${code}"`);
@@ -70,12 +72,12 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
     if (resolution.kind === "product-needs-variant") {
       throw new Error(`"${resolution.productName}" มีหลายสี กรุณาเลือกสีจากหน้ารายการสินค้า`);
     }
-    setPendingScan(resolution);
+    setPendingScan({ resolution, fromCamera: meta.fromCamera });
   };
 
   const handleConfirmQuantity = (quantity: number) => {
     if (!pendingScan) return;
-    const resolution = pendingScan;
+    const { resolution, fromCamera } = pendingScan;
     startTransition(async () => {
       try {
         await addStockDocumentLine(document.id, {
@@ -84,6 +86,7 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
           quantity,
         });
         setPendingScan(null);
+        if (fromCamera) scanInputRef.current?.openCamera();
         router.refresh();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
@@ -188,13 +191,13 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
         <Card>
           <CardContent className="pt-6 space-y-3">
             <ScanInput
+              ref={scanInputRef}
               onScan={handleScan}
               disabled={isPending || !!pendingScan}
-              closeCameraOnScan
             />
             {pendingScan && (
               <ScanQuantityPrompt
-                resolution={pendingScan}
+                resolution={pendingScan.resolution}
                 documentType={document.type}
                 pending={isPending}
                 onConfirm={handleConfirmQuantity}

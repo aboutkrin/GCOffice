@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -25,20 +26,43 @@ type DetectorLike = {
  * barcode-detector ponyfill (zxing-wasm), which is the only path on iOS
  * Safari. The wasm asset is served from /public/wasm (see src/app/sw.ts) so
  * it never fetches from a CDN — required for the offline PWA and any CSP.
+ *
+ * One-shot per open: the capture loop stops itself (camera track + rAF) the
+ * instant a code is decoded, and the sheet is left open only long enough to
+ * flash confirmation — the caller (ScanInput) closes it. To reopen for the
+ * next scan, the caller flips `open` again; if the same label is still in
+ * frame, decoding is suppressed until it either changes or leaves frame, so
+ * a re-opened camera doesn't immediately re-fire on the label the user just
+ * scanned.
  */
 export function CameraScanner({ open, onOpenChange, onDetect }: CameraScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const detectorRef = useRef<DetectorLike | null>(null);
   const rafRef = useRef<number | null>(null);
-  const lastDetectedRef = useRef<{ code: string; at: number } | null>(null);
+  const onDetectRef = useRef(onDetect);
+  const lastEmittedRef = useRef<string | null>(null);
+  const awaitingClearRef = useRef(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [flash, setFlash] = useState(false);
 
+  onDetectRef.current = onDetect;
+
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    let done = false;
+    awaitingClearRef.current = lastEmittedRef.current !== null;
+
+    function stopHardware() {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      if (videoRef.current) videoRef.current.srcObject = null;
+      detectorRef.current = null;
+    }
 
     async function start() {
       setStatus("loading");
@@ -91,24 +115,29 @@ export function CameraScanner({ open, onOpenChange, onDetect }: CameraScannerPro
     }
 
     function loop() {
-      if (cancelled || !videoRef.current || !detectorRef.current) return;
+      if (cancelled || done || !videoRef.current || !detectorRef.current) return;
       const video = videoRef.current;
       if (video.readyState >= 2) {
         detectorRef.current
           .detect(video)
           .then((codes) => {
-            if (cancelled || codes.length === 0) return;
-            const value = codes[0].rawValue;
-            const now = Date.now();
-            const last = lastDetectedRef.current;
-            if (last && last.code === value && now - last.at < 1200) {
-              // still within the input component's own dedupe window; skip re-emitting every frame
+            if (cancelled || done) return;
+            if (codes.length === 0) {
+              awaitingClearRef.current = false;
               return;
             }
-            lastDetectedRef.current = { code: value, at: now };
+            const value = codes[0].rawValue;
+            if (awaitingClearRef.current) {
+              if (value === lastEmittedRef.current) return;
+              awaitingClearRef.current = false;
+            }
+
+            done = true;
+            lastEmittedRef.current = value;
+            stopHardware();
             setFlash(true);
             setTimeout(() => setFlash(false), 400);
-            onDetect(value);
+            onDetectRef.current(value);
           })
           .catch(() => {
             // transient decode errors are expected on out-of-focus frames
@@ -121,12 +150,9 @@ export function CameraScanner({ open, onOpenChange, onDetect }: CameraScannerPro
 
     return () => {
       cancelled = true;
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-      detectorRef.current = null;
+      stopHardware();
     };
-  }, [open, onDetect]);
+  }, [open]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -155,6 +181,12 @@ export function CameraScanner({ open, onOpenChange, onDetect }: CameraScannerPro
               }`}
             />
           )}
+        </div>
+        <div className="px-4 pb-4">
+          <Button type="button" variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
+            <X className="size-4" />
+            ปิดกล้อง
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
