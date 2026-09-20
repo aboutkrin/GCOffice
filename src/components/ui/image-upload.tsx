@@ -5,7 +5,20 @@ import { ImagePlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { uploadImage, deleteImage } from "@/lib/upload";
+import {
+  isImageCandidate,
+  prepareImageFile,
+  type PrepareStage,
+} from "@/lib/image-file";
+import { IMAGE_ACCEPT_ATTRIBUTE } from "@/lib/image-formats";
+import { UPLOAD_ERROR_MESSAGES, uploadErrorMessage } from "@/lib/upload-errors";
 import { cn } from "@/lib/utils";
+
+const STAGE_LABELS: Record<PrepareStage | "uploading", string> = {
+  converting: "กำลังแปลงรูปภาพ...",
+  compressing: "กำลังย่อรูปภาพ...",
+  uploading: "กำลังอัปโหลด...",
+};
 
 interface ImageUploadProps {
   value: string;
@@ -23,25 +36,29 @@ export function ImageUpload({
   folder = "uploads",
   disabled = false,
 }: ImageUploadProps) {
-  const [isUploading, setIsUploading] = useState(false);
+  const [stage, setStage] = useState<PrepareStage | "uploading" | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(
     async (file: File) => {
-      if (!file.type.startsWith("image/")) {
-        toast.error("กรุณาเลือกไฟล์รูปภาพเท่านั้น");
+      if (!isImageCandidate(file)) {
+        toast.error(UPLOAD_ERROR_MESSAGES.INVALID_TYPE);
         return;
       }
 
-      setIsUploading(true);
+      setStage("uploading");
       try {
-        const url = await uploadImage(bucket, file, folder);
+        // Converts iPhone HEIC to JPEG and downsizes large photos;
+        // reports its own "converting"/"compressing" stages as it goes.
+        const prepared = await prepareImageFile(file, setStage);
+        setStage("uploading");
+        const url = await uploadImage(bucket, prepared, folder);
         onChange(url);
-      } catch (error: any) {
-        toast.error(error?.message ?? "อัปโหลดรูปภาพไม่สำเร็จ");
+      } catch (error) {
+        toast.error(uploadErrorMessage(error));
       } finally {
-        setIsUploading(false);
+        setStage(null);
       }
     },
     [bucket, folder, onChange]
@@ -78,6 +95,8 @@ export function ImageUpload({
     setIsDragging(false);
   }, []);
 
+  const isBusy = stage !== null;
+
   if (value) {
     return (
       <div className="relative inline-block">
@@ -108,7 +127,7 @@ export function ImageUpload({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept={IMAGE_ACCEPT_ATTRIBUTE}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -118,7 +137,7 @@ export function ImageUpload({
       />
       <button
         type="button"
-        disabled={isUploading || disabled}
+        disabled={isBusy || disabled}
         onClick={() => inputRef.current?.click()}
         onDrop={disabled ? undefined : handleDrop}
         onDragOver={disabled ? undefined : handleDragOver}
@@ -126,17 +145,17 @@ export function ImageUpload({
         className={cn(
           "flex size-40 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed text-muted-foreground transition-colors hover:border-primary hover:text-primary",
           isDragging && "border-primary bg-primary/5 text-primary",
-          isUploading && "pointer-events-none opacity-60",
+          isBusy && "pointer-events-none opacity-60",
           disabled && "cursor-not-allowed opacity-60 hover:border-inherit hover:text-muted-foreground"
         )}
       >
-        {isUploading ? (
+        {isBusy ? (
           <Loader2 className="size-8 animate-spin" />
         ) : (
           <ImagePlus className="size-8" />
         )}
         <span className="text-xs">
-          {isUploading ? "กำลังอัปโหลด..." : "อัปโหลดรูปภาพ"}
+          {stage ? STAGE_LABELS[stage] : "อัปโหลดรูปภาพ"}
         </span>
       </button>
     </>

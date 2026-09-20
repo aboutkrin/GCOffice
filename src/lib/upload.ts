@@ -1,5 +1,7 @@
 "use client";
 
+import { UploadError, type UploadErrorCode } from "@/lib/upload-errors";
+
 export async function uploadImage(
   bucket: "product-images" | "company-logos" | "signatures",
   file: File,
@@ -8,16 +10,30 @@ export async function uploadImage(
   const formData = new FormData();
   formData.append("file", file);
   formData.append("bucket", bucket);
+  formData.append("folder", folder);
 
-  const res = await fetch("/api/upload", {
-    method: "POST",
-    body: formData,
-  });
+  let res: Response;
+  try {
+    res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+  } catch (error) {
+    // Offline, DNS failure, request aborted by the browser
+    console.error("Upload request failed:", error);
+    throw new UploadError("NETWORK");
+  }
 
-  const data = await res.json();
+  // A platform-level error (e.g. a 413 from the edge) returns HTML, not JSON
+  let data: { url?: string; error?: string; code?: UploadErrorCode };
+  try {
+    data = await res.json();
+  } catch {
+    throw new UploadError(res.status === 413 ? "TOO_LARGE" : "NETWORK");
+  }
 
-  if (!res.ok) {
-    throw new Error(data.error || "Upload failed");
+  if (!res.ok || !data.url) {
+    throw new UploadError(data.code ?? "UNKNOWN");
   }
 
   return data.url;

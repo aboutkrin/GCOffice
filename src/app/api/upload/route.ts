@@ -1,6 +1,43 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  MAX_UPLOAD_BYTES,
+  extensionForMimeType,
+  resolveImageMimeType,
+} from "@/lib/image-formats";
+import {
+  UPLOAD_ERROR_MESSAGES,
+  type UploadErrorCode,
+  mapStorageError,
+} from "@/lib/upload-errors";
+
+/** Buckets the client may write to (uploads run with the service-role key). */
+const ALLOWED_BUCKETS = [
+  "product-images",
+  "company-logos",
+  "signatures",
+] as const;
+
+type AllowedBucket = (typeof ALLOWED_BUCKETS)[number];
+
+/** Folders the client may write into, so the path stays under our control. */
+const ALLOWED_FOLDERS = new Set([
+  "uploads",
+  "products",
+  "product-variants",
+  "logos",
+  "bank-logos",
+  "promptpay-qr",
+  "shop-logos",
+]);
+
+function fail(code: UploadErrorCode, status: number) {
+  return NextResponse.json(
+    { error: UPLOAD_ERROR_MESSAGES[code], code },
+    { status }
+  );
+}
 
 export async function POST(request: Request) {
   try {
@@ -12,28 +49,40 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: "กรุณาเข้าสู่ระบบ" },
-        { status: 401 }
-      );
+      return fail("UNAUTHENTICATED", 401);
     }
 
     // Read form data
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const bucket = (formData.get("bucket") as string) || "product-images";
+    const requestedBucket = (formData.get("bucket") as string) || "product-images";
+    const requestedFolder = (formData.get("folder") as string) || "uploads";
 
-    if (!file) {
-      return NextResponse.json(
-        { error: "กรุณาแนบไฟล์" },
-        { status: 400 }
-      );
+    if (!file || file.size === 0) {
+      return fail("NO_FILE", 400);
     }
 
-    // Generate unique filename
-    const extension = file.name.split(".").pop() || "png";
-    const uniqueName = `${crypto.randomUUID()}.${extension}`;
-    const path = `uploads/${uniqueName}`;
+    if (!ALLOWED_BUCKETS.includes(requestedBucket as AllowedBucket)) {
+      return fail("INVALID_TYPE", 400);
+    }
+    const bucket = requestedBucket as AllowedBucket;
+    const folder = ALLOWED_FOLDERS.has(requestedFolder)
+      ? requestedFolder
+      : "uploads";
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return fail("TOO_LARGE", 413);
+    }
+
+    // Resolve the real content type — browsers report "" for HEIC files
+    const contentType = resolveImageMimeType(file.name, file.type);
+    if (!contentType) {
+      return fail("INVALID_TYPE", 400);
+    }
+
+    // Generate unique filename from the resolved type, not the user's filename
+    const uniqueName = `${crypto.randomUUID()}.${extensionForMimeType(contentType)}`;
+    const path = `${folder}/${uniqueName}`;
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -44,15 +93,14 @@ export async function POST(request: Request) {
     const { error: uploadError } = await admin.storage
       .from(bucket)
       .upload(path, buffer, {
-        contentType: file.type,
+        contentType,
       });
 
     if (uploadError) {
+      // Log the raw English message; the user only sees the Thai one.
       console.error("Upload error:", uploadError);
-      return NextResponse.json(
-        { error: `อัปโหลดไม่สำเร็จ: ${uploadError.message}` },
-        { status: 500 }
-      );
+      const code = mapStorageError(uploadError);
+      return fail(code, code === "TOO_LARGE" ? 413 : 500);
     }
 
     // Get public URL
@@ -67,9 +115,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Upload error:", error);
-    return NextResponse.json(
-      { error: "เกิดข้อผิดพลาดในการอัปโหลด" },
-      { status: 500 }
-    );
+    return fail("UNKNOWN", 500);
   }
 }
