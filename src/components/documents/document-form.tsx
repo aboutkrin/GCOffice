@@ -36,7 +36,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
-import { CalendarIcon, Save, FileText, Loader2, AlertTriangle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { DecimalInput } from "@/components/ui/decimal-input";
+import { CalendarIcon, Save, FileText, Loader2, AlertTriangle, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
 import { formatBaht } from "@/lib/thai-currency";
@@ -67,6 +69,21 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+interface DepositDeductionRow {
+  id: string;
+  /** Set when this row links to a deposit invoice already issued in GCOffice; the
+   * server always re-reads that document's grandTotal, ignoring `amount` here. */
+  depositDocumentId?: string;
+  label: string;
+  taxInvoiceNumber?: string;
+  amount: number;
+  checked: boolean;
+  depositDate?: string;
+  /** true for a manually-added row (label/amount editable); false for a linked
+   * deposit invoice candidate (label/amount are read-only, only checked toggles). */
+  editable: boolean;
+}
 
 interface DocumentFormProps {
   type: "QUOTATION" | "INVOICE" | "RECEIPT";
@@ -149,6 +166,37 @@ export function DocumentForm({
     initialData?.customInvoiceNumber || ""
   );
 
+  // Deposit invoice (ใบแจ้งหนี้มัดจำ) — INVOICE only. Immutable after creation
+  // (see the edit-mode gating on the toggle below).
+  const [isDepositInvoice, setIsDepositInvoice] = useState<boolean>(
+    initialData?.isDepositInvoice ?? false
+  );
+  const [taxInvoiceNumber, setTaxInvoiceNumber] = useState<string>(
+    initialData?.isDepositInvoice ? initialData?.documentNumber || "" : ""
+  );
+  const [depositBasisType, setDepositBasisType] = useState<"PERCENTAGE" | "AMOUNT">("PERCENTAGE");
+  const [depositBasisValue, setDepositBasisValue] = useState<number>(
+    initialData?.depositPercent ? Number(initialData.depositPercent) : 50
+  );
+  // The quotation object backing the current selection — kept around so the
+  // deposit toggle / basis inputs can recompute items & terms without re-fetching.
+  const [selectedQuotation, setSelectedQuotation] = useState<any | null>(null);
+
+  const [depositDeductionRows, setDepositDeductionRows] = useState<DepositDeductionRow[]>(
+    initialData?.depositDeductions
+      ? initialData.depositDeductions.map((d: any) => ({
+          id: d.id || Math.random().toString(36).substr(2, 9),
+          depositDocumentId: d.depositDocumentId || undefined,
+          label: d.label,
+          taxInvoiceNumber: d.taxInvoiceNumber || undefined,
+          amount: Number(d.amount) || 0,
+          checked: true,
+          depositDate: d.depositDate || undefined,
+          editable: !d.depositDocumentId,
+        }))
+      : []
+  );
+
   const isEditing = !!initialData;
 
   // Initialize line items from existing data
@@ -229,6 +277,13 @@ export function DocumentForm({
     }
   }, [selectedCompanyId, companies, isEditing]);
 
+  // A deposit invoice never deducts anything itself (enforced in validators.ts).
+  const depositDeduction = isDepositInvoice
+    ? 0
+    : depositDeductionRows
+        .filter((r) => r.checked)
+        .reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+
   const pricing = usePricing({
     subtotal,
     discountType,
@@ -236,12 +291,15 @@ export function DocumentForm({
     vatEnabled,
     vatRate,
     shippingCost,
+    depositDeduction,
   });
 
-  // Recalculate payment terms when grand total changes
+  // Recalculate payment terms against the net payable (grand total minus any
+  // deposit already invoiced) so the "ยอดรวมงวดชำระไม่ตรงกับยอดสุทธิ" check
+  // in payment-terms.tsx compares against what's actually still owed.
   useEffect(() => {
-    recalculate(pricing.grandTotal);
-  }, [pricing.grandTotal, recalculate]);
+    recalculate(pricing.netPayable);
+  }, [pricing.netPayable, recalculate]);
 
   // Watch documentDate for delivery date calculation
   const documentDate = form.watch("documentDate");
@@ -265,9 +323,9 @@ export function DocumentForm({
   const handleUpdateTerm = useCallback(
     (id: string, updates: Partial<PaymentTerm>) => {
       updateTerm(id, updates);
-      recalculate(pricing.grandTotal);
+      recalculate(pricing.netPayable);
     },
-    [updateTerm, recalculate, pricing.grandTotal]
+    [updateTerm, recalculate, pricing.netPayable]
   );
 
   const handleApplyTemplate = useCallback(
@@ -280,34 +338,73 @@ export function DocumentForm({
         value: Number(item.value) || 0,
         calculatedAmount:
           item.type === "PERCENTAGE"
-            ? pricing.grandTotal * (Number(item.value) / 100)
+            ? pricing.netPayable * (Number(item.value) / 100)
             : Number(item.value),
         note: item.note || undefined,
       }));
       setTerms(newTerms);
     },
-    [setTerms, pricing.grandTotal]
+    [setTerms, pricing.netPayable]
   );
 
-  const handleQuotationSelect = (quotationId: string) => {
-    const q = quotations?.find((q: any) => q.id === quotationId);
-    if (!q) return;
+  // ── Deposit invoice line item / term generation ──────────────────────────
+  const computeDepositAmount = (
+    q: any,
+    basisType: "PERCENTAGE" | "AMOUNT",
+    basisValue: number
+  ) => {
+    // Pre-VAT base of the quotation, so VAT lands on the deposit itself when
+    // this invoice's own vatEnabled/vatRate (copied from the quotation) applies.
+    const afterDiscount = q.vatEnabled
+      ? Number(q.grandTotal) / (1 + Number(q.vatRate) / 100)
+      : Number(q.grandTotal);
+    return basisType === "PERCENTAGE" ? afterDiscount * (basisValue / 100) : basisValue;
+  };
 
-    setSourceQuotationId(quotationId);
+  const buildDepositLineItem = (
+    q: any,
+    basisType: "PERCENTAGE" | "AMOUNT",
+    basisValue: number
+  ): LineItem => {
+    const amount = computeDepositAmount(q, basisType, basisValue);
+    const basisLabel = basisType === "PERCENTAGE" ? `${basisValue}%` : formatBaht(basisValue);
+    return {
+      id: Math.random().toString(36).substr(2, 9),
+      sequence: 1,
+      productName: `เงินมัดจำ ${basisLabel} ตามใบเสนอราคาเลขที่ ${q.documentNumber}`,
+      showImage: false,
+      quantity: 1,
+      unitPrice: amount,
+      lineTotal: amount,
+    };
+  };
 
-    // Pre-fill company and customer
-    form.setValue("companyId", q.companyId);
-    form.setValue("customerId", q.customerId);
+  // Fill items & payment terms from the selected quotation, branching on
+  // whether this is a deposit invoice (one generated line + a single
+  // full-payment term) or a normal/final invoice (full copy, as before).
+  const applyQuotationLineItemsAndTerms = (
+    q: any,
+    depositMode: boolean,
+    basisType: "PERCENTAGE" | "AMOUNT",
+    basisValue: number
+  ) => {
+    if (depositMode) {
+      setItems([buildDepositLineItem(q, basisType, basisValue)]);
+      // 100% so the existing grandTotal-recalculation effect keeps it in sync
+      // with the deposit line as the basis % / ฿ changes.
+      setTerms([
+        {
+          id: Math.random().toString(36).substr(2, 9),
+          sequence: 1,
+          name: "ชำระเต็มจำนวน",
+          type: "PERCENTAGE",
+          value: 100,
+          calculatedAmount: computeDepositAmount(q, basisType, basisValue),
+        },
+      ]);
+      return;
+    }
 
-    // Pre-fill VAT settings
-    form.setValue("vatEnabled", q.vatEnabled);
-    form.setValue("vatRate", Number(q.vatRate));
-
-    // Pre-fill discount
-    setDiscountType(q.discountType || null);
-    setDiscountValue(q.discountValue ? Number(q.discountValue) : 0);
-
-    // Pre-fill line items
     const newItems = q.lineItems.map((item: any, idx: number) => ({
       id: Math.random().toString(36).substr(2, 9),
       sequence: idx + 1,
@@ -324,7 +421,6 @@ export function DocumentForm({
     }));
     setItems(newItems);
 
-    // Pre-fill payment terms
     const newTerms = q.paymentTerms.map((term: any, idx: number) => ({
       id: Math.random().toString(36).substr(2, 9),
       sequence: idx + 1,
@@ -335,18 +431,116 @@ export function DocumentForm({
       note: term.note || undefined,
     }));
     setTerms(newTerms);
+  };
+
+  const handleDepositInvoiceToggle = (checked: boolean) => {
+    setIsDepositInvoice(checked);
+    if (selectedQuotation) {
+      applyQuotationLineItemsAndTerms(selectedQuotation, checked, depositBasisType, depositBasisValue);
+    }
+    if (checked) {
+      // A deposit invoice never carries shipping or a deduction of its own.
+      setShippingCost(0);
+      setFreeShipping(false);
+      setPickupAtShowroom(false);
+      setShippingLocation("");
+      setFreeShippingLocation("");
+      setShippingError("");
+    }
+  };
+
+  const handleDepositBasisTypeChange = (val: "PERCENTAGE" | "AMOUNT") => {
+    setDepositBasisType(val);
+    if (selectedQuotation && isDepositInvoice) {
+      applyQuotationLineItemsAndTerms(selectedQuotation, true, val, depositBasisValue);
+    }
+  };
+
+  const handleDepositBasisValueChange = (val: number) => {
+    setDepositBasisValue(val);
+    if (selectedQuotation && isDepositInvoice) {
+      applyQuotationLineItemsAndTerms(selectedQuotation, true, depositBasisType, val);
+    }
+  };
+
+  // ── Deduct-deposit-on-final-invoice row management ───────────────────────
+  const toggleDeductionRow = (id: string) => {
+    setDepositDeductionRows((rows) =>
+      rows.map((r) => (r.id === id ? { ...r, checked: !r.checked } : r))
+    );
+  };
+
+  const addManualDeductionRow = () => {
+    setDepositDeductionRows((rows) => [
+      ...rows,
+      {
+        id: Math.random().toString(36).substr(2, 9),
+        label: "",
+        amount: 0,
+        checked: true,
+        editable: true,
+      },
+    ]);
+  };
+
+  const updateManualDeductionRow = (id: string, updates: Partial<DepositDeductionRow>) => {
+    setDepositDeductionRows((rows) =>
+      rows.map((r) => (r.id === id ? { ...r, ...updates } : r))
+    );
+  };
+
+  const removeDeductionRow = (id: string) => {
+    setDepositDeductionRows((rows) => rows.filter((r) => r.id !== id));
+  };
+
+  const handleQuotationSelect = (quotationId: string) => {
+    const q = quotations?.find((q: any) => q.id === quotationId);
+    if (!q) return;
+
+    setSourceQuotationId(quotationId);
+    setSelectedQuotation(q);
+
+    // Pre-fill company and customer
+    form.setValue("companyId", q.companyId);
+    form.setValue("customerId", q.customerId);
+
+    // Pre-fill VAT settings
+    form.setValue("vatEnabled", q.vatEnabled);
+    form.setValue("vatRate", Number(q.vatRate));
+
+    // Pre-fill discount
+    setDiscountType(q.discountType || null);
+    setDiscountValue(q.discountValue ? Number(q.discountValue) : 0);
+
+    applyQuotationLineItemsAndTerms(q, isDepositInvoice, depositBasisType, depositBasisValue);
 
     // Pre-fill footer notes, shipping, and production day settings
     setFooterNotes(q.footerNotes || "");
-    setShippingCost(q.shippingCost ? Number(q.shippingCost) : 0);
-    setFreeShipping(q.freeShipping ?? false);
-    setShippingLocation(q.shippingLocation || "");
-    setFreeShippingLocation(q.freeShippingLocation || "");
-    setPickupAtShowroom(q.pickupAtShowroom ?? false);
+    if (!isDepositInvoice) {
+      setShippingCost(q.shippingCost ? Number(q.shippingCost) : 0);
+      setFreeShipping(q.freeShipping ?? false);
+      setShippingLocation(q.shippingLocation || "");
+      setFreeShippingLocation(q.freeShippingLocation || "");
+      setPickupAtShowroom(q.pickupAtShowroom ?? false);
+    }
     setProductionDaysMin(q.productionDaysMin ?? null);
     setProductionDaysMax(q.productionDaysMax ?? null);
     setSkipWeekends(q.skipWeekends ?? false);
     setSkipHolidays(q.skipHolidays ?? false);
+
+    // Deposit invoices already issued off this quotation — candidates to
+    // deduct on the final invoice (there can be several).
+    const candidateRows: DepositDeductionRow[] = (q.invoices || []).map((inv: any) => ({
+      id: inv.id,
+      depositDocumentId: inv.id,
+      label: `เงินมัดจำ${inv.depositPercent ? ` ${Number(inv.depositPercent)}%` : ""} ตามใบแจ้งหนี้เลขที่ ${inv.documentNumber}`,
+      taxInvoiceNumber: inv.documentNumber,
+      amount: Number(inv.grandTotal),
+      checked: true,
+      depositDate: inv.documentDate,
+      editable: false,
+    }));
+    setDepositDeductionRows(candidateRows);
   };
 
   const handleInvoiceSelect = (invoiceId: string) => {
@@ -410,6 +604,12 @@ export function DocumentForm({
   };
 
   const assembleData = (formData: FormData) => {
+    const checkedDeductions = !isDepositInvoice
+      ? depositDeductionRows.filter(
+          (r) => r.checked && (r.depositDocumentId || (r.label.trim() && r.amount > 0))
+        )
+      : [];
+
     return {
       type,
       documentDate: formData.documentDate,
@@ -418,15 +618,18 @@ export function DocumentForm({
       customInvoiceNumber: type === "RECEIPT" ? customInvoiceNumber || undefined : undefined,
       sourceQuotationId: type === "INVOICE" ? sourceQuotationId : undefined,
       sourceInvoiceId: type === "RECEIPT" ? sourceInvoiceId : undefined,
+      isDepositInvoice: type === "INVOICE" ? isDepositInvoice : undefined,
+      taxInvoiceNumber: isDepositInvoice ? taxInvoiceNumber.trim() || undefined : undefined,
+      depositPercent: isDepositInvoice && depositBasisType === "PERCENTAGE" ? depositBasisValue : undefined,
       discountType,
       discountValue,
       vatEnabled: formData.vatEnabled,
       vatRate: formData.vatRate,
-      shippingCost: pickupAtShowroom || freeShipping ? 0 : shippingCost,
-      shippingLocation: !pickupAtShowroom && !freeShipping && shippingCost > 0 ? shippingLocation || undefined : undefined,
-      freeShipping: !pickupAtShowroom && freeShipping,
-      freeShippingLocation: !pickupAtShowroom && freeShipping ? freeShippingLocation || undefined : undefined,
-      pickupAtShowroom,
+      shippingCost: isDepositInvoice || pickupAtShowroom || freeShipping ? 0 : shippingCost,
+      shippingLocation: !isDepositInvoice && !pickupAtShowroom && !freeShipping && shippingCost > 0 ? shippingLocation || undefined : undefined,
+      freeShipping: !isDepositInvoice && !pickupAtShowroom && freeShipping,
+      freeShippingLocation: !isDepositInvoice && !pickupAtShowroom && freeShipping ? freeShippingLocation || undefined : undefined,
+      pickupAtShowroom: !isDepositInvoice && pickupAtShowroom,
       footerNotes: footerNotes || undefined,
       productionDays: productionDaysText || undefined,
       productionDaysMin: productionDaysMin ?? undefined,
@@ -461,6 +664,17 @@ export function DocumentForm({
               note: term.note,
             }))
           : undefined,
+      depositDeductions:
+        checkedDeductions.length > 0
+          ? checkedDeductions.map((r, idx) => ({
+              sequence: idx + 1,
+              depositDocumentId: r.depositDocumentId,
+              label: r.label,
+              taxInvoiceNumber: r.taxInvoiceNumber,
+              amount: r.amount,
+              depositDate: r.depositDate ? new Date(r.depositDate) : undefined,
+            }))
+          : undefined,
     };
   };
 
@@ -475,6 +689,11 @@ export function DocumentForm({
       return;
     }
 
+    if (isDepositInvoice && !taxInvoiceNumber.trim()) {
+      alert("กรุณาระบุเลขที่ใบกำกับภาษี");
+      return;
+    }
+
     if (items.length === 0) {
       alert("กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ");
       return;
@@ -486,8 +705,8 @@ export function DocumentForm({
       return;
     }
 
-    // Validate shipping
-    if (!pickupAtShowroom && !freeShipping && shippingCost <= 0) {
+    // Validate shipping — a deposit invoice never carries shipping.
+    if (!isDepositInvoice && !pickupAtShowroom && !freeShipping && shippingCost <= 0) {
       setShippingError("กรุณาระบุค่าจัดส่ง หรือเลือก จัดส่งฟรี หรือ รับเองที่โชว์รูม");
       const el = document.getElementById("shipping-section");
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -595,7 +814,168 @@ export function DocumentForm({
                     <span>ไม่มีใบเสนอราคาที่ยืนยันแล้ว กรุณายืนยันใบเสนอราคาก่อนสร้างใบแจ้งหนี้</span>
                   </div>
                 )}
+
+                {/* Deposit invoice toggle — one generated line for the deposit
+                    amount, with a manually-typed tax-invoice number. */}
+                {sourceQuotationId && (
+                  <div className="mt-4 rounded-lg border p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-medium">
+                          ใบแจ้งหนี้มัดจำ (ออกใบกำกับภาษี)
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          ออกใบแจ้งหนี้/ใบกำกับภาษีสำหรับเงินมัดจำที่ได้รับ แทนที่จะเป็นใบแจ้งหนี้เต็มจำนวน
+                        </p>
+                      </div>
+                      <Switch
+                        checked={isDepositInvoice}
+                        onCheckedChange={handleDepositInvoiceToggle}
+                      />
+                    </div>
+
+                    {isDepositInvoice && (
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">
+                            เลขที่ใบกำกับภาษี <span className="text-destructive">*</span>
+                          </Label>
+                          <Input
+                            value={taxInvoiceNumber}
+                            onChange={(e) => setTaxInvoiceNumber(e.target.value)}
+                            placeholder="เช่น A6809-001"
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">เกณฑ์เงินมัดจำ</Label>
+                          <Select
+                            value={depositBasisType}
+                            onValueChange={(val) =>
+                              handleDepositBasisTypeChange(val as "PERCENTAGE" | "AMOUNT")
+                            }
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PERCENTAGE">เปอร์เซ็นต์ (%)</SelectItem>
+                              <SelectItem value="AMOUNT">จำนวนเงิน (฿)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">ค่า</Label>
+                          <DecimalInput
+                            value={depositBasisValue || ""}
+                            onChange={handleDepositBasisValueChange}
+                            placeholder={depositBasisType === "PERCENTAGE" ? "%" : "฿"}
+                            className="h-9"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <Separator className="mt-4" />
+              </div>
+            )}
+
+            {/* Deduct deposit(s) already invoiced — final invoice only (new or edit) */}
+            {type === "INVOICE" && !isDepositInvoice && (sourceQuotationId || isEditing) && (
+              <div className="mb-4">
+                <div className="rounded-lg border p-3 space-y-3">
+                  <Label className="text-sm font-medium">หักเงินมัดจำที่ชำระแล้ว</Label>
+                  <div className="space-y-2">
+                    {depositDeductionRows.map((row) =>
+                      row.editable ? (
+                        <div
+                          key={row.id}
+                          className="flex flex-col sm:flex-row items-start sm:items-end gap-2 p-2 rounded-md border bg-muted/30"
+                        >
+                          <div className="flex-1 w-full space-y-1">
+                            <Label className="text-xs text-muted-foreground">รายการหัก</Label>
+                            <Input
+                              value={row.label}
+                              onChange={(e) =>
+                                updateManualDeductionRow(row.id, { label: e.target.value })
+                              }
+                              placeholder="เช่น เงินมัดจำตามใบกำกับภาษี A6809-001"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="w-full sm:w-[160px] space-y-1">
+                            <Label className="text-xs text-muted-foreground">จำนวนเงิน (฿)</Label>
+                            <DecimalInput
+                              value={row.amount || ""}
+                              onChange={(val) => updateManualDeductionRow(row.id, { amount: val })}
+                              placeholder="กรอกจำนวนเงิน"
+                              className="h-9"
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeDeductionRow(row.id)}
+                            className="text-destructive hover:text-destructive shrink-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          key={row.id}
+                          className="flex items-center justify-between gap-2 p-2 rounded-md border bg-muted/30"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Switch
+                              checked={row.checked}
+                              onCheckedChange={() => toggleDeductionRow(row.id)}
+                            />
+                            <div className="min-w-0">
+                              <div className="text-sm truncate">{row.label}</div>
+                              {row.depositDate && (
+                                <div className="text-xs text-muted-foreground">
+                                  {formatThaiDate(new Date(row.depositDate), "short")}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-sm font-medium shrink-0">
+                            {formatBaht(row.amount)}
+                          </div>
+                        </div>
+                      )
+                    )}
+                    {depositDeductionRows.length === 0 && (
+                      <p className="text-sm text-muted-foreground">ไม่มีเงินมัดจำที่ต้องหัก</p>
+                    )}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addManualDeductionRow}
+                    className="gap-1"
+                  >
+                    <Plus className="h-4 w-4" />
+                    เพิ่มรายการหักด้วยตนเอง
+                  </Button>
+                </div>
+                <Separator className="mt-4" />
+              </div>
+            )}
+
+            {/* Deposit invoice indicator — edit mode. isDepositInvoice / the
+                tax-invoice number are immutable after creation. */}
+            {type === "INVOICE" && isEditing && initialData?.isDepositInvoice && (
+              <div className="mb-4 flex items-center gap-2 p-3 rounded-md border border-amber-300 bg-amber-50 text-amber-800 text-sm">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>
+                  เอกสารนี้เป็นใบแจ้งหนี้มัดจำ เลขที่ใบกำกับภาษี: {initialData.documentNumber ?? "ร่าง"}
+                </span>
               </div>
             )}
 
@@ -821,6 +1201,8 @@ export function DocumentForm({
               vatAmount={pricing.vatAmount}
               shippingCost={shippingCost}
               grandTotal={pricing.grandTotal}
+              depositDeduction={depositDeduction}
+              netPayable={pricing.netPayable}
             />
           </CardContent>
         </Card>
@@ -837,7 +1219,7 @@ export function DocumentForm({
               removeTerm={removeTerm}
               updateTerm={handleUpdateTerm}
               totalAmount={paymentTotalAmount}
-              grandTotal={pricing.grandTotal}
+              grandTotal={pricing.netPayable}
               paymentTermTemplates={paymentTermTemplates}
               onApplyTemplate={(tpl) => {
                 handleApplyTemplate(tpl);

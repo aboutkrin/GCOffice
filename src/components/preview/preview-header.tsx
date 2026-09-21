@@ -32,6 +32,7 @@ interface PreviewHeaderProps {
   company: CompanySnapshot;
   documentType: string;
   vatEnabled?: boolean;
+  isDepositInvoice?: boolean;
   copyLabel?: string;
 }
 
@@ -39,6 +40,7 @@ export function PreviewHeader({
   company,
   documentType,
   vatEnabled,
+  isDepositInvoice,
   copyLabel,
 }: PreviewHeaderProps) {
   let typeLabel: string;
@@ -46,10 +48,13 @@ export function PreviewHeader({
     typeLabel = vatEnabled
       ? "ใบเสร็จรับเงิน/ใบกำกับภาษี"
       : "ใบเสร็จรับเงิน";
+  } else if (documentType === "INVOICE" && isDepositInvoice) {
+    typeLabel = vatEnabled ? "ใบแจ้งหนี้มัดจำ/ใบกำกับภาษี" : "ใบแจ้งหนี้มัดจำ";
   } else {
     typeLabel = DOCUMENT_TYPE_LABELS[documentType] || documentType;
   }
 
+  const isTaxInvoice = documentType === "RECEIPT" || isDepositInvoice;
   const isLongName = company.name.length > 25;
 
   return (
@@ -72,10 +77,10 @@ export function PreviewHeader({
           </h1>
         </div>
         <div className="text-right shrink-0">
-          <h2 className={`font-bold text-primary ${documentType === "RECEIPT" ? "text-xs sm:text-base" : "text-lg sm:text-2xl"}`}>
+          <h2 className={`font-bold text-primary ${isTaxInvoice ? "text-xs sm:text-base" : "text-lg sm:text-2xl"}`}>
             {typeLabel}
           </h2>
-          {documentType === "RECEIPT" && copyLabel && (
+          {isTaxInvoice && copyLabel && (
             <p className="text-xs sm:text-sm text-primary/80">({copyLabel})</p>
           )}
         </div>

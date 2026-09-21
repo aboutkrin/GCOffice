@@ -63,6 +63,13 @@ interface PaymentTerm {
   note?: string;
 }
 
+interface DepositDeduction {
+  sequence: number;
+  label: string;
+  taxInvoiceNumber?: string | null;
+  amount: number;
+}
+
 export interface DocumentData {
   id: string;
   type: "QUOTATION" | "INVOICE" | "RECEIPT";
@@ -85,6 +92,10 @@ export interface DocumentData {
   freeShippingLocation?: string | null;
   pickupAtShowroom?: boolean;
   grandTotal: number;
+  isDepositInvoice?: boolean;
+  depositDeduction?: number;
+  netPayable?: number;
+  depositDeductions?: DepositDeduction[];
   footerNotes?: string;
   productionDays?: string;
   deliveryDateStart?: Date;
@@ -119,9 +130,12 @@ const CONTENT_HEIGHT_PX =
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
-function documentTypeLabel(documentType: string, vatEnabled?: boolean): string {
+function documentTypeLabel(documentType: string, vatEnabled?: boolean, isDepositInvoice?: boolean): string {
   if (documentType === "RECEIPT") {
     return vatEnabled ? "ใบเสร็จรับเงิน/ใบกำกับภาษี" : "ใบเสร็จรับเงิน";
+  }
+  if (documentType === "INVOICE" && isDepositInvoice) {
+    return vatEnabled ? "ใบแจ้งหนี้มัดจำ/ใบกำกับภาษี" : "ใบแจ้งหนี้มัดจำ";
   }
   return DOCUMENT_TYPE_LABELS[documentType] || documentType;
 }
@@ -131,12 +145,14 @@ function ContinuationHeader({
   company,
   documentType,
   vatEnabled,
+  isDepositInvoice,
   documentNumber,
   documentDate,
 }: {
   company: CompanySnapshot;
   documentType: string;
   vatEnabled?: boolean;
+  isDepositInvoice?: boolean;
   documentNumber: string | null;
   documentDate: Date;
 }) {
@@ -165,7 +181,7 @@ function ContinuationHeader({
       </div>
       <div className="shrink-0 text-right">
         <div className="text-xs font-bold text-primary">
-          {documentTypeLabel(documentType, vatEnabled)} (ต่อ)
+          {documentTypeLabel(documentType, vatEnabled, isDepositInvoice)} (ต่อ)
         </div>
         <div className="text-[9px] text-gray-500">
           เลขที่ {documentNumber ?? "ร่าง"} · {formatThaiDate(new Date(documentDate))}
@@ -307,6 +323,8 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           freeShippingLocation={doc.freeShippingLocation}
           pickupAtShowroom={doc.pickupAtShowroom}
           grandTotal={doc.grandTotal}
+          depositDeductions={doc.depositDeductions}
+          netPayable={doc.netPayable}
         />
         <PreviewPayment
           paymentTerms={doc.paymentTerms}
@@ -355,6 +373,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
                     company={doc.companySnapshot}
                     documentType={doc.type}
                     vatEnabled={doc.vatEnabled}
+                    isDepositInvoice={doc.isDepositInvoice}
                     copyLabel={copyLabel}
                   />
                   <PreviewCustomer
@@ -370,6 +389,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
                   company={doc.companySnapshot}
                   documentType={doc.type}
                   vatEnabled={doc.vatEnabled}
+                  isDepositInvoice={doc.isDepositInvoice}
                   documentNumber={doc.documentNumber}
                   documentDate={doc.documentDate}
                 />
@@ -400,6 +420,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
               company={doc.companySnapshot}
               documentType={doc.type}
               vatEnabled={doc.vatEnabled}
+              isDepositInvoice={doc.isDepositInvoice}
               copyLabel={copyLabel}
             />
             <PreviewCustomer
@@ -415,6 +436,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
               company={doc.companySnapshot}
               documentType={doc.type}
               vatEnabled={doc.vatEnabled}
+              isDepositInvoice={doc.isDepositInvoice}
               documentNumber={doc.documentNumber}
               documentDate={doc.documentDate}
             />

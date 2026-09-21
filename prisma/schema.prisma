@@ -243,6 +243,20 @@ model Document {
   pickupAtShowroom     Boolean  @default(false) @map("pickup_at_showroom")
   grandTotal     Decimal       @default(0) @map("grand_total") @db.Decimal(12, 2)
 
+  /// Deposit VAT invoice: a normal INVOICE flagged as a deposit, carrying one
+  /// generated line for the deposit amount, whose documentNumber is a
+  /// manually-typed tax-invoice number instead of the auto INV-YYMM-NNNN.
+  isDepositInvoice Boolean  @default(false) @map("is_deposit_invoice")
+  depositPercent   Decimal? @map("deposit_percent") @db.Decimal(5, 2)
+  /// Sum of deposit invoices (or manual rows) deducted on this document, and
+  /// grandTotal - depositDeduction. netPayable is always populated (equals
+  /// grandTotal when there is no deduction) so it can be summed for revenue.
+  depositDeduction Decimal  @default(0) @map("deposit_deduction") @db.Decimal(12, 2)
+  netPayable       Decimal  @default(0) @map("net_payable") @db.Decimal(12, 2)
+
+  depositDeductions DocumentDepositDeduction[] @relation("DepositDeductionOnDocument")
+  deductedOn        DocumentDepositDeduction[] @relation("DepositDeductedBy")
+
   footerNotes       String?   @map("footer_notes") @db.Text
   productionDays    String?   @map("production_days")
   productionDaysMin Int?      @map("production_days_min")
@@ -340,6 +354,28 @@ model DocumentPaymentTerm {
 
   @@index([documentId])
   @@map("document_payment_terms")
+}
+
+model DocumentDepositDeduction {
+  id         String   @id @default(cuid())
+  documentId String   @map("document_id")
+  document   Document @relation("DepositDeductionOnDocument", fields: [documentId], references: [id], onDelete: Cascade)
+
+  sequence          Int
+  /// Nullable: a deposit invoiced outside GCOffice is deducted as a manual
+  /// row with no link, using the typed amount as-is.
+  depositDocumentId String?   @map("deposit_document_id")
+  depositDocument   Document? @relation("DepositDeductedBy", fields: [depositDocumentId], references: [id])
+  label             String
+  taxInvoiceNumber  String?   @map("tax_invoice_number")
+  amount            Decimal   @db.Decimal(12, 2)
+  depositDate       DateTime? @map("deposit_date") @db.Date
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([documentId])
+  @@map("document_deposit_deductions")
 }
 
 // ============================================================

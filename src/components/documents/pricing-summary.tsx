@@ -24,6 +24,9 @@ interface PricingSummaryProps {
   vatAmount: number;
   shippingCost?: number;
   grandTotal: number;
+  /** Deposit(s) already invoiced, deducted after รวมทั้งสิ้น. */
+  depositDeduction?: number;
+  netPayable?: number;
 }
 
 export function PricingSummary({
@@ -39,6 +42,8 @@ export function PricingSummary({
   vatAmount,
   shippingCost = 0,
   grandTotal,
+  depositDeduction = 0,
+  netPayable,
 }: PricingSummaryProps) {
   return (
     <div className="space-y-3">
@@ -135,6 +140,26 @@ export function PricingSummary({
           </span>
         </div>
       </div>
+
+      {/* Deposit deduction + net payable */}
+      {depositDeduction > 0 && (
+        <>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">หัก เงินมัดจำที่ชำระแล้ว</span>
+            <span className="text-sm font-medium text-red-600">
+              -{formatNumber(depositDeduction)} บาท
+            </span>
+          </div>
+          <div className="border-t pt-3">
+            <div className="flex items-center justify-between">
+              <span className="text-base font-semibold">ยอดคงเหลือที่ต้องชำระ</span>
+              <span className="text-xl font-bold text-primary">
+                {formatNumber(netPayable ?? grandTotal - depositDeduction)} บาท
+              </span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

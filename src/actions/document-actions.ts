@@ -20,6 +20,46 @@ function formatZodError(error: ZodError): string {
     .join(", ");
 }
 
+type DepositDeductionInput = {
+  sequence: number;
+  depositDocumentId?: string | null;
+  label: string;
+  taxInvoiceNumber?: string;
+  amount: number;
+  depositDate?: Date | null;
+};
+
+/**
+ * Resolve the amount to deduct for each deposit deduction row. Rows linked to
+ * a deposit invoice always use that document's stored grandTotal — never the
+ * client-supplied amount — so a stale/tampered client payload can't skew the
+ * net payable. Manual (unlinked) rows keep the typed amount as-is.
+ */
+async function resolveDepositDeductions(
+  tx: any,
+  deductions: DepositDeductionInput[]
+): Promise<{ rows: (DepositDeductionInput & { amount: number })[]; total: number }> {
+  const linkedIds = deductions
+    .map((d) => d.depositDocumentId)
+    .filter((id): id is string => !!id);
+  const linked = linkedIds.length
+    ? await tx.document.findMany({
+        where: { id: { in: linkedIds } },
+        select: { id: true, grandTotal: true },
+      })
+    : [];
+  const grandTotalById = new Map(linked.map((d: any) => [d.id, Number(d.grandTotal)]));
+
+  const rows = deductions.map((d) => ({
+    ...d,
+    amount: d.depositDocumentId && grandTotalById.has(d.depositDocumentId)
+      ? (grandTotalById.get(d.depositDocumentId) as number)
+      : d.amount,
+  }));
+  const total = rows.reduce((sum, d) => sum + d.amount, 0);
+  return { rows, total };
+}
+
 export async function createDocument(data: unknown, options?: { asDraft?: boolean }) {
   try {
     const validated = documentSchema.parse(data);
@@ -27,7 +67,13 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
     const user = await requireUserAction();
 
     const asDraft = options?.asDraft ?? false;
-    const documentNumber = asDraft ? null : await generateDocumentNumber(validated.type);
+    // A deposit invoice's document number IS the manually-typed tax-invoice
+    // number — it never gets an auto INV-YYMM-NNNN.
+    const documentNumber = validated.isDepositInvoice
+      ? validated.taxInvoiceNumber!.trim()
+      : asDraft
+        ? null
+        : await generateDocumentNumber(validated.type);
 
     // For RECEIPT type, generate custom invoice number if not provided
     let customInvoiceNumber: string | undefined;
@@ -77,6 +123,15 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
     const documentDate = toUTCNoon(new Date(validated.documentDate));
 
     const document = await prisma.$transaction(async (tx: any) => {
+      const { rows: deductionRows, total: depositDeduction } = await resolveDepositDeductions(
+        tx,
+        validated.depositDeductions ?? []
+      );
+      if (depositDeduction > grandTotal + 0.01) {
+        throw new Error("ยอดหักเงินมัดจำมากกว่ายอดรวมทั้งสิ้น");
+      }
+      const netPayable = grandTotal - depositDeduction;
+
       // Create document first (without nested line items / payment terms)
       const doc = await tx.document.create({
         data: {
@@ -84,6 +139,10 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
           status,
           documentNumber,
           customInvoiceNumber: customInvoiceNumber || undefined,
+          isDepositInvoice: validated.isDepositInvoice,
+          depositPercent: validated.isDepositInvoice ? validated.depositPercent ?? undefined : undefined,
+          depositDeduction,
+          netPayable,
           documentDate,
           companyId: validated.companyId,
           companySnapshot: serialize(company),
@@ -171,10 +230,25 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
         });
       }
 
+      // Bulk-insert deposit deductions
+      if (deductionRows.length > 0) {
+        await tx.documentDepositDeduction.createMany({
+          data: deductionRows.map((d) => ({
+            documentId: doc.id,
+            sequence: d.sequence,
+            depositDocumentId: d.depositDocumentId || null,
+            label: d.label,
+            taxInvoiceNumber: d.taxInvoiceNumber || null,
+            amount: d.amount,
+            depositDate: d.depositDate ? toUTCNoon(new Date(d.depositDate)) : null,
+          })),
+        });
+      }
+
       // Return full document with relations
       return tx.document.findUniqueOrThrow({
         where: { id: doc.id },
-        include: { lineItems: true, paymentTerms: true },
+        include: { lineItems: true, paymentTerms: true, depositDeductions: true },
       });
     });
 
@@ -186,6 +260,9 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
     console.error("createDocument error:", error);
     if (error instanceof ZodError) {
       return { success: false as const, error: `ข้อมูลไม่ถูกต้อง: ${formatZodError(error)}` };
+    }
+    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+      return { success: false as const, error: "เลขที่ใบกำกับภาษีนี้ถูกใช้แล้ว" };
     }
     const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการสร้างเอกสาร";
     return { success: false as const, error: message };
@@ -233,9 +310,19 @@ export async function updateDocument(id: string, data: unknown) {
     });
 
     const document = await prisma.$transaction(async (tx: any) => {
+      const { rows: deductionRows, total: depositDeduction } = await resolveDepositDeductions(
+        tx,
+        validated.depositDeductions ?? []
+      );
+      if (depositDeduction > grandTotal + 0.01) {
+        throw new Error("ยอดหักเงินมัดจำมากกว่ายอดรวมทั้งสิ้น");
+      }
+      const netPayable = grandTotal - depositDeduction;
+
       // Delete old items
       await tx.documentLineItem.deleteMany({ where: { documentId: id } });
       await tx.documentPaymentTerm.deleteMany({ where: { documentId: id } });
+      await tx.documentDepositDeduction.deleteMany({ where: { documentId: id } });
 
       // Update document fields (without nested creates)
       await tx.document.update({
@@ -245,6 +332,8 @@ export async function updateDocument(id: string, data: unknown) {
           customInvoiceNumber: validated.type === "RECEIPT"
             ? (validated.customInvoiceNumber?.trim() || undefined)
             : undefined,
+          depositDeduction,
+          netPayable,
           companyId: validated.companyId,
           companySnapshot: serialize(company),
           customerId: validated.customerId,
@@ -326,10 +415,25 @@ export async function updateDocument(id: string, data: unknown) {
         });
       }
 
+      // Bulk-insert deposit deductions
+      if (deductionRows.length > 0) {
+        await tx.documentDepositDeduction.createMany({
+          data: deductionRows.map((d) => ({
+            documentId: id,
+            sequence: d.sequence,
+            depositDocumentId: d.depositDocumentId || null,
+            label: d.label,
+            taxInvoiceNumber: d.taxInvoiceNumber || null,
+            amount: d.amount,
+            depositDate: d.depositDate ? toUTCNoon(new Date(d.depositDate)) : null,
+          })),
+        });
+      }
+
       // Return full document with relations
       return tx.document.findUniqueOrThrow({
         where: { id },
-        include: { lineItems: true, paymentTerms: true },
+        include: { lineItems: true, paymentTerms: true, depositDeductions: true },
       });
     });
 
@@ -341,6 +445,9 @@ export async function updateDocument(id: string, data: unknown) {
     console.error("updateDocument error:", error);
     if (error instanceof ZodError) {
       return { success: false as const, error: `ข้อมูลไม่ถูกต้อง: ${formatZodError(error)}` };
+    }
+    if (error && typeof error === "object" && "code" in error && error.code === "P2002") {
+      return { success: false as const, error: "เลขที่ใบกำกับภาษีนี้ถูกใช้แล้ว" };
     }
     const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการบันทึกเอกสาร";
     return { success: false as const, error: message };
@@ -356,7 +463,7 @@ export async function updateDocumentStatus(
   // Fetch current status to determine reservation actions
   const currentDocument = await prisma.document.findUniqueOrThrow({
     where: { id },
-    select: { status: true, type: true, reservesStock: true, documentNumber: true },
+    select: { status: true, type: true, reservesStock: true, documentNumber: true, isDepositInvoice: true },
   });
 
   const oldStatus = currentDocument.status;
@@ -377,12 +484,20 @@ export async function updateDocumentStatus(
 
   // Finalizing a draft: the running document number is only burned the moment
   // it leaves DRAFT for a real status (cancelling a draft outright still
-  // doesn't consume one).
-  const needsDocumentNumber =
+  // doesn't consume one). A deposit invoice never gets an auto number — its
+  // number is the manually-typed tax-invoice number entered at save time —
+  // so leaving DRAFT without one is a hard stop instead.
+  const leavingDraft =
     oldStatus === DocumentStatus.DRAFT &&
     newStatus !== DocumentStatus.DRAFT &&
     newStatus !== DocumentStatus.CANCELLED &&
     !currentDocument.documentNumber;
+
+  if (leavingDraft && currentDocument.isDepositInvoice) {
+    throw new Error("กรุณาระบุเลขที่ใบกำกับภาษีก่อน");
+  }
+
+  const needsDocumentNumber = leavingDraft && !currentDocument.isDepositInvoice;
   const documentNumber = needsDocumentNumber
     ? await generateDocumentNumber(currentDocument.type)
     : undefined;
@@ -416,6 +531,7 @@ export async function getDocumentForShare(id: string) {
     include: {
       lineItems: { orderBy: { sequence: "asc" } },
       paymentTerms: { orderBy: { sequence: "asc" } },
+      depositDeductions: { orderBy: { sequence: "asc" } },
       company: true,
       createdBy: true,
     },

@@ -99,6 +99,18 @@ export const paymentTermSchema = z.object({
   note: z.string().optional(),
 });
 
+export const depositDeductionSchema = z.object({
+  sequence: z.number(),
+  depositDocumentId: z.string().optional().nullable(),
+  label: z.string().min(1, "กรุณาระบุรายการหัก"),
+  taxInvoiceNumber: z.string().optional(),
+  amount: z.coerce.number().min(0, "ยอดหักต้องไม่ติดลบ"),
+  depositDate: z.preprocess(
+    (val) => (val === null || val === undefined || val === "" ? null : val),
+    z.coerce.date().nullable()
+  ).optional(),
+});
+
 export const holidaySchema = z.object({
   name: z.string().min(1, "กรุณาระบุชื่อวันหยุด"),
   date: z.coerce.date({ error: "กรุณาเลือกวันที่" }),
@@ -123,6 +135,10 @@ export const documentSchema = z.object({
   customInvoiceNumber: z.string().optional(),
   sourceQuotationId: z.string().optional(),
   sourceInvoiceId: z.string().optional(),
+  isDepositInvoice: z.boolean().default(false),
+  taxInvoiceNumber: z.string().optional(),
+  depositPercent: z.coerce.number().optional().nullable(),
+  depositDeductions: z.array(depositDeductionSchema).optional(),
   discountType: z.enum(["PERCENTAGE", "AMOUNT"]).optional().nullable(),
   discountValue: z.coerce.number().optional(),
   vatEnabled: z.boolean().default(true),
@@ -162,6 +178,15 @@ export const documentSchema = z.object({
 ).refine(
   (data) => data.type !== "RECEIPT" || (data.sourceInvoiceId && data.sourceInvoiceId.length > 0),
   { message: "กรุณาเลือกใบแจ้งหนี้", path: ["sourceInvoiceId"] }
+).refine(
+  (data) => !data.isDepositInvoice || (data.taxInvoiceNumber && data.taxInvoiceNumber.trim().length > 0),
+  { message: "กรุณาระบุเลขที่ใบกำกับภาษี", path: ["taxInvoiceNumber"] }
+).refine(
+  (data) => !data.isDepositInvoice || data.type === "INVOICE",
+  { message: "เฉพาะใบแจ้งหนี้เท่านั้นที่ออกเป็นใบมัดจำได้", path: ["isDepositInvoice"] }
+).refine(
+  (data) => !data.isDepositInvoice || !data.depositDeductions || data.depositDeductions.length === 0,
+  { message: "ใบแจ้งหนี้มัดจำหักเงินมัดจำไม่ได้", path: ["depositDeductions"] }
 ).refine(
   (data) => {
     if (data.productionDaysMin != null && data.productionDaysMax != null) {
