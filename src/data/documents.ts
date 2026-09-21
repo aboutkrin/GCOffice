@@ -67,6 +67,8 @@ export async function getDocuments(params?: {
         vatEnabled: true,
         customerSnapshot: true,
         createdAt: true,
+        isDepositInvoice: true,
+        netPayable: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -82,7 +84,10 @@ export async function getConfirmedQuotations(params?: { year?: number; month?: n
     const where: any = {
       type: "QUOTATION",
       status: "CONFIRMED",
-      invoices: { none: { status: { not: "CANCELLED" } } },
+      // A quotation stays selectable for the final invoice as long as no
+      // non-cancelled *final* invoice has been issued off it yet — deposit
+      // invoices don't consume it (there can be several of those).
+      invoices: { none: { status: { not: "CANCELLED" }, isDepositInvoice: false } },
     };
     if (params?.year && params?.month) {
       const startDate = new Date(Date.UTC(params.year, params.month - 1, 1));
@@ -115,6 +120,19 @@ export async function getConfirmedQuotations(params?: { year?: number; month?: n
         skipHolidays: true,
         lineItems: { orderBy: { sequence: "asc" } },
         paymentTerms: { orderBy: { sequence: "asc" } },
+        // Deposit invoices already issued off this quotation — candidates for
+        // deduction on the final invoice.
+        invoices: {
+          where: { isDepositInvoice: true, status: { not: "CANCELLED" } },
+          select: {
+            id: true,
+            documentNumber: true,
+            documentDate: true,
+            grandTotal: true,
+            depositPercent: true,
+          },
+          orderBy: { documentDate: "asc" },
+        },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -178,6 +196,7 @@ export async function getDocumentById(id: string) {
       include: {
         lineItems: { orderBy: { sequence: "asc" } },
         paymentTerms: { orderBy: { sequence: "asc" } },
+        depositDeductions: { orderBy: { sequence: "asc" } },
         company: true,
         customer: true,
         createdBy: true,

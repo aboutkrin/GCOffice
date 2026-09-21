@@ -9,6 +9,8 @@ interface PricingInput {
   vatEnabled: boolean;
   vatRate: number;
   shippingCost?: number;
+  /** Deposit invoice(s) deducted after รวมทั้งสิ้น (VAT-inclusive). */
+  depositDeduction?: number;
 }
 
 export function usePricing(input: PricingInput) {
@@ -20,6 +22,7 @@ export function usePricing(input: PricingInput) {
       vatEnabled,
       vatRate,
       shippingCost = 0,
+      depositDeduction = 0,
     } = input;
 
     // Include shipping in subtotal before discount
@@ -36,8 +39,9 @@ export function usePricing(input: PricingInput) {
     // VAT is calculated on afterDiscount (which includes shipping)
     const vatAmount = vatEnabled ? afterDiscount * (vatRate / 100) : 0;
     const grandTotal = afterDiscount + vatAmount;
+    const netPayable = grandTotal - depositDeduction;
 
-    return { discountAmount, afterDiscount, vatAmount, grandTotal };
+    return { discountAmount, afterDiscount, vatAmount, grandTotal, netPayable };
   }, [
     input.subtotal,
     input.discountType,
@@ -45,5 +49,6 @@ export function usePricing(input: PricingInput) {
     input.vatEnabled,
     input.vatRate,
     input.shippingCost,
+    input.depositDeduction,
   ]);
 }

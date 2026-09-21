@@ -43,6 +43,7 @@ import {
   QUOTATION_STATUS_OPTIONS,
   INVOICE_STATUS_OPTIONS,
   RECEIPT_STATUS_OPTIONS,
+  DEPOSIT_INVOICE_LABEL,
 } from "@/lib/constants";
 import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal, Loader2, FileDown, ImageIcon } from "lucide-react";
 
@@ -240,7 +241,14 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
             {documents.map((doc) => (
               <TableRow key={doc.id}>
                 <TableCell className="font-medium">
-                  <div>{doc.documentNumber ?? "ร่าง"}</div>
+                  <div className="flex items-center gap-1.5">
+                    {doc.documentNumber ?? "ร่าง"}
+                    {doc.isDepositInvoice && (
+                      <Badge className="bg-amber-100 text-amber-800 text-[10px] pointer-events-none">
+                        {DEPOSIT_INVOICE_LABEL}
+                      </Badge>
+                    )}
+                  </div>
                   {doc.customInvoiceNumber && (
                     <div className="text-xs text-muted-foreground">{doc.customInvoiceNumber}</div>
                   )}
@@ -257,7 +265,12 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                   )}
                 </TableCell>
                 <TableCell className="text-right">
-                  {formatBaht(doc.grandTotal)}
+                  {formatBaht(doc.netPayable ?? doc.grandTotal)}
+                  {doc.netPayable != null && Number(doc.netPayable) !== Number(doc.grandTotal) && (
+                    <div className="text-xs text-muted-foreground line-through">
+                      {formatBaht(doc.grandTotal)}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="text-center">
                   <DropdownMenu>
@@ -352,10 +365,15 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
             tabIndex={0}
           >
             <div className="flex items-center justify-between">
-              <span className="font-medium text-sm">
+              <span className="font-medium text-sm flex items-center gap-1.5">
                 {doc.documentNumber ?? "ร่าง"}
+                {doc.isDepositInvoice && (
+                  <Badge className="bg-amber-100 text-amber-800 text-[10px] pointer-events-none">
+                    {DEPOSIT_INVOICE_LABEL}
+                  </Badge>
+                )}
                 {doc.customInvoiceNumber && (
-                  <span className="text-xs text-muted-foreground ml-2">({doc.customInvoiceNumber})</span>
+                  <span className="text-xs text-muted-foreground ml-1">({doc.customInvoiceNumber})</span>
                 )}
               </span>
               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -450,7 +468,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                 {formatThaiDate(new Date(doc.documentDate), "short")}
               </span>
               <span className="font-semibold">
-                {formatBaht(doc.grandTotal)}
+                {formatBaht(doc.netPayable ?? doc.grandTotal)}
               </span>
             </div>
             <div className="flex items-center gap-2">

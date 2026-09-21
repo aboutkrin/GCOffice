@@ -59,6 +59,9 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   RECEIPT: "ใบเสร็จรับเงิน",
 };
 
+/** Label for an INVOICE with isDepositInvoice = true (see document-preview.tsx). */
+export const DEPOSIT_INVOICE_LABEL = "ใบแจ้งหนี้มัดจำ";
+
 export const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "ใช้งาน",
   INACTIVE: "ไม่ใช้งาน",
