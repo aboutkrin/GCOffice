@@ -188,6 +188,7 @@ export function DocumentForm({
   const [receiptPaymentTouched, setReceiptPaymentTouched] = useState(false);
   const [receiptBasis, setReceiptBasis] = useState<"AMOUNT" | "PERCENTAGE">("AMOUNT");
   const [receiptValue, setReceiptValue] = useState(Number(initialData?.netPayable || 0));
+  const [receiptSelectedTermIndex, setReceiptSelectedTermIndex] = useState("");
   const receiptInvoice = (initialData?.sourceInvoice || invoices?.find((invoice) => invoice.id === sourceInvoiceId)) as ReceiptInvoiceOption | undefined;
   const invoiceTotal = Number(receiptInvoice?.netPayable ?? receiptInvoice?.grandTotal ?? 0);
   const previousPayments = (receiptInvoice?.receipts || []).filter((r) => r.id !== initialData?.id)
@@ -900,8 +901,9 @@ export function DocumentForm({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-2">
                       <Label>เลือกงวดชำระ (หรือระบุเอง)</Label>
-                      <Select value="" onValueChange={(index) => {
+                      <Select value={receiptSelectedTermIndex} onValueChange={(index) => {
                         setReceiptPaymentTouched(true);
+                        setReceiptSelectedTermIndex(index);
                         setReceiptBasis("AMOUNT");
                         setReceiptValue(Number(receiptInvoice.paymentTerms[Number(index)].calculatedAmount));
                       }}>
