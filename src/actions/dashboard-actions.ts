@@ -10,7 +10,7 @@ import {
   type DeliveryScheduleItem,
   type HolidayItem,
 } from "@/data/dashboard";
-import { assertAdmin, requireUserAction } from "@/lib/auth";
+import { assertAdmin } from "@/lib/auth";
 
 export async function fetchYearlyStatsAction(
   year: number
@@ -42,11 +42,6 @@ export async function fetchHolidaysForMonthAction(
 export async function markDocumentShippedAction(
   id: string
 ): Promise<void> {
-  await requireUserAction();
-  const { prisma } = await import("@/lib/prisma");
-  const { DocumentStatus } = await import("@/generated/prisma/client");
-  await prisma.document.update({
-    where: { id },
-    data: { status: DocumentStatus.SHIPPED },
-  });
+  const { updateDocumentStatus } = await import("@/actions/document-actions");
+  await updateDocumentStatus(id, "SHIPPED");
 }

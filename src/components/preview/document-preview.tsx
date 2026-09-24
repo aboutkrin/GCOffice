@@ -10,6 +10,9 @@ import { PreviewSummary } from "./preview-summary";
 import { PreviewPayment } from "./preview-payment";
 import { PreviewFooter } from "./preview-footer";
 
+import { type ReceiptPaymentKind, type ReceiptPaymentSummary, RECEIPT_PAYMENT_LABELS } from "@/lib/receipt-payment";
+import { formatBaht } from "@/lib/thai-currency";
+
 interface CompanySnapshot {
   name: string;
   address: string;
@@ -75,7 +78,7 @@ export interface DocumentData {
   type: "QUOTATION" | "INVOICE" | "RECEIPT";
   documentNumber: string | null;
   customInvoiceNumber?: string | null;
-  status: "DRAFT" | "QUOTED" | "CONFIRMED" | "SAMPLE" | "BILLED" | "PAID" | "CANCELLED";
+  status: "DRAFT" | "QUOTED" | "CONFIRMED" | "SAMPLE" | "SHIPPED" | "BILLED" | "DEPOSITED" | "PAID" | "CANCELLED";
   documentDate: Date;
   companySnapshot: CompanySnapshot;
   customerSnapshot: CustomerSnapshot;
@@ -93,6 +96,8 @@ export interface DocumentData {
   pickupAtShowroom?: boolean;
   grandTotal: number;
   isDepositInvoice?: boolean;
+  receiptPaymentType?: ReceiptPaymentKind | null;
+  receiptPaymentSummary?: ReceiptPaymentSummary | null;
   depositDeduction?: number;
   netPayable?: number;
   depositDeductions?: DepositDeduction[];
@@ -309,6 +314,17 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
 
     const summaryBlock = (
       <>
+        {doc.receiptPaymentType && doc.receiptPaymentSummary && (
+          <div className="mb-3 rounded border border-blue-200 p-2 text-[11px]">
+            <div className="mb-1 font-semibold">รับชำระ{RECEIPT_PAYMENT_LABELS[doc.receiptPaymentType]} ตามใบแจ้งหนี้เลขที่ {doc.receiptPaymentSummary.invoiceNumber}</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <span>ยอดใบแจ้งหนี้</span><span className="text-right">{formatBaht(doc.receiptPaymentSummary.invoiceTotal)}</span>
+              <span>รับชำระก่อนหน้านี้</span><span className="text-right">{formatBaht(doc.receiptPaymentSummary.previousPayments)}</span>
+              <strong>รับชำระครั้งนี้</strong><strong className="text-right">{formatBaht(doc.receiptPaymentSummary.paymentAmount)}</strong>
+              <span>ยอดคงเหลือหลังรับชำระ</span><span className="text-right">{formatBaht(doc.receiptPaymentSummary.remainingBalance)}</span>
+            </div>
+          </div>
+        )}
         <PreviewSummary
           subtotal={doc.subtotal}
           discountType={doc.discountType}

@@ -59,6 +59,8 @@ import { Input } from "@/components/ui/input";
 import { createDocument, updateDocument } from "@/actions/document-actions";
 import { calculateDeliveryDates, type Holiday } from "@/lib/delivery-date";
 
+import { RECEIPT_PAYMENT_LABELS, satang, type ReceiptPaymentKind } from "@/lib/receipt-payment";
+
 // Form schema for top-level fields only (line items & payment terms handled by hooks)
 const formSchema = z.object({
   documentDate: z.date(),
@@ -69,6 +71,15 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+interface ReceiptInvoiceOption {
+  id: string;
+  documentNumber: string | null;
+  netPayable: number | string;
+  grandTotal: number | string;
+  receipts: { id: string; netPayable: number | string }[];
+  paymentTerms: { name: string; calculatedAmount: number | string }[];
+}
 
 interface DepositDeductionRow {
   id: string;
@@ -166,21 +177,27 @@ export function DocumentForm({
     initialData?.customInvoiceNumber || ""
   );
 
-  // Deposit invoice (ใบแจ้งหนี้มัดจำ) — INVOICE only. Immutable after creation
-  // (see the edit-mode gating on the toggle below).
-  const [isDepositInvoice, setIsDepositInvoice] = useState<boolean>(
-    initialData?.isDepositInvoice ?? false
-  );
-  const [taxInvoiceNumber, setTaxInvoiceNumber] = useState<string>(
-    initialData?.isDepositInvoice ? initialData?.documentNumber || "" : ""
-  );
-  const [depositBasisType, setDepositBasisType] = useState<"PERCENTAGE" | "AMOUNT">("PERCENTAGE");
-  const [depositBasisValue, setDepositBasisValue] = useState<number>(
-    initialData?.depositPercent ? Number(initialData.depositPercent) : 50
-  );
-  // The quotation object backing the current selection — kept around so the
-  // deposit toggle / basis inputs can recompute items & terms without re-fetching.
-  const [selectedQuotation, setSelectedQuotation] = useState<any | null>(null);
+  // Legacy invoice fields are retained only when editing existing documents.
+  const isDepositInvoice = initialData?.isDepositInvoice ?? false;
+  const taxInvoiceNumber = isDepositInvoice ? initialData?.documentNumber || "" : "";
+  const depositBasisType = "PERCENTAGE";
+  const depositBasisValue = Number(initialData?.depositPercent || 0);
+
+  const managedReceipt = type === "RECEIPT" && (!initialData || !!initialData.receiptPaymentType);
+  const [receiptPaymentType, setReceiptPaymentType] = useState<ReceiptPaymentKind>(initialData?.receiptPaymentType || "FULL");
+  const [receiptPaymentTouched, setReceiptPaymentTouched] = useState(false);
+  const [receiptBasis, setReceiptBasis] = useState<"AMOUNT" | "PERCENTAGE">("AMOUNT");
+  const [receiptValue, setReceiptValue] = useState(Number(initialData?.netPayable || 0));
+  const receiptInvoice = (initialData?.sourceInvoice || invoices?.find((invoice) => invoice.id === sourceInvoiceId)) as ReceiptInvoiceOption | undefined;
+  const invoiceTotal = Number(receiptInvoice?.netPayable ?? receiptInvoice?.grandTotal ?? 0);
+  const previousPayments = (receiptInvoice?.receipts || []).filter((r) => r.id !== initialData?.id)
+    .reduce((sum, r) => sum + satang(r.netPayable), 0) / 100;
+  const outstanding = (satang(invoiceTotal) - satang(previousPayments)) / 100;
+  const receiptAmount = initialData?.receiptPaymentType && initialData.status === "PAID" && !receiptPaymentTouched
+    ? Number(initialData.netPayable)
+    : receiptPaymentType === "FULL" ? invoiceTotal
+    : receiptPaymentType === "BALANCE" ? outstanding
+    : satang(receiptBasis === "PERCENTAGE" ? invoiceTotal * receiptValue / 100 : receiptValue) / 100;
 
   const [depositDeductionRows, setDepositDeductionRows] = useState<DepositDeductionRow[]>(
     initialData?.depositDeductions
@@ -347,64 +364,7 @@ export function DocumentForm({
     [setTerms, pricing.netPayable]
   );
 
-  // ── Deposit invoice line item / term generation ──────────────────────────
-  const computeDepositAmount = (
-    q: any,
-    basisType: "PERCENTAGE" | "AMOUNT",
-    basisValue: number
-  ) => {
-    // Pre-VAT base of the quotation, so VAT lands on the deposit itself when
-    // this invoice's own vatEnabled/vatRate (copied from the quotation) applies.
-    const afterDiscount = q.vatEnabled
-      ? Number(q.grandTotal) / (1 + Number(q.vatRate) / 100)
-      : Number(q.grandTotal);
-    return basisType === "PERCENTAGE" ? afterDiscount * (basisValue / 100) : basisValue;
-  };
-
-  const buildDepositLineItem = (
-    q: any,
-    basisType: "PERCENTAGE" | "AMOUNT",
-    basisValue: number
-  ): LineItem => {
-    const amount = computeDepositAmount(q, basisType, basisValue);
-    const basisLabel = basisType === "PERCENTAGE" ? `${basisValue}%` : formatBaht(basisValue);
-    return {
-      id: Math.random().toString(36).substr(2, 9),
-      sequence: 1,
-      productName: `เงินมัดจำ ${basisLabel} ตามใบเสนอราคาเลขที่ ${q.documentNumber}`,
-      showImage: false,
-      quantity: 1,
-      unitPrice: amount,
-      lineTotal: amount,
-    };
-  };
-
-  // Fill items & payment terms from the selected quotation, branching on
-  // whether this is a deposit invoice (one generated line + a single
-  // full-payment term) or a normal/final invoice (full copy, as before).
-  const applyQuotationLineItemsAndTerms = (
-    q: any,
-    depositMode: boolean,
-    basisType: "PERCENTAGE" | "AMOUNT",
-    basisValue: number
-  ) => {
-    if (depositMode) {
-      setItems([buildDepositLineItem(q, basisType, basisValue)]);
-      // 100% so the existing grandTotal-recalculation effect keeps it in sync
-      // with the deposit line as the basis % / ฿ changes.
-      setTerms([
-        {
-          id: Math.random().toString(36).substr(2, 9),
-          sequence: 1,
-          name: "ชำระเต็มจำนวน",
-          type: "PERCENTAGE",
-          value: 100,
-          calculatedAmount: computeDepositAmount(q, basisType, basisValue),
-        },
-      ]);
-      return;
-    }
-
+  const applyQuotationLineItemsAndTerms = (q: any) => {
     const newItems = q.lineItems.map((item: any, idx: number) => ({
       id: Math.random().toString(36).substr(2, 9),
       sequence: idx + 1,
@@ -431,36 +391,6 @@ export function DocumentForm({
       note: term.note || undefined,
     }));
     setTerms(newTerms);
-  };
-
-  const handleDepositInvoiceToggle = (checked: boolean) => {
-    setIsDepositInvoice(checked);
-    if (selectedQuotation) {
-      applyQuotationLineItemsAndTerms(selectedQuotation, checked, depositBasisType, depositBasisValue);
-    }
-    if (checked) {
-      // A deposit invoice never carries shipping or a deduction of its own.
-      setShippingCost(0);
-      setFreeShipping(false);
-      setPickupAtShowroom(false);
-      setShippingLocation("");
-      setFreeShippingLocation("");
-      setShippingError("");
-    }
-  };
-
-  const handleDepositBasisTypeChange = (val: "PERCENTAGE" | "AMOUNT") => {
-    setDepositBasisType(val);
-    if (selectedQuotation && isDepositInvoice) {
-      applyQuotationLineItemsAndTerms(selectedQuotation, true, val, depositBasisValue);
-    }
-  };
-
-  const handleDepositBasisValueChange = (val: number) => {
-    setDepositBasisValue(val);
-    if (selectedQuotation && isDepositInvoice) {
-      applyQuotationLineItemsAndTerms(selectedQuotation, true, depositBasisType, val);
-    }
   };
 
   // ── Deduct-deposit-on-final-invoice row management ───────────────────────
@@ -498,7 +428,6 @@ export function DocumentForm({
     if (!q) return;
 
     setSourceQuotationId(quotationId);
-    setSelectedQuotation(q);
 
     // Pre-fill company and customer
     form.setValue("companyId", q.companyId);
@@ -512,7 +441,7 @@ export function DocumentForm({
     setDiscountType(q.discountType || null);
     setDiscountValue(q.discountValue ? Number(q.discountValue) : 0);
 
-    applyQuotationLineItemsAndTerms(q, isDepositInvoice, depositBasisType, depositBasisValue);
+    applyQuotationLineItemsAndTerms(q);
 
     // Pre-fill footer notes, shipping, and production day settings
     setFooterNotes(q.footerNotes || "");
@@ -528,19 +457,7 @@ export function DocumentForm({
     setSkipWeekends(q.skipWeekends ?? false);
     setSkipHolidays(q.skipHolidays ?? false);
 
-    // Deposit invoices already issued off this quotation — candidates to
-    // deduct on the final invoice (there can be several).
-    const candidateRows: DepositDeductionRow[] = (q.invoices || []).map((inv: any) => ({
-      id: inv.id,
-      depositDocumentId: inv.id,
-      label: `เงินมัดจำ${inv.depositPercent ? ` ${Number(inv.depositPercent)}%` : ""} ตามใบแจ้งหนี้เลขที่ ${inv.documentNumber}`,
-      taxInvoiceNumber: inv.documentNumber,
-      amount: Number(inv.grandTotal),
-      checked: true,
-      depositDate: inv.documentDate,
-      editable: false,
-    }));
-    setDepositDeductionRows(candidateRows);
+
   };
 
   const handleInvoiceSelect = (invoiceId: string) => {
@@ -548,6 +465,10 @@ export function DocumentForm({
     if (!inv) return;
 
     setSourceInvoiceId(invoiceId);
+    const alreadyPaid = (inv.receipts as ReceiptInvoiceOption["receipts"] || []).reduce((sum, r) => sum + satang(r.netPayable), 0);
+    setReceiptPaymentType(alreadyPaid > 0 ? "BALANCE" : "FULL");
+    setReceiptBasis("AMOUNT");
+    setReceiptValue(Number(inv.paymentTerms?.[0]?.calculatedAmount || 0));
 
     // Pre-fill company and customer
     form.setValue("companyId", inv.companyId);
@@ -621,6 +542,8 @@ export function DocumentForm({
       isDepositInvoice: type === "INVOICE" ? isDepositInvoice : undefined,
       taxInvoiceNumber: isDepositInvoice ? taxInvoiceNumber.trim() || undefined : undefined,
       depositPercent: isDepositInvoice && depositBasisType === "PERCENTAGE" ? depositBasisValue : undefined,
+      receiptPaymentType: managedReceipt ? receiptPaymentType : undefined,
+      receiptAmount: managedReceipt ? receiptAmount : undefined,
       discountType,
       discountValue,
       vatEnabled: formData.vatEnabled,
@@ -685,7 +608,7 @@ export function DocumentForm({
     }
 
     if (type === "RECEIPT" && !isEditing && !sourceInvoiceId) {
-      alert("กรุณาเลือกใบแจ้งหนี้ที่ชำระแล้ว");
+      alert("กรุณาเลือกใบแจ้งหนี้");
       return;
     }
 
@@ -706,7 +629,7 @@ export function DocumentForm({
     }
 
     // Validate shipping — a deposit invoice never carries shipping.
-    if (!isDepositInvoice && !pickupAtShowroom && !freeShipping && shippingCost <= 0) {
+    if (!managedReceipt && !isDepositInvoice && !pickupAtShowroom && !freeShipping && shippingCost <= 0) {
       setShippingError("กรุณาระบุค่าจัดส่ง หรือเลือก จัดส่งฟรี หรือ รับเองที่โชว์รูม");
       const el = document.getElementById("shipping-section");
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -715,7 +638,7 @@ export function DocumentForm({
     setShippingError("");
 
     // Validate payment terms
-    if (terms.length === 0) {
+    if (!managedReceipt && terms.length === 0) {
       setPaymentTermsError("กรุณาเพิ่มเงื่อนไขการชำระเงินอย่างน้อย 1 งวด");
       const el = document.getElementById("payment-terms-section");
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -723,6 +646,10 @@ export function DocumentForm({
     }
     setPaymentTermsError("");
 
+    if (managedReceipt && (!Number.isFinite(receiptAmount) || receiptAmount <= 0 || satang(receiptAmount) > satang(outstanding))) {
+      alert("ยอดรับชำระต้องมากกว่า 0 และไม่เกินยอดคงเหลือ");
+      return;
+    }
     setSaving(true);
     try {
       const data = assembleData(formData);
@@ -815,75 +742,12 @@ export function DocumentForm({
                   </div>
                 )}
 
-                {/* Deposit invoice toggle — one generated line for the deposit
-                    amount, with a manually-typed tax-invoice number. */}
-                {sourceQuotationId && (
-                  <div className="mt-4 rounded-lg border p-3 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label className="text-sm font-medium">
-                          ใบแจ้งหนี้มัดจำ (ออกใบกำกับภาษี)
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          ออกใบแจ้งหนี้/ใบกำกับภาษีสำหรับเงินมัดจำที่ได้รับ แทนที่จะเป็นใบแจ้งหนี้เต็มจำนวน
-                        </p>
-                      </div>
-                      <Switch
-                        checked={isDepositInvoice}
-                        onCheckedChange={handleDepositInvoiceToggle}
-                      />
-                    </div>
-
-                    {isDepositInvoice && (
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">
-                            เลขที่ใบกำกับภาษี <span className="text-destructive">*</span>
-                          </Label>
-                          <Input
-                            value={taxInvoiceNumber}
-                            onChange={(e) => setTaxInvoiceNumber(e.target.value)}
-                            placeholder="เช่น A6809-001"
-                            className="h-9"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">เกณฑ์เงินมัดจำ</Label>
-                          <Select
-                            value={depositBasisType}
-                            onValueChange={(val) =>
-                              handleDepositBasisTypeChange(val as "PERCENTAGE" | "AMOUNT")
-                            }
-                          >
-                            <SelectTrigger className="h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="PERCENTAGE">เปอร์เซ็นต์ (%)</SelectItem>
-                              <SelectItem value="AMOUNT">จำนวนเงิน (฿)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">ค่า</Label>
-                          <DecimalInput
-                            value={depositBasisValue || ""}
-                            onChange={handleDepositBasisValueChange}
-                            placeholder={depositBasisType === "PERCENTAGE" ? "%" : "฿"}
-                            className="h-9"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <Separator className="mt-4" />
               </div>
             )}
 
             {/* Deduct deposit(s) already invoiced — final invoice only (new or edit) */}
-            {type === "INVOICE" && !isDepositInvoice && (sourceQuotationId || isEditing) && (
+            {type === "INVOICE" && !isDepositInvoice && isEditing && Number(initialData?.depositDeduction) > 0 && (
               <div className="mb-4">
                 <div className="rounded-lg border p-3 space-y-3">
                   <Label className="text-sm font-medium">หักเงินมัดจำที่ชำระแล้ว</Label>
@@ -989,7 +853,7 @@ export function DocumentForm({
                     onValueChange={handleInvoiceSelect}
                   >
                     <SelectTrigger className="w-full mt-1.5">
-                      <SelectValue placeholder="เลือกใบแจ้งหนี้ที่ชำระแล้ว" />
+                      <SelectValue placeholder="เลือกใบแจ้งหนี้ที่ต้องการรับชำระ" />
                     </SelectTrigger>
                     <SelectContent>
                       {invoices.map((inv: any) => {
@@ -1006,10 +870,71 @@ export function DocumentForm({
                 ) : (
                   <div className="flex items-center gap-2 mt-1.5 p-3 rounded-md border border-amber-300 bg-amber-50 text-amber-800 text-sm">
                     <AlertTriangle className="h-4 w-4 shrink-0" />
-                    <span>ไม่มีใบแจ้งหนี้ที่ชำระแล้ว กรุณาเปลี่ยนสถานะใบแจ้งหนี้เป็น &quot;ชำระแล้ว&quot; ก่อนสร้างใบเสร็จรับเงิน</span>
+                    <span>ไม่มีใบแจ้งหนี้ที่มียอดคงเหลือสำหรับรับชำระ</span>
                   </div>
                 )}
                 <Separator className="mt-4" />
+              </div>
+            )}
+
+            {managedReceipt && receiptInvoice && (
+              <div className="mb-4 space-y-4 rounded-lg border p-4">
+                <p className="font-medium">รับชำระตามใบแจ้งหนี้ {receiptInvoice.documentNumber}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                  <div>ยอดใบแจ้งหนี้ <strong>{formatBaht(invoiceTotal)}</strong></div>
+                  <div>รับชำระแล้ว <strong>{formatBaht(previousPayments)}</strong></div>
+                  <div>ยอดคงเหลือ <strong>{formatBaht(outstanding)}</strong></div>
+                </div>
+                <div className="space-y-2">
+                  <Label>ประเภทการรับชำระ</Label>
+                  <Select value={receiptPaymentType} onValueChange={(value) => { setReceiptPaymentTouched(true); setReceiptPaymentType(value as ReceiptPaymentKind); }}>
+                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="FULL" disabled={previousPayments > 0}>เต็มจำนวน</SelectItem>
+                      <SelectItem value="DEPOSIT">มัดจำ</SelectItem>
+                      <SelectItem value="BALANCE" disabled={previousPayments <= 0}>ยอดคงเหลือ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {receiptPaymentType === "DEPOSIT" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label>เลือกงวดชำระ (หรือระบุเอง)</Label>
+                      <Select value="" onValueChange={(index) => {
+                        setReceiptPaymentTouched(true);
+                        setReceiptBasis("AMOUNT");
+                        setReceiptValue(Number(receiptInvoice.paymentTerms[Number(index)].calculatedAmount));
+                      }}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="เลือกงวดชำระ" /></SelectTrigger>
+                        <SelectContent>
+                          {(receiptInvoice.paymentTerms || []).map((term, index) => (
+                            <SelectItem key={index} value={String(index)}>{term.name} — {formatBaht(Number(term.calculatedAmount))}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>ระบุยอดเป็น</Label>
+                      <Select value={receiptBasis} onValueChange={(value) => {
+                        setReceiptPaymentTouched(true);
+                        setReceiptBasis(value as "AMOUNT" | "PERCENTAGE");
+                        setReceiptValue(value === "PERCENTAGE" ? (invoiceTotal ? receiptAmount / invoiceTotal * 100 : 0) : receiptAmount);
+                      }}>
+                        <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="AMOUNT">จำนวนเงิน (฿)</SelectItem><SelectItem value="PERCENTAGE">เปอร์เซ็นต์ของยอดใบแจ้งหนี้</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{receiptBasis === "PERCENTAGE" ? "เปอร์เซ็นต์ (%)" : "จำนวนเงินรวมภาษี (฿)"}</Label>
+                      <DecimalInput value={receiptValue || ""} onChange={(value) => { setReceiptPaymentTouched(true); setReceiptValue(value); }} />
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-wrap justify-between gap-3 rounded-md bg-muted p-3">
+                  <strong>รับชำระ{RECEIPT_PAYMENT_LABELS[receiptPaymentType]}ครั้งนี้ {formatBaht(receiptAmount)}</strong>
+                  <span>คงเหลือหลังรับชำระ {formatBaht((satang(outstanding) - satang(receiptAmount)) / 100)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">ยอดรับชำระรวมภาษีตามใบแจ้งหนี้แล้ว ใบเสร็จร่างยังไม่หักยอดคงเหลือ</p>
               </div>
             )}
 
@@ -1039,6 +964,7 @@ export function DocumentForm({
                   <FormItem>
                     <FormLabel>บริษัท <span className="text-destructive">*</span></FormLabel>
                     <Select
+                      disabled={managedReceipt}
                       onValueChange={(companyId) => {
                         field.onChange(companyId);
                         const selected = companies.find((c) => c.id === companyId);
@@ -1074,12 +1000,14 @@ export function DocumentForm({
                 render={({ field }) => (
                   <FormItem className="min-w-0">
                     <FormLabel>ลูกค้า <span className="text-destructive">*</span></FormLabel>
+                    <fieldset disabled={managedReceipt}>
                     <CustomerSelect
                       customers={customers}
                       value={field.value}
                       onSelect={(customer) => field.onChange(customer.id)}
                       placeholder="เลือกลูกค้า"
                     />
+                    </fieldset>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1128,6 +1056,7 @@ export function DocumentForm({
           </CardContent>
         </Card>
 
+        {!managedReceipt && (<>
         {/* Section 2: Line Items */}
         <Card>
           <CardHeader>
@@ -1231,6 +1160,8 @@ export function DocumentForm({
             />
           </CardContent>
         </Card>
+
+        </>)}
 
         {/* Section 6: Notes & Delivery */}
         <Card>

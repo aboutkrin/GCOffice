@@ -1,7 +1,10 @@
 import { prisma } from "./prisma";
-import { DocumentType } from "@/generated/prisma/client";
+import { DocumentType, type Prisma } from "@/generated/prisma/client";
 
-export async function generateDocumentNumber(type: DocumentType): Promise<string> {
+export async function generateDocumentNumber(
+  type: DocumentType,
+  client: Pick<Prisma.TransactionClient, "documentCounter"> = prisma,
+): Promise<string> {
   const now = new Date();
   const buddhistYear = (now.getFullYear() + 543).toString().slice(-2);
   const month = (now.getMonth() + 1).toString().padStart(2, "0");
@@ -13,7 +16,7 @@ export async function generateDocumentNumber(type: DocumentType): Promise<string
   };
   const prefix = prefixMap[type] || type;
 
-  const counter = await prisma.documentCounter.upsert({
+  const counter = await client.documentCounter.upsert({
     where: {
       type_yearMonth: { type, yearMonth },
     },

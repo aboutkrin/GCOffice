@@ -213,6 +213,12 @@ model DocumentCounter {
   @@map("document_counters")
 }
 
+enum ReceiptPaymentType {
+  FULL
+  DEPOSIT
+  BALANCE
+}
+
 model Document {
   id             String         @id @default(cuid())
   type           DocumentType
@@ -275,6 +281,9 @@ model Document {
   sourceQuotation   Document?  @relation("InvoiceFromQuotation", fields: [sourceQuotationId], references: [id])
   invoices          Document[] @relation("InvoiceFromQuotation")
 
+  receiptPaymentType ReceiptPaymentType? @map("receipt_payment_type")
+  receiptPaymentSummary Json? @map("receipt_payment_summary")
+
   sourceInvoiceId String?    @map("source_invoice_id")
   sourceInvoice   Document?  @relation("ReceiptFromInvoice", fields: [sourceInvoiceId], references: [id])
   receipts        Document[] @relation("ReceiptFromInvoice")
@@ -298,6 +307,7 @@ model Document {
   @@index([documentDate])
   @@index([customerId])
   @@index([companyId])
+  @@index([sourceInvoiceId])
   @@map("documents")
 }
 

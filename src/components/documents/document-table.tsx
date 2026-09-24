@@ -47,6 +47,8 @@ import {
 } from "@/lib/constants";
 import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal, Loader2, FileDown, ImageIcon } from "lucide-react";
 
+import { RECEIPT_PAYMENT_LABELS, type ReceiptPaymentKind } from "@/lib/receipt-payment";
+
 interface DocumentTableProps {
   documents: any[];
   basePath: string; // "/quotations", "/invoices", or "/receipts"
@@ -243,6 +245,11 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-1.5">
                     {doc.documentNumber ?? "ร่าง"}
+                    {doc.receiptPaymentType && (
+                      <Badge className="bg-amber-100 text-amber-800 text-[10px] pointer-events-none">
+                        {RECEIPT_PAYMENT_LABELS[doc.receiptPaymentType as ReceiptPaymentKind]}
+                      </Badge>
+                    )}
                     {doc.isDepositInvoice && (
                       <Badge className="bg-amber-100 text-amber-800 text-[10px] pointer-events-none">
                         {DEPOSIT_INVOICE_LABEL}
@@ -367,7 +374,12 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
             <div className="flex items-center justify-between">
               <span className="font-medium text-sm flex items-center gap-1.5">
                 {doc.documentNumber ?? "ร่าง"}
-                {doc.isDepositInvoice && (
+                {doc.receiptPaymentType && (
+                      <Badge className="bg-amber-100 text-amber-800 text-[10px] pointer-events-none">
+                        {RECEIPT_PAYMENT_LABELS[doc.receiptPaymentType as ReceiptPaymentKind]}
+                      </Badge>
+                    )}
+                    {doc.isDepositInvoice && (
                   <Badge className="bg-amber-100 text-amber-800 text-[10px] pointer-events-none">
                     {DEPOSIT_INVOICE_LABEL}
                   </Badge>

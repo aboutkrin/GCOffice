@@ -11,6 +11,9 @@ import { toUTCNoon } from "@/lib/thai-date";
 import { ZodError } from "zod";
 import { checkAvailabilityForDocument, type StockShortage } from "@/data/stock-availability";
 
+import { applyReceiptPayment, lockInvoice, paidReceipts, syncInvoicePaymentStatus } from "@/lib/receipt-payment-server";
+import { satang } from "@/lib/receipt-payment";
+
 function formatZodError(error: ZodError): string {
   return error.issues
     .map((i) => {
@@ -65,6 +68,12 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
     const validated = documentSchema.parse(data);
 
     const user = await requireUserAction();
+    if (validated.isDepositInvoice || validated.depositDeductions?.length) {
+      throw new Error("กรุณารับชำระเงินมัดจำผ่านใบเสร็จรับเงิน");
+    }
+    if (validated.type === "RECEIPT" && (!validated.receiptPaymentType || !validated.receiptAmount)) {
+      throw new Error("กรุณาเลือกประเภทและยอดรับชำระ");
+    }
 
     const asDraft = options?.asDraft ?? false;
     // A deposit invoice's document number IS the manually-typed tax-invoice
@@ -123,6 +132,7 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
     const documentDate = toUTCNoon(new Date(validated.documentDate));
 
     const document = await prisma.$transaction(async (tx: any) => {
+      if (validated.type === "RECEIPT") await lockInvoice(tx, validated.sourceInvoiceId!);
       const { rows: deductionRows, total: depositDeduction } = await resolveDepositDeductions(
         tx,
         validated.depositDeductions ?? []
@@ -245,6 +255,12 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
         });
       }
 
+      if (validated.type === "RECEIPT") {
+        await applyReceiptPayment(tx, doc.id, { sourceInvoiceId: validated.sourceInvoiceId!,
+          type: validated.receiptPaymentType!, amount: validated.receiptAmount! });
+        if (!asDraft) await syncInvoicePaymentStatus(tx, validated.sourceInvoiceId!);
+      }
+
       // Return full document with relations
       return tx.document.findUniqueOrThrow({
         where: { id: doc.id },
@@ -255,6 +271,7 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
     revalidatePath("/quotations");
     revalidatePath("/invoices");
     revalidatePath("/receipts");
+    revalidatePath("/dashboard");
     return { success: true as const, data: serialize(document) };
   } catch (error) {
     console.error("createDocument error:", error);
@@ -310,6 +327,42 @@ export async function updateDocument(id: string, data: unknown) {
     });
 
     const document = await prisma.$transaction(async (tx: any) => {
+      const before = await tx.document.findUniqueOrThrow({ where: { id } });
+      await lockInvoice(tx, before.sourceInvoiceId || id);
+      const current = await tx.document.findUniqueOrThrow({ where: { id } });
+      if (current.type !== validated.type || (current.sourceInvoiceId && current.sourceInvoiceId !== validated.sourceInvoiceId)) {
+        throw new Error("ไม่สามารถเปลี่ยนประเภทหรือใบแจ้งหนี้อ้างอิงของเอกสาร");
+      }
+      if (!current.isDepositInvoice && validated.isDepositInvoice) throw new Error("ไม่สามารถสร้างใบแจ้งหนี้มัดจำใหม่");
+      if (current.receiptPaymentType) {
+        if (!validated.receiptPaymentType || !validated.receiptAmount) throw new Error("กรุณาระบุยอดรับชำระ");
+        const changed = current.receiptPaymentType !== validated.receiptPaymentType || satang(current.netPayable) !== satang(validated.receiptAmount);
+        if (current.status === "CANCELLED") throw new Error("กรุณาคืนสถานะใบเสร็จก่อนแก้ไข");
+        if (changed || current.status === "DRAFT") {
+          await applyReceiptPayment(tx, id, { sourceInvoiceId: current.sourceInvoiceId,
+            type: validated.receiptPaymentType, amount: validated.receiptAmount });
+        }
+        await tx.document.update({ where: { id }, data: {
+          documentDate, footerNotes: validated.footerNotes,
+          customInvoiceNumber: validated.customInvoiceNumber?.trim() || null,
+          paymentDate: validated.paymentDate ? toUTCNoon(new Date(validated.paymentDate)) : null,
+        } });
+        if (current.status === "PAID") await syncInvoicePaymentStatus(tx, current.sourceInvoiceId);
+        return tx.document.findUniqueOrThrow({ where: { id }, include: { lineItems: true, paymentTerms: true, depositDeductions: true } });
+      }
+      if (validated.receiptPaymentType) throw new Error("ใบเสร็จเดิมต้องคงรูปแบบเดิม");
+      if (current.type === "INVOICE") {
+        const receipts = await paidReceipts(tx, id);
+        const { total: deduction } = await resolveDepositDeductions(tx, validated.depositDeductions ?? []);
+        if (receipts.length && (satang(current.netPayable) !== satang(grandTotal - deduction)
+          || satang(current.vatAmount) !== satang(vatAmount) || current.companyId !== validated.companyId
+          || current.customerId !== validated.customerId)) {
+          throw new Error("กรุณายกเลิกใบเสร็จที่รับชำระแล้วก่อนเปลี่ยนยอด บริษัท หรือลูกค้าในใบแจ้งหนี้");
+        }
+        if (!Number(current.depositDeduction) && validated.depositDeductions?.length) {
+          throw new Error("กรุณาหักเงินมัดจำผ่านใบเสร็จยอดคงเหลือ");
+        }
+      }
       const { rows: deductionRows, total: depositDeduction } = await resolveDepositDeductions(
         tx,
         validated.depositDeductions ?? []
@@ -430,6 +483,10 @@ export async function updateDocument(id: string, data: unknown) {
         });
       }
 
+      if (current.type === "RECEIPT" && current.sourceInvoiceId && current.status === "PAID") {
+        await syncInvoicePaymentStatus(tx, current.sourceInvoiceId);
+      }
+
       // Return full document with relations
       return tx.document.findUniqueOrThrow({
         where: { id },
@@ -440,6 +497,7 @@ export async function updateDocument(id: string, data: unknown) {
     revalidatePath("/quotations");
     revalidatePath("/invoices");
     revalidatePath("/receipts");
+    revalidatePath("/dashboard");
     return { success: true as const, data: serialize(document) };
   } catch (error) {
     console.error("updateDocument error:", error);
@@ -458,57 +516,78 @@ export async function updateDocumentStatus(
   id: string,
   status: DocumentStatus
 ) {
-  await requireUserAction();
+  const user = await requireUserAction();
 
-  // Fetch current status to determine reservation actions
-  const currentDocument = await prisma.document.findUniqueOrThrow({
-    where: { id },
-    select: { status: true, type: true, reservesStock: true, documentNumber: true, isDepositInvoice: true },
-  });
+  const { document, enteringConfirmed } = await prisma.$transaction(async (tx) => {
+    // Fetch current status to determine reservation actions
+    const before = await tx.document.findUniqueOrThrow({ where: { id } });
+    await lockInvoice(tx, before.sourceInvoiceId || id);
+    const currentDocument = await tx.document.findUniqueOrThrow({ where: { id } });
+    const allowed: Record<string, string[]> = {
+      QUOTATION: ["DRAFT", "QUOTED", "CONFIRMED", "SHIPPED", "CANCELLED"],
+      INVOICE: ["DRAFT", "BILLED", "DEPOSITED", "PAID", "CANCELLED"],
+      RECEIPT: ["DRAFT", "PAID", "CANCELLED"],
+    };
+    if (!allowed[currentDocument.type].includes(status)) throw new Error("สถานะไม่ถูกต้องสำหรับเอกสารนี้");
+    if (currentDocument.type === "INVOICE" && (await paidReceipts(tx, id)).length) {
+      await syncInvoicePaymentStatus(tx, id);
+      const derived = await tx.document.findUniqueOrThrow({ where: { id } });
+      if (derived.status !== status) throw new Error("สถานะคำนวณจากใบเสร็จ กรุณายกเลิกใบเสร็จที่รับชำระแล้วก่อน");
+    }
+    if (currentDocument.type === "RECEIPT" && status === "PAID" && currentDocument.status !== "PAID" && currentDocument.receiptPaymentType) {
+      await applyReceiptPayment(tx, id, { sourceInvoiceId: currentDocument.sourceInvoiceId!,
+        type: currentDocument.receiptPaymentType, amount: Number(currentDocument.netPayable) }, currentDocument.status !== "DRAFT");
+    }
 
-  const oldStatus = currentDocument.status;
-  const newStatus = status;
+    const oldStatus = currentDocument.status;
+    const newStatus = status;
 
-  // Cancelling a document that has already moved past DRAFT is an admin-only action.
-  if (newStatus === DocumentStatus.CANCELLED && oldStatus !== DocumentStatus.DRAFT) {
-    await assertAdmin();
-  }
+    // Cancelling a document that has already moved past DRAFT is an admin-only action.
+    if (newStatus === DocumentStatus.CANCELLED && oldStatus !== DocumentStatus.DRAFT) {
+      if (user.role !== "ADMIN") throw new Error("คุณไม่มีสิทธิ์ใช้งานส่วนนี้");
+    }
 
-  // Confirming opts the document into the reservation system (see
-  // src/data/stock-availability.ts). Once true this never reverts — a
-  // cancelled document simply drops out of the reserving statuses
-  // (CONFIRMED/SHIPPED), so its reservation disappears from the derived query
-  // without any stock movement being written. Nothing here touches on-hand:
-  // that only changes via goods receive / issue / stock count.
-  const enteringConfirmed = newStatus === DocumentStatus.CONFIRMED && oldStatus !== DocumentStatus.CONFIRMED;
+    // Confirming opts the document into the reservation system (see
+    // src/data/stock-availability.ts). Once true this never reverts — a
+    // cancelled document simply drops out of the reserving statuses
+    // (CONFIRMED/SHIPPED), so its reservation disappears from the derived query
+    // without any stock movement being written. Nothing here touches on-hand:
+    // that only changes via goods receive / issue / stock count.
+    const enteringConfirmed = newStatus === DocumentStatus.CONFIRMED && oldStatus !== DocumentStatus.CONFIRMED;
 
-  // Finalizing a draft: the running document number is only burned the moment
-  // it leaves DRAFT for a real status (cancelling a draft outright still
-  // doesn't consume one). A deposit invoice never gets an auto number — its
-  // number is the manually-typed tax-invoice number entered at save time —
-  // so leaving DRAFT without one is a hard stop instead.
-  const leavingDraft =
-    oldStatus === DocumentStatus.DRAFT &&
-    newStatus !== DocumentStatus.DRAFT &&
-    newStatus !== DocumentStatus.CANCELLED &&
-    !currentDocument.documentNumber;
+    // Finalizing a draft: the running document number is only burned the moment
+    // it leaves DRAFT for a real status (cancelling a draft outright still
+    // doesn't consume one). A deposit invoice never gets an auto number — its
+    // number is the manually-typed tax-invoice number entered at save time —
+    // so leaving DRAFT without one is a hard stop instead.
+    const leavingDraft =
+      oldStatus === DocumentStatus.DRAFT &&
+      newStatus !== DocumentStatus.DRAFT &&
+      newStatus !== DocumentStatus.CANCELLED &&
+      !currentDocument.documentNumber;
 
-  if (leavingDraft && currentDocument.isDepositInvoice) {
-    throw new Error("กรุณาระบุเลขที่ใบกำกับภาษีก่อน");
-  }
+    if (leavingDraft && currentDocument.isDepositInvoice) {
+      throw new Error("กรุณาระบุเลขที่ใบกำกับภาษีก่อน");
+    }
 
-  const needsDocumentNumber = leavingDraft && !currentDocument.isDepositInvoice;
-  const documentNumber = needsDocumentNumber
-    ? await generateDocumentNumber(currentDocument.type)
-    : undefined;
+    const needsDocumentNumber = leavingDraft && !currentDocument.isDepositInvoice;
+    const documentNumber = needsDocumentNumber
+      ? await generateDocumentNumber(currentDocument.type, tx)
+      : undefined;
 
-  const document = await prisma.document.update({
-    where: { id },
-    data: {
-      status: newStatus,
-      ...(documentNumber ? { documentNumber } : {}),
-      ...(enteringConfirmed ? { reservesStock: true } : {}),
-    },
+    const document = await tx.document.update({
+      where: { id },
+      data: {
+        status: newStatus,
+        ...(documentNumber ? { documentNumber } : {}),
+        ...(enteringConfirmed ? { reservesStock: true } : {}),
+      },
+    });
+
+    if (currentDocument.sourceInvoiceId && (oldStatus === "PAID" || newStatus === "PAID")) {
+      await syncInvoicePaymentStatus(tx, currentDocument.sourceInvoiceId);
+    }
+    return { document, enteringConfirmed };
   });
 
   // Advisory-only: report what would be short, never blocking and never writing.
@@ -522,6 +601,7 @@ export async function updateDocumentStatus(
   revalidatePath("/quotations");
   revalidatePath("/invoices");
   revalidatePath("/receipts");
+  revalidatePath("/dashboard");
   return serialize({ ...document, shortages });
 }
 
@@ -574,13 +654,7 @@ export async function getNextCustomInvoiceNumber(documentDate: Date) {
 export async function deleteDocument(id: string) {
   await assertAdmin();
 
-  // Cancelling drops the document out of the reserving statuses, so its
-  // reservation (if any) simply disappears from the derived query. Nothing
-  // to restore — on-hand was never touched by confirming in the first place.
-  await prisma.document.update({
-    where: { id },
-    data: { status: "CANCELLED" },
-  });
+  await updateDocumentStatus(id, DocumentStatus.CANCELLED);
 
   revalidatePath("/stock");
   revalidatePath("/quotations");

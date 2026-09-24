@@ -135,6 +135,8 @@ export const documentSchema = z.object({
   customInvoiceNumber: z.string().optional(),
   sourceQuotationId: z.string().optional(),
   sourceInvoiceId: z.string().optional(),
+  receiptPaymentType: z.enum(["FULL", "DEPOSIT", "BALANCE"]).optional(),
+  receiptAmount: z.coerce.number().finite().positive("กรุณาระบุยอดรับชำระมากกว่า 0").optional(),
   isDepositInvoice: z.boolean().default(false),
   taxInvoiceNumber: z.string().optional(),
   depositPercent: z.coerce.number().optional().nullable(),

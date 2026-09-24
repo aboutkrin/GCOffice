@@ -67,6 +67,7 @@ export async function getDocuments(params?: {
         vatEnabled: true,
         customerSnapshot: true,
         createdAt: true,
+        receiptPaymentType: true,
         isDepositInvoice: true,
         netPayable: true,
       },
@@ -142,51 +143,19 @@ export async function getConfirmedQuotations(params?: { year?: number; month?: n
   }
 }
 
-export async function getPaidInvoices(params?: { year?: number; month?: number }) {
-  try {
-    const where: any = {
-      type: "INVOICE",
-      status: "PAID",
-      receipts: { none: {} },
-    };
-    if (params?.year && params?.month) {
-      const startDate = new Date(Date.UTC(params.year, params.month - 1, 1));
-      const endDate = new Date(Date.UTC(params.year, params.month, 1));
-      where.documentDate = { gte: startDate, lt: endDate };
-    }
-    const data = await prisma.document.findMany({
-      where,
-      select: {
-        id: true,
-        documentNumber: true,
-        documentDate: true,
-        grandTotal: true,
-        customerSnapshot: true,
-        companyId: true,
-        customerId: true,
-        vatEnabled: true,
-        vatRate: true,
-        discountType: true,
-        discountValue: true,
-        shippingCost: true,
-        shippingLocation: true,
-        freeShipping: true,
-        freeShippingLocation: true,
-        pickupAtShowroom: true,
-        footerNotes: true,
-        productionDaysMin: true,
-        productionDaysMax: true,
-        skipWeekends: true,
-        skipHolidays: true,
-        lineItems: { orderBy: { sequence: "asc" } },
-        paymentTerms: { orderBy: { sequence: "asc" } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
-    return serialize(data);
-  } catch {
-    return [];
-  }
+export async function getReceiptInvoices() {
+  const data = await prisma.document.findMany({
+    where: { type: "INVOICE", status: { in: ["BILLED", "DEPOSITED", "PAID"] } },
+    include: {
+      lineItems: { orderBy: { sequence: "asc" } },
+      paymentTerms: { orderBy: { sequence: "asc" } },
+      receipts: { where: { status: "PAID", type: "RECEIPT" }, select: { id: true, netPayable: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return serialize(data.filter((invoice) =>
+    Math.round(Number(invoice.netPayable) * 100) > invoice.receipts.reduce((sum, r) => sum + Math.round(Number(r.netPayable) * 100), 0)
+  ));
 }
 
 export async function getDocumentById(id: string) {
@@ -197,6 +166,10 @@ export async function getDocumentById(id: string) {
         lineItems: { orderBy: { sequence: "asc" } },
         paymentTerms: { orderBy: { sequence: "asc" } },
         depositDeductions: { orderBy: { sequence: "asc" } },
+        sourceInvoice: { include: {
+          paymentTerms: { orderBy: { sequence: "asc" } },
+          receipts: { where: { status: "PAID", type: "RECEIPT" }, select: { id: true, netPayable: true } },
+        } },
         company: true,
         customer: true,
         createdBy: true,
