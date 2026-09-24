@@ -12,6 +12,7 @@ import {
   Pencil,
   ChevronDown,
   Loader2,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -429,48 +430,76 @@ export function ExportToolbar({
               <span className="text-xs sm:text-sm">แก้ไข</span>
             </Button>
 
-            {/* Status Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            {/* Status control — receipts derive their status from the invoice, so
+                only expose the ability to cancel a mistaken receipt. */}
+            {documentType === "RECEIPT" ? (
+              currentStatus === "CANCELLED" ? (
+                <Badge className={`${DOCUMENT_STATUS_COLORS[currentStatus]} text-xs pointer-events-none`}>
+                  {DOCUMENT_STATUS_LABELS[currentStatus]}
+                </Badge>
+              ) : (
                 <Button
                   variant="outline"
                   size="sm"
                   disabled={isPending}
                   className="shrink-0"
+                  onClick={() => {
+                    if (window.confirm("ยกเลิกใบเสร็จนี้ใช่หรือไม่?")) {
+                      handleStatusChange("CANCELLED");
+                    }
+                  }}
                 >
                   {isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Badge
-                      className={`${DOCUMENT_STATUS_COLORS[currentStatus]} text-xs pointer-events-none`}
-                    >
-                      {DOCUMENT_STATUS_LABELS[currentStatus]}
-                    </Badge>
+                    <Ban className="h-4 w-4" />
                   )}
-                  <ChevronDown className="h-3 w-3" />
+                  <span className="text-xs sm:text-sm">ยกเลิกใบเสร็จ</span>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {STATUS_OPTIONS.map((status) => (
-                  <DropdownMenuItem
-                    key={status}
-                    onClick={() => handleStatusChange(status)}
-                    disabled={status === currentStatus}
+              )
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isPending}
+                    className="shrink-0"
                   >
-                    <Badge
-                      className={`${DOCUMENT_STATUS_COLORS[status]} text-xs pointer-events-none`}
-                    >
-                      {DOCUMENT_STATUS_LABELS[status]}
-                    </Badge>
-                    {status === currentStatus && (
-                      <span className="ml-2 text-xs text-gray-400">
-                        (ปัจจุบัน)
-                      </span>
+                    {isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Badge
+                        className={`${DOCUMENT_STATUS_COLORS[currentStatus]} text-xs pointer-events-none`}
+                      >
+                        {DOCUMENT_STATUS_LABELS[currentStatus]}
+                      </Badge>
                     )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    <ChevronDown className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {STATUS_OPTIONS.map((status) => (
+                    <DropdownMenuItem
+                      key={status}
+                      onClick={() => handleStatusChange(status)}
+                      disabled={status === currentStatus}
+                    >
+                      <Badge
+                        className={`${DOCUMENT_STATUS_COLORS[status]} text-xs pointer-events-none`}
+                      >
+                        {DOCUMENT_STATUS_LABELS[status]}
+                      </Badge>
+                      {status === currentStatus && (
+                        <span className="ml-2 text-xs text-gray-400">
+                          (ปัจจุบัน)
+                        </span>
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </div>
