@@ -38,6 +38,8 @@ export default async function ReceiptPreviewPage({
           taxId: document.company.taxId,
         }
       : document.companySnapshot,
+    // Use live customer data so customer edits reflect when printing
+    customerSnapshot: document.customer ?? document.customerSnapshot,
     createdBy: document.createdBy,
   };
 
