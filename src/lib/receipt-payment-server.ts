@@ -58,6 +58,7 @@ export async function applyReceiptPayment(tx: Tx, id: string, input: {
     return;
   }
   const calculated = calculateReceiptPayment({ total: Number(invoice.netPayable), invoiceVat,
+    vatRate: invoice.vatEnabled && invoiceVat > 0 ? Number(invoice.vatRate) : 0,
     paid, paidVat, type: input.type, requested: input.amount });
   const summary: ReceiptPaymentSummary = {
     invoiceNumber: invoice.documentNumber ?? "", invoiceTotal: Number(invoice.netPayable),
