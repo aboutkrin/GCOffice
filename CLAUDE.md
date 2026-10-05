@@ -48,7 +48,7 @@ Key models:
 - **DocumentLineItem** / **DocumentPaymentTerm** — Cascade-deleted children of Document
 - **DocumentCounter** — Per-type, per-month auto-incrementing document numbers
 
-Documents store JSON snapshots of company/customer data at creation time for historical accuracy.
+Documents store JSON snapshots of company/customer data at creation time for historical accuracy. Editing a customer (`updateCustomer`) refreshes `customerSnapshot` on all of that customer's documents, and the preview/print pages and `getDocumentForShare` render live company and customer data.
 
 Financial fields use Prisma `Decimal` type (12,2 precision).
 

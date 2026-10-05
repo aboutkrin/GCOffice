@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { customerSchema } from "@/lib/validators";
 import { requireUserAction, assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { serialize } from "@/lib/utils";
 
 export async function createCustomer(data: unknown) {
   const validated = customerSchema.parse(data);
@@ -30,11 +31,24 @@ export async function createCustomer(data: unknown) {
 export async function updateCustomer(id: string, data: unknown) {
   await requireUserAction();
   const validated = customerSchema.parse(data);
-  const customer = await prisma.customer.update({
-    where: { id },
-    data: validated,
+  const customer = await prisma.$transaction(async (tx) => {
+    const updated = await tx.customer.update({
+      where: { id },
+      data: validated,
+    });
+    // Refresh the customer snapshot on every document of this customer so
+    // lists, search and printouts show the edited name/address.
+    await tx.document.updateMany({
+      where: { customerId: id },
+      data: { customerSnapshot: serialize(updated) },
+    });
+    return updated;
   });
   revalidatePath("/customers");
+  revalidatePath("/quotations");
+  revalidatePath("/invoices");
+  revalidatePath("/receipts");
+  revalidatePath("/dashboard");
   return customer;
 }
 

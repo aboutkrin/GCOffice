@@ -613,6 +613,7 @@ export async function getDocumentForShare(id: string) {
       paymentTerms: { orderBy: { sequence: "asc" } },
       depositDeductions: { orderBy: { sequence: "asc" } },
       company: true,
+      customer: true,
       createdBy: true,
     },
   });
@@ -640,6 +641,7 @@ export async function getDocumentForShare(id: string) {
           taxId: document.company.taxId,
         }
       : document.companySnapshot,
+    customerSnapshot: document.customer ?? document.customerSnapshot,
     createdBy: document.createdBy,
   };
 
