@@ -5,10 +5,10 @@ import { applyReceiptPayment, lockInvoice, syncInvoicePaymentStatus } from "../s
 import type { Prisma } from "../src/generated/prisma/client";
 
 test("full payment and deposit/balance allocate the same total and VAT", () => {
-  const full = calculate({ total: 10700, invoiceVat: 700, paid: 0, paidVat: 0, type: "FULL", requested: 10700 });
+  const full = calculate({ total: 10700, invoiceVat: 700, paid: 0, paidVat: 0, vatRate: 7, type: "FULL", requested: 10700 });
   assert.deepEqual(full, { amount: 10700, vat: 700, base: 10000, remaining: 0 });
-  const deposit = calculate({ total: 10700, invoiceVat: 700, paid: 0, paidVat: 0, type: "DEPOSIT", requested: 3210 });
-  const balance = calculate({ total: 10700, invoiceVat: 700, paid: deposit.amount, paidVat: deposit.vat, type: "BALANCE", requested: 7490 });
+  const deposit = calculate({ total: 10700, invoiceVat: 700, paid: 0, paidVat: 0, vatRate: 7, type: "DEPOSIT", requested: 3210 });
+  const balance = calculate({ total: 10700, invoiceVat: 700, paid: deposit.amount, paidVat: deposit.vat, vatRate: 7, type: "BALANCE", requested: 7490 });
   assert.equal(deposit.vat + balance.vat, 700);
   assert.equal(deposit.base + balance.base, 10000);
   assert.equal(balance.remaining, 0);
@@ -17,7 +17,7 @@ test("full payment and deposit/balance allocate the same total and VAT", () => {
 test("multiple deposits reconcile rounding on the last receipt", () => {
   let paid = 0, paidVat = 0;
   for (const amount of [33.33, 33.33, 33.34]) {
-    const result = calculate({ total: 100, invoiceVat: 6.54, paid, paidVat, type: paid > 66 ? "BALANCE" : "DEPOSIT", requested: amount });
+    const result = calculate({ total: 100, invoiceVat: 6.54, paid, paidVat, vatRate: 7, type: paid > 66 ? "BALANCE" : "DEPOSIT", requested: amount });
     paid = (satang(paid) + satang(result.amount)) / 100;
     paidVat = (satang(paidVat) + satang(result.vat)) / 100;
   }
@@ -25,8 +25,17 @@ test("multiple deposits reconcile rounding on the last receipt", () => {
   assert.equal(paidVat, 6.54);
 });
 
+test("deposit VAT is extracted from the amount paid, not pro-rated from the rounded invoice VAT", () => {
+  // INV-6909-0015: invoice VAT 6,763.72 was rounded up from 6,763.715; pro-rating gave 2,029.12.
+  const invoice = { total: 103388.22, invoiceVat: 6763.72, vatRate: 7 };
+  const deposit = calculate({ ...invoice, paid: 0, paidVat: 0, type: "DEPOSIT", requested: 31016.46 });
+  assert.deepEqual(deposit, { amount: 31016.46, vat: 2029.11, base: 28987.35, remaining: 72371.76 });
+  const balance = calculate({ ...invoice, paid: 31016.46, paidVat: deposit.vat, type: "BALANCE", requested: 72371.76 });
+  assert.equal(satang(deposit.vat) + satang(balance.vat), satang(6763.72));
+});
+
 test("rejects invalid amounts, duplicate full payments and stale balances", () => {
-  const base = { total: 10000, invoiceVat: 0, paid: 3000, paidVat: 0 };
+  const base = { total: 10000, invoiceVat: 0, paid: 3000, paidVat: 0, vatRate: 0 };
   for (const requested of [0, -1, NaN, Infinity, 7000.01]) {
     assert.throws(() => calculate({ ...base, type: "DEPOSIT", requested }));
   }

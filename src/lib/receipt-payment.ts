@@ -14,6 +14,8 @@ export interface ReceiptPaymentSummary {
 
 export function calculateReceiptPayment(input: {
   total: number; invoiceVat: number; paid: number; paidVat: number;
+  /** Invoice VAT % (0 when VAT is off); partial payments extract VAT at rate/(100+rate). */
+  vatRate: number;
   type: ReceiptPaymentKind; requested: number;
 }) {
   const total = satang(input.total);
@@ -30,7 +32,9 @@ export function calculateReceiptPayment(input: {
     throw new Error("ยอดคงเหลือเปลี่ยนแปลง กรุณาโหลดข้อมูลใหม่ก่อนบันทึก");
   }
   const vatRemaining = satang(input.invoiceVat) - satang(input.paidVat);
-  const vat = amount === remaining ? vatRemaining : Math.min(vatRemaining, Math.round(satang(input.invoiceVat) * amount / total));
+  // Pro-rating the invoice's already-rounded VAT can be a satang off; the final payment absorbs the difference.
+  const vat = amount === remaining ? vatRemaining
+    : Math.min(vatRemaining, Math.round(amount * input.vatRate / (100 + input.vatRate)));
   if (vat < 0 || vat > amount) throw new Error("ยอดภาษีของใบเสร็จก่อนหน้าไม่สอดคล้องกับใบแจ้งหนี้");
   return { amount: amount / 100, vat: vat / 100, base: (amount - vat) / 100, remaining: (remaining - amount) / 100 };
 }
