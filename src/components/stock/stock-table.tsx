@@ -295,6 +295,7 @@ export function StockTable({
             <SelectItem value="all">ทั้งหมด</SelectItem>
             <SelectItem value="in_stock">มีสินค้า</SelectItem>
             <SelectItem value="out_of_stock">สินค้าหมด</SelectItem>
+            <SelectItem value="reserved">มีการจอง</SelectItem>
           </SelectContent>
         </Select>
         <Select
