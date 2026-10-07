@@ -10,9 +10,16 @@ import {
   FileText,
   ScanLine,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const mobileNavItems = [
+const mobileNavItems: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  isPrimary?: boolean;
+  adminOnly?: boolean;
+}[] = [
   {
     href: "/dashboard",
     label: "หน้าหลัก",
