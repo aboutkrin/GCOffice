@@ -17,7 +17,6 @@ const mobileNavItems = [
     href: "/dashboard",
     label: "หน้าหลัก",
     icon: LayoutDashboard,
-    adminOnly: true,
   },
   {
     href: "/invoices",

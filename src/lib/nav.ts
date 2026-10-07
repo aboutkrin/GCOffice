@@ -14,7 +14,6 @@ import {
   Wallet,
   ReceiptText,
   Truck,
-  CalendarClock,
   Printer,
   Warehouse,
   PackagePlus,
@@ -48,8 +47,7 @@ export function isNavGroup(entry: NavEntry): entry is NavGroup {
 }
 
 export const MAIN_NAV: NavEntry[] = [
-  { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard, adminOnly: true },
-  { href: "/delivery-schedule", label: "กำหนดส่งสินค้า", icon: CalendarClock },
+  { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
   { href: "/customers", label: "ลูกค้า", icon: Users },
   {
     label: "เอกสาร",
