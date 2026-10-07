@@ -26,7 +26,7 @@ export default async function ReceivePage({ searchParams }: ReceivePageProps) {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">รับเข้าสินค้า</h1>
-          <p className="text-muted-foreground text-sm">ประวัติและสร้างเอกสารรับเข้าสินค้า</p>
+          <p className="text-muted-foreground text-sm">กด &quot;รับเข้าใหม่&quot; → สแกน QR แล้วใส่จำนวน → กด &quot;บันทึกและปรับสต็อค&quot; เพื่อเพิ่มสต็อค</p>
         </div>
         <NewStockDocumentButton type="RECEIVE" label="รับเข้าใหม่" basePath="receive" />
       </div>

@@ -132,13 +132,11 @@ export const STOCK_MOVEMENT_TYPE_COLORS: Record<string, string> = {
 
 export const STOCK_STATUS_LABELS: Record<string, string> = {
   IN_STOCK: "มีสินค้า",
-  LOW_STOCK: "สินค้าใกล้หมด",
   OUT_OF_STOCK: "สินค้าหมด",
 };
 
 export const STOCK_STATUS_COLORS: Record<string, string> = {
   IN_STOCK: "bg-green-100 text-green-800",
-  LOW_STOCK: "bg-amber-100 text-amber-800",
   OUT_OF_STOCK: "bg-red-100 text-red-800",
 };
 

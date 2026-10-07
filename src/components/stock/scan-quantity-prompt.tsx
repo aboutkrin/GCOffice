@@ -33,6 +33,8 @@ export function ScanQuantityPrompt({
   onCancel,
 }: ScanQuantityPromptProps) {
   const [quantity, setQuantity] = useState(1);
+  // A count can legitimately be 0 (looked, found nothing); receive/issue can't.
+  const minQuantity = documentType === "COUNT" ? 0 : 1;
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -45,7 +47,7 @@ export function ScanQuantityPrompt({
   }, []);
 
   const confirm = () => {
-    if (quantity <= 0 || pending) return;
+    if (quantity < minQuantity || pending) return;
     onConfirm(quantity);
   };
 
@@ -63,6 +65,9 @@ export function ScanQuantityPrompt({
             )}
           </p>
           <p className="text-xs text-muted-foreground font-mono">{resolution.productSku}</p>
+          <p className="text-xs text-muted-foreground">
+            คงเหลือในระบบตอนนี้ <span className="font-mono font-medium text-foreground">{resolution.stockQuantity}</span> กล่อง
+          </p>
         </div>
       </div>
 
@@ -92,7 +97,7 @@ export function ScanQuantityPrompt({
           <X className="size-4" />
           ยกเลิก
         </Button>
-        <Button type="button" size="sm" onClick={confirm} disabled={pending || quantity <= 0}>
+        <Button type="button" size="sm" onClick={confirm} disabled={pending || quantity < minQuantity}>
           {pending ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
           เพิ่ม
         </Button>

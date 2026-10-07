@@ -78,6 +78,22 @@ export async function getStockDocument(id: string) {
   }
 }
 
+/** Number of DRAFT (not yet posted, so not yet applied to stock) documents per type. */
+export async function getDraftStockDocumentCounts() {
+  try {
+    const rows = await prisma.stockDocument.groupBy({
+      by: ["type"],
+      where: { status: "DRAFT" },
+      _count: { _all: true },
+    });
+    const counts: Record<string, number> = {};
+    for (const row of rows) counts[row.type] = row._count._all;
+    return counts;
+  } catch {
+    return {} as Record<string, number>;
+  }
+}
+
 /** Resume the caller's own open DRAFT session for this type, if any. */
 export async function getOpenStockDocumentFor(type: StockDocumentType, userId: string) {
   try {

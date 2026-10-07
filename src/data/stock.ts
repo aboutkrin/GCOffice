@@ -7,6 +7,14 @@ import {
   getReservationMap,
 } from "./stock-availability";
 
+/** A product "มีสินค้า" when it, or any of its colour variants, has at least 1 box. */
+const inStockWhere: Prisma.ProductWhereInput = {
+  OR: [
+    { stockQuantity: { gte: 1 } },
+    { colorVariants: { some: { stockQuantity: { gte: 1 } } } },
+  ],
+};
+
 export async function getStockOverview(params?: {
   search?: string;
   categoryId?: string;
@@ -19,21 +27,22 @@ export async function getStockOverview(params?: {
   };
 
   if (params?.categoryId) where.categoryId = params.categoryId;
+  const and: Prisma.ProductWhereInput[] = [];
   if (params?.search) {
-    where.OR = [
-      { name: { contains: params.search, mode: "insensitive" } },
-      { sku: { contains: params.search, mode: "insensitive" } },
-    ];
+    and.push({
+      OR: [
+        { name: { contains: params.search, mode: "insensitive" } },
+        { sku: { contains: params.search, mode: "insensitive" } },
+        { colorVariants: { some: { sku: { contains: params.search, mode: "insensitive" } } } },
+      ],
+    });
   }
-  if (params?.stockFilter === "low_stock") {
-    // Prisma 7 supports column-to-column comparison via field references.
-    where.stockQuantity = {
-      gt: 0,
-      lte: prisma.product.fields.lowStockThreshold,
-    };
+  if (params?.stockFilter === "in_stock") {
+    and.push(inStockWhere);
   } else if (params?.stockFilter === "out_of_stock") {
-    where.stockQuantity = 0;
+    and.push({ NOT: inStockWhere });
   }
+  if (and.length > 0) where.AND = and;
 
   const page = params?.page ?? 1;
   const perPage = params?.perPage ?? 10;
@@ -52,12 +61,12 @@ export async function getStockOverview(params?: {
               colorHex: true,
               imageUrl: true,
               stockQuantity: true,
-              lowStockThreshold: true,
               sku: true,
             },
           },
         },
-        orderBy: { name: "asc" },
+        // Products with stock first, so what can be sold is always on top.
+        orderBy: [{ stockQuantity: "desc" }, { name: "asc" }],
         skip: (page - 1) * perPage,
         take: perPage,
       }),
@@ -90,31 +99,18 @@ export async function getStockOverview(params?: {
 
 export async function getStockStats() {
   try {
-    const [totalProducts, outOfStock, lowStock, reorderResult] = await Promise.all([
+    const [totalProducts, inStock] = await Promise.all([
       prisma.product.count({ where: { status: "ACTIVE" } }),
-      prisma.product.count({ where: { status: "ACTIVE", stockQuantity: 0 } }),
-      prisma.product.count({
-        where: {
-          status: "ACTIVE",
-          stockQuantity: { gt: 0, lte: prisma.product.fields.lowStockThreshold },
-        },
-      }),
-      prisma.$queryRaw<{ total: number }[]>(Prisma.sql`
-        SELECT COALESCE(SUM(GREATEST(0, low_stock_threshold - stock_quantity)), 0)::int AS total
-        FROM products WHERE status = 'ACTIVE'
-      `),
+      prisma.product.count({ where: { status: "ACTIVE", ...inStockWhere } }),
     ]);
-
-    const totalReorderQuantity = reorderResult[0]?.total ?? 0;
-    const inStock = totalProducts - outOfStock - lowStock;
 
     const reservationMap = await getReservationMap();
     let totalReserved = 0;
     for (const reserved of reservationMap.values()) totalReserved += reserved;
 
-    return { totalProducts, inStock, lowStock, outOfStock, totalReorderQuantity, totalReserved };
+    return { totalProducts, inStock, outOfStock: totalProducts - inStock, totalReserved };
   } catch {
-    return { totalProducts: 0, inStock: 0, lowStock: 0, outOfStock: 0, totalReorderQuantity: 0, totalReserved: 0 };
+    return { totalProducts: 0, inStock: 0, outOfStock: 0, totalReserved: 0 };
   }
 }
 
@@ -178,12 +174,7 @@ export async function getInStockProducts() {
     const data = await prisma.product.findMany({
       where: {
         status: "ACTIVE",
-        // Show anything with at least 1 box, whether counted on the product
-        // itself or only on one of its colour variants.
-        OR: [
-          { stockQuantity: { gte: 1 } },
-          { colorVariants: { some: { stockQuantity: { gte: 1 } } } },
-        ],
+        ...inStockWhere,
       },
       include: {
         category: true,
