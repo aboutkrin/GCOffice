@@ -47,7 +47,7 @@ export function isNavGroup(entry: NavEntry): entry is NavGroup {
 }
 
 export const MAIN_NAV: NavEntry[] = [
-  { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard, adminOnly: true },
+  { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
   { href: "/customers", label: "ลูกค้า", icon: Users },
   {
     label: "เอกสาร",

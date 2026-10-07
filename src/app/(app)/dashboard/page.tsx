@@ -27,6 +27,26 @@ export default async function DashboardPage() {
   const { year: currentYear, month: currentMonth } = getThaiNow();
   const user = await getCurrentUser();
   const isAdmin = user?.role === "ADMIN";
+
+  // STAFF only sees the delivery schedule on the dashboard.
+  if (!isAdmin) {
+    const [deliverySchedule, holidays] = await Promise.all([
+      getDeliverySchedule(currentYear, currentMonth),
+      getHolidaysForMonth(currentYear, currentMonth),
+    ]);
+    return (
+      <div>
+        <PageHeader title="แดชบอร์ด" description="กำหนดส่งสินค้า" />
+        <DeliverySchedule
+          initialData={deliverySchedule}
+          initialYear={currentYear}
+          initialMonth={currentMonth}
+          initialHolidays={holidays}
+        />
+      </div>
+    );
+  }
+
   const [stats, yearlyStats, revenueExpense, deliverySchedule, holidays] = await Promise.all([
     getDashboardStats(),
     getYearlyStats(currentYear),
