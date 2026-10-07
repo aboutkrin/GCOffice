@@ -65,10 +65,8 @@ interface StockTableProps {
   };
 }
 
-function getStockStatus(product: any): string {
-  if (product.stockQuantity === 0) return "OUT_OF_STOCK";
-  if (product.stockQuantity <= product.lowStockThreshold) return "LOW_STOCK";
-  return "IN_STOCK";
+function getStockStatus(stockQuantity: number): string {
+  return stockQuantity > 0 ? "IN_STOCK" : "OUT_OF_STOCK";
 }
 
 export function StockTable({
@@ -202,7 +200,7 @@ export function StockTable({
       id: "stockStatus",
       header: "สถานะสต็อค",
       cell: ({ row }) => {
-        const status = getStockStatus(row.original);
+        const status = getStockStatus(row.original.stockQuantity);
         return (
           <Badge className={STOCK_STATUS_COLORS[status]}>
             {STOCK_STATUS_LABELS[status]}
@@ -278,7 +276,7 @@ export function StockTable({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           )}
           <Input
-            placeholder="ค้นหาชื่อหรือรหัสสินค้า..."
+            placeholder="ค้นหาชื่อ รหัสสินค้า หรือรหัสสี..."
             value={searchValue}
             onChange={onSearchChange}
             className="pl-9"
@@ -295,7 +293,7 @@ export function StockTable({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">ทั้งหมด</SelectItem>
-            <SelectItem value="low_stock">สินค้าใกล้หมด</SelectItem>
+            <SelectItem value="in_stock">มีสินค้า</SelectItem>
             <SelectItem value="out_of_stock">สินค้าหมด</SelectItem>
           </SelectContent>
         </Select>
@@ -371,12 +369,7 @@ export function StockTable({
                       ))}
                     </TableRow>
                     {isExpanded && variants.map((variant: any) => {
-                      const variantStatus =
-                        variant.stockQuantity === 0
-                          ? "OUT_OF_STOCK"
-                          : variant.stockQuantity <= variant.lowStockThreshold
-                            ? "LOW_STOCK"
-                            : "IN_STOCK";
+                      const variantStatus = getStockStatus(variant.stockQuantity);
                       return (
                         <TableRow key={`variant-${variant.id}`} className="bg-muted/30">
                           <TableCell className="hidden md:table-cell" />

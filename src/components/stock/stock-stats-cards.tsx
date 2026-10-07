@@ -1,20 +1,20 @@
-"use client";
-
-import { Package, PackageCheck, PackageX, AlertTriangle, Lock } from "lucide-react";
+import Link from "next/link";
+import { Package, PackageCheck, PackageX, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface StockStatsCardsProps {
   stats: {
     totalProducts: number;
     inStock: number;
-    lowStock: number;
     outOfStock: number;
-    totalReorderQuantity: number;
     totalReserved?: number;
   };
+  /** Current `stockFilter` search param — the matching card is highlighted. */
+  activeFilter?: string;
 }
 
-export function StockStatsCards({ stats }: StockStatsCardsProps) {
+export function StockStatsCards({ stats, activeFilter = "" }: StockStatsCardsProps) {
   const cards = [
     {
       label: "สินค้าทั้งหมด",
@@ -22,6 +22,8 @@ export function StockStatsCards({ stats }: StockStatsCardsProps) {
       icon: Package,
       color: "text-blue-600",
       bg: "bg-blue-50",
+      ring: "ring-blue-500",
+      filter: "",
     },
     {
       label: "มีสินค้า",
@@ -29,13 +31,8 @@ export function StockStatsCards({ stats }: StockStatsCardsProps) {
       icon: PackageCheck,
       color: "text-green-600",
       bg: "bg-green-50",
-    },
-    {
-      label: "สินค้าใกล้หมด",
-      value: stats.lowStock,
-      icon: AlertTriangle,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
+      ring: "ring-green-500",
+      filter: "in_stock",
     },
     {
       label: "สินค้าหมด",
@@ -43,35 +40,50 @@ export function StockStatsCards({ stats }: StockStatsCardsProps) {
       icon: PackageX,
       color: "text-red-600",
       bg: "bg-red-50",
+      ring: "ring-red-500",
+      filter: "out_of_stock",
     },
-    ...(stats.totalReserved != null
-      ? [
-          {
-            label: "จองทั้งหมด",
-            value: stats.totalReserved,
-            icon: Lock,
-            color: "text-purple-600",
-            bg: "bg-purple-50",
-          },
-        ]
-      : []),
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {cards.map((card) => (
-        <Card key={card.label}>
+        <Link
+          key={card.label}
+          href={card.filter ? `/stock?stockFilter=${card.filter}` : "/stock"}
+          className="rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Card
+            className={cn(
+              "h-full transition-colors hover:bg-muted/50",
+              activeFilter === card.filter && `ring-2 ${card.ring}`,
+            )}
+          >
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className={`rounded-lg p-2 ${card.bg}`}>
+                <card.icon className={`size-5 ${card.color}`} />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{card.value}</p>
+                <p className="text-xs text-muted-foreground">{card.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      ))}
+      {stats.totalReserved != null && (
+        <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <div className={`rounded-lg p-2 ${card.bg}`}>
-              <card.icon className={`size-5 ${card.color}`} />
+            <div className="rounded-lg p-2 bg-purple-50">
+              <Lock className="size-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{card.value}</p>
-              <p className="text-xs text-muted-foreground">{card.label}</p>
+              <p className="text-2xl font-bold">{stats.totalReserved}</p>
+              <p className="text-xs text-muted-foreground">จองทั้งหมด (กล่อง)</p>
             </div>
           </CardContent>
         </Card>
-      ))}
+      )}
     </div>
   );
 }

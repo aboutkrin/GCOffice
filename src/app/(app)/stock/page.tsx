@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { History, FileText, ClipboardList, PackagePlus, PackageMinus, ClipboardCheck, QrCode } from "lucide-react";
+import { History, FileText, ClipboardList, PackagePlus, PackageMinus, ClipboardCheck, QrCode, AlertTriangle } from "lucide-react";
 
 import { getStockOverview, getStockStats } from "@/data/stock";
 import { getProductCategories } from "@/data/products";
+import { getDraftStockDocumentCounts } from "@/data/stock-documents";
 import { Button } from "@/components/ui/button";
 import { StockStatsCards } from "@/components/stock/stock-stats-cards";
 import { StockTable } from "@/components/stock/stock-table";
@@ -22,7 +23,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
 
-  const [{ products, total }, stats, categories] = await Promise.all([
+  const [{ products, total }, stats, categories, draftCounts] = await Promise.all([
     getStockOverview({
       search: params.search,
       categoryId: params.categoryId,
@@ -32,7 +33,14 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     }),
     getStockStats(),
     getProductCategories(),
+    getDraftStockDocumentCounts(),
   ]);
+
+  const drafts = [
+    { type: "RECEIVE", label: "รับเข้า", href: "/stock/receive" },
+    { type: "ISSUE", label: "เบิกออก", href: "/stock/issue" },
+    { type: "COUNT", label: "ตรวจนับ", href: "/stock/count" },
+  ].filter((d) => (draftCounts[d.type] ?? 0) > 0);
 
   const totalPages = Math.ceil(total / 10);
 
@@ -91,7 +99,19 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         </div>
       </div>
 
-      <StockStatsCards stats={stats} />
+      {drafts.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <AlertTriangle className="size-4 shrink-0" />
+          <span>มีเอกสารร่างที่ยังไม่บันทึก สต็อคยังไม่ถูกปรับจนกว่าจะกด &quot;บันทึกและปรับสต็อค&quot;:</span>
+          {drafts.map((d) => (
+            <Link key={d.type} href={d.href} className="font-medium underline underline-offset-2">
+              {d.label} {draftCounts[d.type]} ใบ
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <StockStatsCards stats={stats} activeFilter={params.stockFilter ?? ""} />
 
       <StockTable
         products={products}

@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import { ArrowLeft, Check, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ import { ScanInput, type ScanInputHandle } from "./scan-input";
 import { ScanQuantityPrompt } from "./scan-quantity-prompt";
 import { StockDocumentLineRow } from "./stock-document-line-row";
 import { StockCountVarianceSummary } from "./stock-count-variance-summary";
+import { StockProductSearch, StockVariantChooser, type PickedStockItem } from "./stock-product-search";
 import { resolveStockCodeAction } from "@/actions/stock-actions";
 import type { StockCodeResolution } from "@/lib/stock-code";
 import {
@@ -53,9 +54,15 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pendingScan, setPendingScan] = useState<{
-    resolution: Extract<StockCodeResolution, { kind: "variant" | "product" }>;
+    resolution: PickedStockItem;
     fromCamera: boolean;
   } | null>(null);
+  // Scanned a product QR whose stock is tracked per colour — ask which colour.
+  const [needsVariant, setNeedsVariant] = useState<{
+    resolution: Extract<StockCodeResolution, { kind: "product-needs-variant" }>;
+    fromCamera: boolean;
+  } | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
   const scanInputRef = useRef<ScanInputHandle>(null);
 
   const isDraft = document.status === "DRAFT";
@@ -70,7 +77,8 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
       throw new Error("รหัสนี้ตรงกับหลายรายการ กรุณาเลือกสินค้าด้วยตนเอง");
     }
     if (resolution.kind === "product-needs-variant") {
-      throw new Error(`"${resolution.productName}" มีหลายสี กรุณาเลือกสีจากหน้ารายการสินค้า`);
+      setNeedsVariant({ resolution, fromCamera: meta.fromCamera });
+      return;
     }
     setPendingScan({ resolution, fromCamera: meta.fromCamera });
   };
@@ -96,11 +104,18 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
 
   const handleCancelScan = () => setPendingScan(null);
 
+  const handleVariantPicked = (item: PickedStockItem) => {
+    setPendingScan({ resolution: item, fromCamera: needsVariant?.fromCamera ?? false });
+    setNeedsVariant(null);
+  };
+
   const handlePost = () => {
     startTransition(async () => {
       try {
         await postStockDocument(document.id);
-        toast.success("บันทึกเอกสารเรียบร้อยแล้ว");
+        toast.success("บันทึกเรียบร้อย สต็อคถูกปรับแล้ว", {
+          action: { label: "ดูภาพรวมสต็อค", onClick: () => router.push("/stock") },
+        });
         setConfirmPost(false);
         router.refresh();
       } catch (err) {
@@ -176,7 +191,7 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
             </Button>
             <Button size="sm" onClick={() => setConfirmPost(true)} disabled={isPending || document.lines.length === 0}>
               <Check className="size-4" />
-              บันทึกเอกสาร
+              บันทึกและปรับสต็อค
             </Button>
           </div>
         )}
@@ -188,13 +203,54 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
       </div>
 
       {isDraft && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <AlertTriangle className="size-4 shrink-0 mt-0.5" />
+          <span>
+            {document.type === "COUNT"
+              ? "สแกน QR แล้วใส่จำนวนที่นับได้จริงของแต่ละรายการ"
+              : "สแกน QR แล้วใส่จำนวน"}{" "}
+            — ยังเป็นร่าง สต็อคจะยังไม่เปลี่ยนจนกว่าจะกด &quot;บันทึกและปรับสต็อค&quot;
+          </span>
+        </div>
+      )}
+
+      {isDraft && (
         <Card>
           <CardContent className="pt-6 space-y-3">
             <ScanInput
               ref={scanInputRef}
               onScan={handleScan}
-              disabled={isPending || !!pendingScan}
+              disabled={isPending || !!pendingScan || !!needsVariant}
             />
+            {needsVariant && (
+              <StockVariantChooser
+                product={{
+                  id: needsVariant.resolution.productId,
+                  name: needsVariant.resolution.productName,
+                  sku: needsVariant.resolution.productSku,
+                }}
+                variants={needsVariant.resolution.colorVariants}
+                onPick={handleVariantPicked}
+                onCancel={() => setNeedsVariant(null)}
+              />
+            )}
+            {!pendingScan && !needsVariant && (
+              showSearch ? (
+                <StockProductSearch
+                  disabled={isPending}
+                  onPick={(item) => setPendingScan({ resolution: item, fromCamera: false })}
+                />
+              ) : (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowSearch(true)}
+                >
+                  <Search className="size-3.5" />
+                  ไม่มี QR? ค้นหาสินค้าด้วยชื่อหรือรหัส
+                </button>
+              )
+            )}
             {pendingScan && (
               <ScanQuantityPrompt
                 resolution={pendingScan.resolution}
@@ -253,14 +309,16 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
           <AlertDialogHeader>
             <AlertDialogTitle>ยืนยันบันทึกเอกสาร</AlertDialogTitle>
             <AlertDialogDescription>
-              สต็อคจะถูกปรับตามรายการทั้งหมด {document.lines.length} รายการ ({totalQuantity} ชิ้น)
-              และไม่สามารถแก้ไขรายการได้อีกหลังจากนี้
+              {document.type === "COUNT"
+                ? `สต็อคของ ${document.lines.length} รายการที่นับจะถูกตั้งเป็นจำนวนที่นับได้ (รายการที่ไม่ได้นับจะไม่เปลี่ยน)`
+                : `สต็อคจะถูก${document.type === "RECEIVE" ? "เพิ่ม" : "ลด"}ตามรายการทั้งหมด ${document.lines.length} รายการ (${totalQuantity} กล่อง)`}
+              {" "}และไม่สามารถแก้ไขรายการได้อีกหลังจากนี้
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isPending}>ยกเลิก</AlertDialogCancel>
             <AlertDialogAction onClick={handlePost} disabled={isPending}>
-              บันทึกเอกสาร
+              บันทึกและปรับสต็อค
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

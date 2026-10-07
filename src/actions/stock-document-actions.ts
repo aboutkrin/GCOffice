@@ -287,10 +287,6 @@ export async function postStockDocument(stockDocumentId: string) {
     if (!header) throw new Error("ไม่พบเอกสาร");
     if (header.status !== "DRAFT") throw new Error("เอกสารนี้ถูกบันทึกแล้ว");
 
-    if (header.type === "COUNT") {
-      await assertAdmin();
-    }
-
     const lines = await tx.stockDocumentLine.findMany({
       where: { stockDocumentId },
       orderBy: { sequence: "asc" },

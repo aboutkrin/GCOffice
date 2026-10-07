@@ -36,7 +36,7 @@ export default async function CountPage({ searchParams }: CountPageProps) {
           <div>
             <h1 className="text-2xl font-bold">ตรวจนับสต็อค</h1>
             <p className="text-muted-foreground text-sm">
-              สแกนนับจริง เทียบกับสต็อคระบบ แล้วบันทึกส่วนต่าง (ต้องใช้สิทธิ์แอดมิน)
+              กด &quot;ตรวจนับใหม่&quot; → สแกน QR แล้วใส่จำนวนที่นับได้ → กด &quot;บันทึกและปรับสต็อค&quot; ระบบจะตั้งสต็อคเป็นจำนวนที่นับได้
             </p>
           </div>
         </div>

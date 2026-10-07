@@ -27,7 +27,7 @@ export default async function IssuePage({ searchParams }: IssuePageProps) {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold">เบิกออกสินค้า</h1>
-          <p className="text-muted-foreground text-sm">ประวัติและสร้างเอกสารเบิกออกสินค้า</p>
+          <p className="text-muted-foreground text-sm">เบิกตามใบเสนอราคา หรือกด &quot;เบิกอิสระ&quot; → สแกน QR แล้วใส่จำนวน → กด &quot;บันทึกและปรับสต็อค&quot; เพื่อลดสต็อค</p>
         </div>
         <div className="flex items-center gap-2">
           <IssueSourcePicker />
