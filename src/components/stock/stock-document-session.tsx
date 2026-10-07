@@ -112,7 +112,12 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
   const handlePost = () => {
     startTransition(async () => {
       try {
-        await postStockDocument(document.id);
+        const result = await postStockDocument(document.id);
+        if (!result.ok) {
+          toast.error(result.error, { duration: 10000 });
+          setConfirmPost(false);
+          return;
+        }
         toast.success("บันทึกเรียบร้อย สต็อคถูกปรับแล้ว", {
           action: { label: "ดูภาพรวมสต็อค", onClick: () => router.push("/stock") },
         });
