@@ -273,158 +273,214 @@ export async function deleteStockDocumentDraft(stockDocumentId: string) {
  * already-POSTED document is rejected — this is the idempotency gate that
  * the old confirm-time deduction never had.
  */
-export async function postStockDocument(stockDocumentId: string) {
-  const user = await requireUserAction();
-
-  const result = await prisma.$transaction(async (tx) => {
-    const headerRows = await tx.$queryRaw<
-      { id: string; status: string; type: string; documentNumber: string }[]
-    >(Prisma.sql`
-      SELECT id, status, type, document_number AS "documentNumber"
-      FROM stock_documents WHERE id = ${stockDocumentId} FOR UPDATE
-    `);
-    const header = headerRows[0];
-    if (!header) throw new Error("ไม่พบเอกสาร");
-    if (header.status !== "DRAFT") throw new Error("เอกสารนี้ถูกบันทึกแล้ว");
-
-    const lines = await tx.stockDocumentLine.findMany({
-      where: { stockDocumentId },
-      orderBy: { sequence: "asc" },
-    });
-    if (lines.length === 0) throw new Error("กรุณาเพิ่มรายการอย่างน้อย 1 รายการ");
-    if (header.type !== "COUNT") {
-      for (const line of lines) {
-        if (line.quantity <= 0) {
-          throw new Error(`จำนวนต้องมากกว่า 0: ${line.productName}`);
-        }
-      }
-    }
-
-    const variantIds = [...new Set(lines.filter((l) => l.colorVariantId).map((l) => l.colorVariantId!))].sort();
-    const productOnlyIds = [...new Set(lines.filter((l) => !l.colorVariantId).map((l) => l.productId))].sort();
-
-    // A product whose colours are tracked as variants must never receive a
-    // product-level movement (Product.stockQuantity is a rollup SUM).
-    if (productOnlyIds.length > 0) {
-      const withVariants = await tx.productColorVariant.findMany({
-        where: { productId: { in: productOnlyIds } },
-        select: { productId: true },
-        distinct: ["productId"],
-      });
-      if (withVariants.length > 0) {
-        throw new Error("มีสินค้าที่ต้องระบุสีก่อนทำรายการ กรุณาเลือกสี");
-      }
-    }
-
-    const variantRows =
-      variantIds.length > 0
-        ? await tx.$queryRaw<{ id: string; stock_quantity: number }[]>(Prisma.sql`
-            SELECT id, stock_quantity FROM product_color_variants
-            WHERE id IN (${Prisma.join(variantIds)}) ORDER BY id FOR UPDATE
-          `)
-        : [];
-    const productRows =
-      productOnlyIds.length > 0
-        ? await tx.$queryRaw<{ id: string; stock_quantity: number }[]>(Prisma.sql`
-            SELECT id, stock_quantity FROM products
-            WHERE id IN (${Prisma.join(productOnlyIds)}) ORDER BY id FOR UPDATE
-          `)
-        : [];
-
-    const variantBalance = new Map(variantRows.map((r) => [r.id, r.stock_quantity]));
-    const productBalance = new Map(productRows.map((r) => [r.id, r.stock_quantity]));
-
-    const touchedProductIds = new Set<string>();
-
-    for (const line of lines) {
-      const isVariant = !!line.colorVariantId;
-      const currentBalance = isVariant
-        ? variantBalance.get(line.colorVariantId!)!
-        : productBalance.get(line.productId)!;
-
-      let newBalance: number;
-      let movementType: "IN" | "OUT" | "ADJUSTMENT";
-      let movementQty: number;
-      let reason: string;
-
-      if (header.type === "RECEIVE") {
-        newBalance = currentBalance + line.quantity;
-        movementType = "IN";
-        movementQty = line.quantity;
-        reason = line.note || `รับเข้าตามเอกสาร ${header.documentNumber}`;
-      } else if (header.type === "ISSUE") {
-        newBalance = currentBalance - line.quantity;
-        if (newBalance < 0) {
-          throw new Error(`สต็อคไม่เพียงพอ: ${line.productName} (คงเหลือ ${currentBalance})`);
-        }
-        movementType = "OUT";
-        movementQty = line.quantity;
-        reason = line.note || `เบิกออกตามเอกสาร ${header.documentNumber}`;
-      } else {
-        // COUNT: the counted quantity is absolute; delta against live on-hand.
-        const delta = line.quantity - currentBalance;
-        if (delta === 0) {
-          await tx.stockDocumentLine.update({
-            where: { id: line.id },
-            data: { systemQuantity: currentBalance },
-          });
-          continue;
-        }
-        newBalance = line.quantity;
-        movementType = "ADJUSTMENT";
-        movementQty = Math.abs(delta);
-        reason = `ตรวจนับ (${header.documentNumber}): ${currentBalance} → ${line.quantity}`;
-      }
-
-      if (isVariant) {
-        await tx.productColorVariant.update({
-          where: { id: line.colorVariantId! },
-          data: { stockQuantity: newBalance },
-        });
-        touchedProductIds.add(line.productId);
-      } else {
-        await tx.product.update({
-          where: { id: line.productId },
-          data: { stockQuantity: newBalance },
-        });
-      }
-
-      await tx.stockMovement.create({
-        data: {
-          productId: line.productId,
-          colorVariantId: line.colorVariantId,
-          type: movementType,
-          quantity: movementQty,
-          reason,
-          reference: header.documentNumber,
-          lotNumber: line.lotNumber,
-          balanceAfter: newBalance,
-          stockDocumentId,
-          stockDocumentLineId: line.id,
-          createdById: user.id,
-        },
-      });
-
-      if (header.type === "COUNT") {
-        await tx.stockDocumentLine.update({
-          where: { id: line.id },
-          data: { systemQuantity: currentBalance },
-        });
-      }
-    }
-
-    for (const productId of touchedProductIds) {
-      await syncProductStockFromVariants(tx, productId);
-    }
-
-    return tx.stockDocument.update({
-      where: { id: stockDocumentId },
-      data: { status: "POSTED", postedAt: new Date(), postedById: user.id },
-    });
-  }, { timeout: 30000 });
+export async function postStockDocument(
+  stockDocumentId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  // Errors are returned, not thrown: a thrown Server Action error reaches the
+  // browser in production only as Next's generic "An error occurred in the
+  // Server Components render", hiding why the post was refused.
+  try {
+    const user = await requireUserAction();
+    await prisma.$transaction(
+      (tx) => postStockDocumentInTransaction(tx, stockDocumentId, user.id),
+      { maxWait: 10000, timeout: 60000 },
+    );
+  } catch (err) {
+    console.error("postStockDocument failed", stockDocumentId, err);
+    return { ok: false, error: postErrorMessage(err) };
+  }
 
   revalidateStockPaths();
-  return serialize(result);
+  return { ok: true };
+}
+
+function postErrorMessage(err: unknown): string {
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2028" || err.code === "P2024") {
+      return "ฐานข้อมูลตอบสนองช้า บันทึกไม่สำเร็จ กรุณากดบันทึกอีกครั้ง";
+    }
+    return `บันทึกไม่สำเร็จ (${err.code}) กรุณาลองอีกครั้ง`;
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return "บันทึกไม่สำเร็จ กรุณาลองอีกครั้ง";
+}
+
+async function postStockDocumentInTransaction(
+  tx: Prisma.TransactionClient,
+  stockDocumentId: string,
+  userId: string,
+) {
+  const headerRows = await tx.$queryRaw<
+    { id: string; status: string; type: string; documentNumber: string }[]
+  >(Prisma.sql`
+    SELECT id, status, type, document_number AS "documentNumber"
+    FROM stock_documents WHERE id = ${stockDocumentId} FOR UPDATE
+  `);
+  const header = headerRows[0];
+  if (!header) throw new Error("ไม่พบเอกสาร");
+  if (header.status !== "DRAFT") throw new Error("เอกสารนี้ถูกบันทึกแล้ว");
+
+  const lines = await tx.stockDocumentLine.findMany({
+    where: { stockDocumentId },
+    orderBy: { sequence: "asc" },
+  });
+  if (lines.length === 0) throw new Error("กรุณาเพิ่มรายการอย่างน้อย 1 รายการ");
+  for (const line of lines) {
+    if (header.type === "COUNT" ? line.quantity < 0 : line.quantity <= 0) {
+      throw new Error(`จำนวนไม่ถูกต้อง: ${line.productName}`);
+    }
+  }
+
+  const variantIds = [...new Set(lines.filter((l) => l.colorVariantId).map((l) => l.colorVariantId!))].sort();
+  const productOnlyIds = [...new Set(lines.filter((l) => !l.colorVariantId).map((l) => l.productId))].sort();
+
+  // A product whose colours are tracked as variants must never receive a
+  // product-level movement (Product.stockQuantity is a rollup SUM). This
+  // happens when colours were added (e.g. by the website sync) after the
+  // line was scanned.
+  if (productOnlyIds.length > 0) {
+    const withVariants = await tx.productColorVariant.findMany({
+      where: { productId: { in: productOnlyIds } },
+      select: { productId: true },
+      distinct: ["productId"],
+    });
+    if (withVariants.length > 0) {
+      const ids = new Set(withVariants.map((v) => v.productId));
+      const names = [...new Set(lines.filter((l) => !l.colorVariantId && ids.has(l.productId)).map((l) => l.productName))];
+      throw new Error(
+        `สินค้านี้มีหลายสี ต้องระบุสี: ${names.join(", ")} — กรุณาลบรายการนี้แล้วสแกน/ค้นหาใหม่โดยเลือกสี`,
+      );
+    }
+  }
+
+  const variantRows =
+    variantIds.length > 0
+      ? await tx.$queryRaw<{ id: string; stock_quantity: number }[]>(Prisma.sql`
+          SELECT id, stock_quantity FROM product_color_variants
+          WHERE id IN (${Prisma.join(variantIds)}) ORDER BY id FOR UPDATE
+        `)
+      : [];
+  const productRows =
+    productOnlyIds.length > 0
+      ? await tx.$queryRaw<{ id: string; stock_quantity: number }[]>(Prisma.sql`
+          SELECT id, stock_quantity FROM products
+          WHERE id IN (${Prisma.join(productOnlyIds)}) ORDER BY id FOR UPDATE
+        `)
+      : [];
+
+  const variantBalance = new Map(variantRows.map((r) => [r.id, r.stock_quantity]));
+  const productBalance = new Map(productRows.map((r) => [r.id, r.stock_quantity]));
+  for (const line of lines) {
+    const found = line.colorVariantId ? variantBalance.has(line.colorVariantId) : productBalance.has(line.productId);
+    if (!found) throw new Error(`ไม่พบสินค้าในระบบ (อาจถูกลบไปแล้ว): ${line.productName}`);
+  }
+
+  // Compute every balance in memory, then write in a handful of set-based
+  // statements. Per-line round trips made long counts exceed the transaction
+  // timeout.
+  const movements: Prisma.StockMovementCreateManyInput[] = [];
+  const systemQuantities: { id: string; qty: number }[] = [];
+  const touchedProductIds = new Set<string>();
+
+  for (const line of lines) {
+    const isVariant = !!line.colorVariantId;
+    const balances = isVariant ? variantBalance : productBalance;
+    const key = isVariant ? line.colorVariantId! : line.productId;
+    const currentBalance = balances.get(key)!;
+
+    let newBalance: number;
+    let movementType: "IN" | "OUT" | "ADJUSTMENT";
+    let movementQty: number;
+    let reason: string;
+
+    if (header.type === "RECEIVE") {
+      newBalance = currentBalance + line.quantity;
+      movementType = "IN";
+      movementQty = line.quantity;
+      reason = line.note || `รับเข้าตามเอกสาร ${header.documentNumber}`;
+    } else if (header.type === "ISSUE") {
+      newBalance = currentBalance - line.quantity;
+      if (newBalance < 0) {
+        throw new Error(`สต็อคไม่เพียงพอ: ${line.productName} (คงเหลือ ${currentBalance})`);
+      }
+      movementType = "OUT";
+      movementQty = line.quantity;
+      reason = line.note || `เบิกออกตามเอกสาร ${header.documentNumber}`;
+    } else {
+      // COUNT: the counted quantity is absolute; delta against live on-hand.
+      systemQuantities.push({ id: line.id, qty: currentBalance });
+      const delta = line.quantity - currentBalance;
+      if (delta === 0) continue;
+      newBalance = line.quantity;
+      movementType = "ADJUSTMENT";
+      movementQty = Math.abs(delta);
+      reason = `ตรวจนับ (${header.documentNumber}): ${currentBalance} → ${line.quantity}`;
+    }
+
+    balances.set(key, newBalance);
+    if (isVariant) touchedProductIds.add(line.productId);
+
+    movements.push({
+      productId: line.productId,
+      colorVariantId: line.colorVariantId,
+      type: movementType,
+      quantity: movementQty,
+      reason,
+      reference: header.documentNumber,
+      lotNumber: line.lotNumber,
+      balanceAfter: newBalance,
+      stockDocumentId,
+      stockDocumentLineId: line.id,
+      createdById: userId,
+    });
+  }
+
+  if (variantIds.length > 0) {
+    const qtys = variantIds.map((id) => variantBalance.get(id)!);
+    await tx.$executeRaw(Prisma.sql`
+      UPDATE product_color_variants AS v
+      SET stock_quantity = n.qty, updated_at = NOW()
+      FROM unnest(${variantIds}::text[], ${qtys}::int[]) AS n(id, qty)
+      WHERE v.id = n.id AND v.stock_quantity <> n.qty
+    `);
+  }
+  if (productOnlyIds.length > 0) {
+    const qtys = productOnlyIds.map((id) => productBalance.get(id)!);
+    await tx.$executeRaw(Prisma.sql`
+      UPDATE products AS p
+      SET stock_quantity = n.qty, updated_at = NOW()
+      FROM unnest(${productOnlyIds}::text[], ${qtys}::int[]) AS n(id, qty)
+      WHERE p.id = n.id AND p.stock_quantity <> n.qty
+    `);
+  }
+  if (touchedProductIds.size > 0) {
+    const ids = [...touchedProductIds];
+    await tx.$executeRaw(Prisma.sql`
+      UPDATE products AS p
+      SET stock_quantity = COALESCE(
+        (SELECT SUM(v.stock_quantity) FROM product_color_variants v WHERE v.product_id = p.id), 0
+      ), updated_at = NOW()
+      WHERE p.id IN (${Prisma.join(ids)})
+    `);
+  }
+  if (movements.length > 0) {
+    await tx.stockMovement.createMany({ data: movements });
+  }
+  if (systemQuantities.length > 0) {
+    const ids = systemQuantities.map((s) => s.id);
+    const qtys = systemQuantities.map((s) => s.qty);
+    await tx.$executeRaw(Prisma.sql`
+      UPDATE stock_document_lines AS l
+      SET system_quantity = n.qty, updated_at = NOW()
+      FROM unnest(${ids}::text[], ${qtys}::int[]) AS n(id, qty)
+      WHERE l.id = n.id
+    `);
+  }
+
+  await tx.stockDocument.update({
+    where: { id: stockDocumentId },
+    data: { status: "POSTED", postedAt: new Date(), postedById: userId },
+  });
 }
 
 /**
