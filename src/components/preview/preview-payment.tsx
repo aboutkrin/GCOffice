@@ -42,8 +42,10 @@ export function PreviewPayment({
 }: PreviewPaymentProps) {
   const isReceipt = documentType === "RECEIPT";
   const hasPaymentTerms = paymentTerms.length > 0;
+  // Receipts don't show the bank account / QR box.
   const hasBankInfo =
-    company.bankName || company.accountName || company.accountNumber;
+    !isReceipt &&
+    (company.bankName || company.accountName || company.accountNumber);
   const hasDeliveryInfo = isReceipt
     ? !!(deliveryCompletedDate || paymentDate)
     : productionDays || deliveryDateStart || deliveryDateEnd;
