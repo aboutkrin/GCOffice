@@ -167,6 +167,7 @@ export async function getDocumentById(id: string) {
         paymentTerms: { orderBy: { sequence: "asc" } },
         depositDeductions: { orderBy: { sequence: "asc" } },
         sourceInvoice: { include: {
+          lineItems: { orderBy: { sequence: "asc" } },
           paymentTerms: { orderBy: { sequence: "asc" } },
           receipts: { where: { status: "PAID", type: "RECEIPT" }, select: { id: true, netPayable: true } },
         } },
