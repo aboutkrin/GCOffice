@@ -81,6 +81,47 @@ interface ReceiptInvoiceOption {
   paymentTerms: { name: string; calculatedAmount: number | string }[];
 }
 
+/** Product photos of an invoice's line items, so staff recognise the order at a glance. */
+function ProductThumbs({
+  items,
+  max,
+  size,
+  showNames,
+}: {
+  items?: { productImage?: string | null; productName?: string; colorVariantName?: string | null }[];
+  max?: number;
+  size: "sm" | "lg";
+  showNames?: boolean;
+}) {
+  const withImage = (items || []).filter((item) => item.productImage);
+  if (withImage.length === 0) return null;
+  const shown = max ? withImage.slice(0, max) : withImage;
+  const box = size === "sm" ? "h-8 w-8" : "h-20 w-20";
+  return (
+    <span className={cn("flex flex-wrap items-start", size === "sm" ? "gap-1" : "gap-3")}>
+      {shown.map((item, idx) => (
+        <span key={idx} className={cn("flex flex-col gap-1", size === "lg" && "w-20")}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={item.productImage!}
+            alt={item.productName || ""}
+            className={cn(box, "rounded border object-cover bg-muted")}
+          />
+          {showNames && (
+            <span className="text-[11px] leading-tight text-muted-foreground line-clamp-2">
+              {item.productName}
+              {item.colorVariantName ? ` (${item.colorVariantName})` : ""}
+            </span>
+          )}
+        </span>
+      ))}
+      {max && withImage.length > max && (
+        <span className="self-center text-xs text-muted-foreground">+{withImage.length - max}</span>
+      )}
+    </span>
+  );
+}
+
 interface DepositDeductionRow {
   id: string;
   /** Set when this row links to a deposit invoice already issued in GCOffice; the
@@ -854,7 +895,10 @@ export function DocumentForm({
                     onValueChange={handleInvoiceSelect}
                   >
                     <SelectTrigger className="w-full mt-1.5">
-                      <SelectValue placeholder="เลือกใบแจ้งหนี้ที่ต้องการรับชำระ" />
+                      <SelectValue placeholder="เลือกใบแจ้งหนี้ที่ต้องการรับชำระ">
+                        {receiptInvoice &&
+                          `${receiptInvoice.documentNumber} - ${(receiptInvoice as any).customerSnapshot?.customerName || "ไม่ระบุ"} - ${formatBaht((receiptInvoice as any).grandTotal)}`}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {invoices.map((inv: any) => {
@@ -862,7 +906,12 @@ export function DocumentForm({
                           (inv.customerSnapshot as any)?.customerName || "ไม่ระบุ";
                         return (
                           <SelectItem key={inv.id} value={inv.id}>
-                            {inv.documentNumber} - {customerName} - {formatBaht(inv.grandTotal)}
+                            <span className="flex items-center gap-3">
+                              <ProductThumbs items={inv.lineItems} max={3} size="sm" />
+                              <span>
+                                {inv.documentNumber} - {customerName} - {formatBaht(inv.grandTotal)}
+                              </span>
+                            </span>
                           </SelectItem>
                         );
                       })}
@@ -881,6 +930,7 @@ export function DocumentForm({
             {managedReceipt && receiptInvoice && (
               <div className="mb-4 space-y-4 rounded-lg border p-4">
                 <p className="font-medium">รับชำระตามใบแจ้งหนี้ {receiptInvoice.documentNumber}</p>
+                <ProductThumbs items={(receiptInvoice as any).lineItems} size="lg" showNames />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                   <div>ยอดใบแจ้งหนี้ <strong>{formatBaht(invoiceTotal)}</strong></div>
                   <div>รับชำระแล้ว <strong>{formatBaht(previousPayments)}</strong></div>
