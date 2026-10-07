@@ -896,8 +896,12 @@ export function DocumentForm({
                   >
                     <SelectTrigger className="w-full mt-1.5">
                       <SelectValue placeholder="เลือกใบแจ้งหนี้ที่ต้องการรับชำระ">
-                        {receiptInvoice &&
-                          `${receiptInvoice.documentNumber} - ${(receiptInvoice as any).customerSnapshot?.customerName || "ไม่ระบุ"} - ${formatBaht((receiptInvoice as any).grandTotal)}`}
+                        {/* Always pass defined children (null, not undefined/false): Radix decides at
+                            mount whether SelectItem text is portaled into the trigger, and switching
+                            from undefined to a string later crashes with a removeChild error. */}
+                        {receiptInvoice
+                          ? `${receiptInvoice.documentNumber} - ${(receiptInvoice as any).customerSnapshot?.customerName || "ไม่ระบุ"} - ${formatBaht((receiptInvoice as any).grandTotal)}`
+                          : null}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
