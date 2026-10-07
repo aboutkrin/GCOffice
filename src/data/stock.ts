@@ -42,12 +42,22 @@ export async function getStockOverview(params?: {
   } else if (params?.stockFilter === "out_of_stock") {
     and.push({ NOT: inStockWhere });
   }
-  if (and.length > 0) where.AND = and;
 
   const page = params?.page ?? 1;
   const perPage = params?.perPage ?? 10;
 
   try {
+    if (params?.stockFilter === "reserved") {
+      // Reservations are derived from confirmed quotations, so resolve the
+      // reserved product ids first and filter on them.
+      const reservedIds = new Set<string>();
+      for (const [key, qty] of await getReservationMap()) {
+        if (qty > 0) reservedIds.add(key.split("::")[0]);
+      }
+      and.push({ id: { in: Array.from(reservedIds) } });
+    }
+    if (and.length > 0) where.AND = and;
+
     const [data, total] = await Promise.all([
       prisma.product.findMany({
         where,

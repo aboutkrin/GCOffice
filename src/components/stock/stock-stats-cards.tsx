@@ -43,6 +43,19 @@ export function StockStatsCards({ stats, activeFilter = "" }: StockStatsCardsPro
       ring: "ring-red-500",
       filter: "out_of_stock",
     },
+    ...(stats.totalReserved != null
+      ? [
+          {
+            label: "จองทั้งหมด (กล่อง)",
+            value: stats.totalReserved,
+            icon: Lock,
+            color: "text-purple-600",
+            bg: "bg-purple-50",
+            ring: "ring-purple-500",
+            filter: "reserved",
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -71,19 +84,6 @@ export function StockStatsCards({ stats, activeFilter = "" }: StockStatsCardsPro
           </Card>
         </Link>
       ))}
-      {stats.totalReserved != null && (
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="rounded-lg p-2 bg-purple-50">
-              <Lock className="size-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.totalReserved}</p>
-              <p className="text-xs text-muted-foreground">จองทั้งหมด (กล่อง)</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
