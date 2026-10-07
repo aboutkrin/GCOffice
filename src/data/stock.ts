@@ -178,7 +178,12 @@ export async function getInStockProducts() {
     const data = await prisma.product.findMany({
       where: {
         status: "ACTIVE",
-        stockQuantity: { gt: 0 },
+        // Show anything with at least 1 box, whether counted on the product
+        // itself or only on one of its colour variants.
+        OR: [
+          { stockQuantity: { gte: 1 } },
+          { colorVariants: { some: { stockQuantity: { gte: 1 } } } },
+        ],
       },
       include: {
         category: true,

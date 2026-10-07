@@ -66,7 +66,15 @@ export const StockReportPreview = forwardRef<
     return acc;
   }, {});
 
-  const totalStock = products.reduce((sum, p) => sum + p.stockQuantity, 0);
+  // A product with in-stock colour variants is counted by those variants;
+  // otherwise by its own quantity.
+  const totalStock = products.reduce((sum, p) => {
+    const variantTotal = p.colorVariants.reduce(
+      (s, v) => s + Math.max(0, v.stockQuantity),
+      0
+    );
+    return sum + (variantTotal > 0 ? variantTotal : Math.max(0, p.stockQuantity));
+  }, 0);
 
   let rowIndex = 0;
 
