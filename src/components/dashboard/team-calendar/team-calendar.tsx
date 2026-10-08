@@ -187,10 +187,32 @@ interface WeekRow {
   segments: Segment[];
 }
 
+function nextDayKey(key: string) {
+  const d = new Date(`${key}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Merge holidays of the same type and name on consecutive days (e.g. Golden Week) into one span. */
+function holidaySpans(holidays: HolidayItem[]) {
+  const sorted = [...holidays].sort((a, b) => dateKey(a.date).localeCompare(dateKey(b.date)));
+  const spans: { item: HolidayItem; start: string; end: string }[] = [];
+  for (const h of sorted) {
+    const key = dateKey(h.date);
+    const prev = spans.find(
+      (s) => s.item.type === h.type && s.item.name === h.name && nextDayKey(s.end) === key
+    );
+    if (prev) prev.end = key;
+    else spans.push({ item: h, start: key, end: key });
+  }
+  return spans;
+}
+
 /**
- * Lay the month out as week rows like a phone calendar: multi-day leave is one
- * bar spanning its days (split at week boundaries), everything else is a
- * single-day bar. Bars are packed into lanes, longest first.
+ * Lay the month out as week rows like a phone calendar: multi-day leave and
+ * consecutive same-name holidays are one bar spanning their days (split at
+ * week boundaries), everything else is a single-day bar. Bars are packed into
+ * lanes, longest first.
  */
 function buildWeekRows(
   cells: (number | null)[],
@@ -200,16 +222,26 @@ function buildWeekRows(
   month: number,
   visible: (ev: DayEvent) => boolean
 ): WeekRow[] {
+  const spans: { ev: DayEvent; start: string; end: string }[] = [
+    ...holidaySpans(data.holidays).map((h) => ({
+      ev: { kind: "holiday" as const, item: h.item },
+      start: h.start,
+      end: h.end,
+    })),
+    ...data.leaves.map((l) => ({
+      ev: { kind: "leave" as const, item: l },
+      start: dateKey(l.startDate),
+      end: dateKey(l.endDate),
+    })),
+  ];
+
   const rows: WeekRow[] = [];
   for (let w = 0; w < cells.length; w += 7) {
     const days = cells.slice(w, w + 7);
     const raw: Omit<Segment, "lane">[] = [];
 
-    for (const l of data.leaves) {
-      const ev: DayEvent = { kind: "leave", item: l };
+    for (const { ev, start, end } of spans) {
       if (!visible(ev)) continue;
-      const start = dateKey(l.startDate);
-      const end = dateKey(l.endDate);
       const cols = days
         .map((d, col) => (d !== null && keyFor(year, month, d) >= start && keyFor(year, month, d) <= end ? col : -1))
         .filter((col) => col >= 0);
@@ -228,7 +260,7 @@ function buildWeekRows(
     days.forEach((d, col) => {
       if (d === null) return;
       for (const ev of eventMap.get(keyFor(year, month, d)) ?? []) {
-        if (ev.kind === "leave" || !visible(ev)) continue;
+        if (ev.kind !== "shipment" || !visible(ev)) continue;
         raw.push({ ev, start: col, end: col, continuesBefore: false, continuesAfter: false });
       }
     });
