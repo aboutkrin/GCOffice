@@ -451,7 +451,7 @@ export const leaveReviewSchema = z.object({
 });
 
 export const chinaShipmentSchema = z.object({
-  title: z.string().min(1, "กรุณาระบุชื่อล็อต / รายการสินค้า"),
+  title: z.string().min(1, "กรุณาระบุเลข Tracking / รายการสินค้า"),
   containerNo: z.string().optional(),
   supplier: z.string().optional(),
   shippedDate: z.coerce.date({ error: "กรุณาเลือกวันที่จีนส่งของ" }),

@@ -126,43 +126,14 @@ export function ChinaShipmentDialog({
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>ชื่อล็อต / รายการสินค้า</FormLabel>
+                  <FormLabel>เลข Tracking / รายการสินค้า</FormLabel>
                   <FormControl>
-                    <Input placeholder="เช่น กระเบื้อง ล็อต ต.ค." {...field} />
+                    <Input placeholder="เช่น 18615 กระเบื้อง Sandstone" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-
-            <div className="grid grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="containerNo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>เลขตู้ / Tracking</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="supplier"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>ผู้ขาย / ชิปปิ้ง</FormLabel>
-                    <FormControl>
-                      <Input {...field} value={field.value ?? ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
 
             <div className="grid grid-cols-2 gap-3">
               <FormField
@@ -187,6 +158,35 @@ export function ChinaShipmentDialog({
                       onChange={(d) => field.onChange(d ?? null)}
                       placeholder="ยังไม่ทราบ"
                     />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="containerNo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>เลขล็อต</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="supplier"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ผู้ขาย / ชิปปิ้ง</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={field.value ?? ""} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

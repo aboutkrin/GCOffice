@@ -68,7 +68,7 @@ export function UpcomingShipmentsCard({ shipments }: { shipments: CalendarShipme
                       <div className="text-xs text-muted-foreground">
                         จีนส่ง {formatThaiDate(new Date(s.shippedDate), "short")}
                         {s.etaDate && ` · ETA ${formatThaiDate(new Date(s.etaDate), "short")}`}
-                        {s.containerNo && ` · ${s.containerNo}`}
+                        {s.containerNo && ` · ล็อต ${s.containerNo}`}
                       </div>
                       <div className={cn("text-xs", eta.className)}>{eta.text}</div>
                     </div>
