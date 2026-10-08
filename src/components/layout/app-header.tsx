@@ -129,7 +129,7 @@ export function AppHeader({ user, role }: AppHeaderProps) {
           <DropdownMenuItem asChild className="cursor-pointer">
             <Link href="/profile">
               <User className="size-4" />
-              ตั้งค่าโปรไฟล์
+              บัญชีของฉัน (วันลา/สลิป)
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem

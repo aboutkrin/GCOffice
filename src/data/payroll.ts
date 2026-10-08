@@ -37,9 +37,14 @@ function monthBounds(year: number, month: number) {
   };
 }
 
-/** Approved leave per profile and COMPANY holidays for one month — the inputs of calculatePayroll. */
+/**
+ * Approved leave per profile (from 1 January up to the end of the month, so earlier months
+ * use up the yearly quotas) and the year's COMPANY holidays — the inputs of calculatePayroll.
+ */
 export async function getPayrollMonthInputs(year: number, month: number, profileIds?: string[]) {
-  const { start, end } = monthBounds(year, month);
+  const start = new Date(Date.UTC(year, 0, 1));
+  const { end } = monthBounds(year, month);
+  const yearEnd = new Date(Date.UTC(year, 11, 31));
   const [leaves, holidays] = await Promise.all([
     prisma.leaveRequest.findMany({
       where: {
@@ -53,7 +58,7 @@ export async function getPayrollMonthInputs(year: number, month: number, profile
     prisma.holiday.findMany({
       where: {
         type: "COMPANY",
-        OR: [{ isRecurring: true }, { date: { gte: start, lte: end } }],
+        OR: [{ isRecurring: true }, { date: { gte: start, lte: yearEnd } }],
       },
       select: { date: true, isRecurring: true },
     }),
@@ -89,6 +94,7 @@ export async function computePayrollFor(
     monthlySalary: Number(salary.monthlySalary),
     startDate: salary.startDate,
     endDate: salary.endDate,
+    annualLeaveDays: salary.annualLeaveDays,
     leaves: leavesByProfile.get(profileId) ?? [],
     holidays,
     items,
@@ -109,6 +115,7 @@ export interface PayrollMonthRow {
     paidDays: number;
     baseAmount: number;
     leaveHours: number;
+    unpaidLeaveHours: number;
     leaveDeduction: number;
     totalEarnings: number;
     totalDeductions: number;
@@ -146,6 +153,7 @@ export async function getPayrollMonth(year: number, month: number): Promise<Payr
             monthlySalary: Number(salary.monthlySalary),
             startDate: salary.startDate,
             endDate: salary.endDate,
+            annualLeaveDays: salary.annualLeaveDays,
             leaves: inputs.leavesByProfile.get(profile.id) ?? [],
             holidays: inputs.holidays,
           })
@@ -164,6 +172,7 @@ export async function getPayrollMonth(year: number, month: number): Promise<Payr
             paidDays: saved.paidDays,
             baseAmount: Number(saved.baseAmount),
             leaveHours: Number(saved.leaveHours),
+            unpaidLeaveHours: Number(saved.unpaidLeaveHours),
             leaveDeduction: Number(saved.leaveDeduction),
             totalEarnings: Number(saved.totalEarnings),
             totalDeductions: Number(saved.totalDeductions),
@@ -200,6 +209,7 @@ export interface EmployeeSalaryRow {
   monthlySalary: number | null;
   startDate: string | null;
   endDate: string | null;
+  annualLeaveDays: number | null;
   notes: string | null;
 }
 
@@ -217,6 +227,30 @@ export async function getEmployeeSalaries(): Promise<EmployeeSalaryRow[]> {
     monthlySalary: p.employeeSalary ? Number(p.employeeSalary.monthlySalary) : null,
     startDate: p.employeeSalary?.startDate?.toISOString() ?? null,
     endDate: p.employeeSalary?.endDate?.toISOString() ?? null,
+    annualLeaveDays: p.employeeSalary?.annualLeaveDays ?? null,
     notes: p.employeeSalary?.notes ?? null,
+  }));
+}
+
+/** An employee's own CONFIRMED payslips, newest first (บัญชีของฉัน). */
+export async function getMyPayslips(profileId: string) {
+  const payrolls = await prisma.payroll.findMany({
+    where: { profileId, status: "CONFIRMED" },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+    select: {
+      id: true,
+      year: true,
+      month: true,
+      netPay: true,
+      leaveDeduction: true,
+      confirmedAt: true,
+    },
+  });
+  return payrolls.map((p) => ({
+    id: p.id,
+    year: p.year,
+    month: p.month,
+    netPay: Number(p.netPay),
+    leaveDeduction: Number(p.leaveDeduction),
   }));
 }

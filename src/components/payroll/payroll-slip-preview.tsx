@@ -5,7 +5,8 @@ import { formatNumber } from "@/lib/thai-currency";
 import { formatThaiDate, THAI_MONTHS } from "@/lib/thai-date";
 import { bahtText } from "@/lib/thai-number";
 import { LEAVE_PERIOD_LABELS, LEAVE_TYPE_LABELS } from "@/lib/constants";
-import type { PayrollLeaveDetail } from "@/lib/payroll";
+import { leaveDetailUnpaidHours, type PayrollLeaveDetail } from "@/lib/payroll";
+import { formatLeaveHours, LEAVE_BALANCE_ORDER, LEAVE_MAIN_TYPES, type LeaveTypeBalance } from "@/lib/leave-policy";
 
 export interface PayrollSlipData {
   year: number;
@@ -19,6 +20,7 @@ export interface PayrollSlipData {
   paidDays: number;
   baseAmount: number;
   leaveHours: number;
+  unpaidLeaveHours: number;
   leaveDeduction: number;
   leaveDetails: PayrollLeaveDetail[];
   totalEarnings: number;
@@ -26,6 +28,8 @@ export interface PayrollSlipData {
   netPay: number;
   notes: string | null;
   items: { kind: string; name: string; amount: number }[];
+  /** Leave balance for the year as of the end of the slip month */
+  leaveBalances?: Record<string, LeaveTypeBalance>;
   company?: {
     name: string;
     address?: string | null;
@@ -44,8 +48,13 @@ export const PayrollSlipPreview = forwardRef<HTMLDivElement, { data: PayrollSlip
       ...data.items.filter((i) => i.kind === "EARNING"),
     ];
     const deductions = [
-      ...(data.leaveHours > 0
-        ? [{ name: `หักลา ${data.leaveHours} ชม. × ${formatNumber(data.hourlyRate)} บาท`, amount: data.leaveDeduction }]
+      ...(data.unpaidLeaveHours > 0
+        ? [
+            {
+              name: `หักลาเกินสิทธิ์/ไม่รับค่าจ้าง ${data.unpaidLeaveHours} ชม. × ${formatNumber(data.hourlyRate)} บาท`,
+              amount: data.leaveDeduction,
+            },
+          ]
         : []),
       ...data.items.filter((i) => i.kind === "DEDUCTION"),
     ];
@@ -139,7 +148,9 @@ export const PayrollSlipPreview = forwardRef<HTMLDivElement, { data: PayrollSlip
 
         {/* Leave detail */}
         <div className="mb-4">
-          <h3 className="text-[11px] font-bold mb-1">รายละเอียดวันลา (หักตามชั่วโมง 9:00–18:00 = 8 ชม./วัน)</h3>
+          <h3 className="text-[11px] font-bold mb-1">
+            รายละเอียดวันลา (นับตามชั่วโมง 9:00–18:00 = 8 ชม./วัน · หักเฉพาะส่วนที่เกินสิทธิ์)
+          </h3>
           {data.leaveDetails.length === 0 ? (
             <p className="text-[10px] text-gray-500">ไม่มีวันลาในเดือนนี้</p>
           ) : (
@@ -150,6 +161,7 @@ export const PayrollSlipPreview = forwardRef<HTMLDivElement, { data: PayrollSlip
                   <th className={`${cell} text-left`}>ประเภท</th>
                   <th className={`${cell} text-left`}>ช่วงเวลา</th>
                   <th className={`${cell} text-right`}>ชั่วโมง</th>
+                  <th className={`${cell} text-right`}>ได้ค่าจ้าง (ชม.)</th>
                   <th className={`${cell} text-right`}>หัก (บาท)</th>
                 </tr>
               </thead>
@@ -160,13 +172,54 @@ export const PayrollSlipPreview = forwardRef<HTMLDivElement, { data: PayrollSlip
                     <td className={cell}>{LEAVE_TYPE_LABELS[d.type] ?? d.type}</td>
                     <td className={cell}>{LEAVE_PERIOD_LABELS[d.period] ?? d.period}</td>
                     <td className={`${cell} text-right`}>{d.hours}</td>
-                    <td className={`${cell} text-right`}>{formatNumber(d.hours * data.hourlyRate)}</td>
+                    <td className={`${cell} text-right`}>{d.hours - leaveDetailUnpaidHours(d)}</td>
+                    <td className={`${cell} text-right`}>
+                      {formatNumber(leaveDetailUnpaidHours(d) * data.hourlyRate)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
         </div>
+
+        {data.leaveBalances && (
+          <div className="mb-4">
+            <h3 className="text-[11px] font-bold mb-1">
+              สิทธิ์วันลาคงเหลือ ปี {data.year + 543} (ณ สิ้นเดือน{THAI_MONTHS[data.month - 1]})
+            </h3>
+            <table className="w-full border-collapse text-[10px]">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className={`${cell} text-left`}>ประเภท</th>
+                  <th className={`${cell} text-right`}>สิทธิ์/ปี</th>
+                  <th className={`${cell} text-right`}>ใช้ไป</th>
+                  <th className={`${cell} text-right`}>คงเหลือ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {LEAVE_BALANCE_ORDER.filter(
+                  (t) =>
+                    (LEAVE_MAIN_TYPES as readonly string[]).includes(t) ||
+                    (data.leaveBalances![t]?.usedHours ?? 0) > 0
+                ).map((t) => {
+                  const b = data.leaveBalances![t];
+                  const limit = b.quotaHours ?? b.paidQuotaHours;
+                  return (
+                    <tr key={t}>
+                      <td className={cell}>{LEAVE_TYPE_LABELS[t] ?? t}</td>
+                      <td className={`${cell} text-right`}>{limit === null ? "ไม่จำกัด" : formatLeaveHours(limit)}</td>
+                      <td className={`${cell} text-right`}>{formatLeaveHours(b.usedHours)}</td>
+                      <td className={`${cell} text-right`}>
+                        {b.remainingHours === null ? "-" : formatLeaveHours(b.remainingHours)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {data.notes && (
           <div className="mb-4 text-[10px]">

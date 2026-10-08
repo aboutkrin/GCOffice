@@ -572,6 +572,8 @@ model EmployeeSalary {
   startDate     DateTime? @map("start_date") @db.Date
   /// Last working day (resignation); a month ending after it is pro-rated
   endDate       DateTime? @map("end_date") @db.Date
+  /// Paid annual leave days per calendar year (from the first anniversary of startDate)
+  annualLeaveDays Int     @default(6) @map("annual_leave_days")
   notes         String?   @db.Text
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -594,8 +596,10 @@ model Payroll {
   paidDays        Int           @map("paid_days")
   baseAmount      Decimal       @map("base_amount") @db.Decimal(12, 2)
   leaveHours      Decimal       @default(0) @map("leave_hours") @db.Decimal(8, 2)
+  /// Leave hours beyond the paid quota (only these are deducted)
+  unpaidLeaveHours Decimal      @default(0) @map("unpaid_leave_hours") @db.Decimal(8, 2)
   leaveDeduction  Decimal       @default(0) @map("leave_deduction") @db.Decimal(12, 2)
-  /// [{ date, type, period, hours }] — the leave days that were deducted
+  /// [{ date, type, period, hours, paidHours?, unpaidHours? }] — leave days in the month
   leaveDetails    Json          @default("[]") @map("leave_details")
   totalEarnings   Decimal       @default(0) @map("total_earnings") @db.Decimal(12, 2)
   totalDeductions Decimal       @default(0) @map("total_deductions") @db.Decimal(12, 2)
@@ -821,6 +825,11 @@ enum LeaveType {
   SICK
   PERSONAL
   OTHER
+  MATERNITY
+  PATERNITY
+  CHILDCARE
+  STERILIZATION
+  MILITARY
 }
 
 enum LeavePeriod {

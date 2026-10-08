@@ -12,7 +12,7 @@ import {
   unconfirmPayroll,
   updatePayroll,
 } from "@/actions/payroll-actions";
-import type { PayrollLeaveDetail } from "@/lib/payroll";
+import { leaveDetailUnpaidHours, type PayrollLeaveDetail } from "@/lib/payroll";
 import { formatBaht } from "@/lib/thai-currency";
 import { formatThaiDate } from "@/lib/thai-date";
 import {
@@ -60,6 +60,7 @@ export interface PayrollEditorData {
   paidDays: number;
   baseAmount: number;
   leaveHours: number;
+  unpaidLeaveHours: number;
   leaveDeduction: number;
   leaveDetails: PayrollLeaveDetail[];
   totalEarnings: number;
@@ -215,7 +216,7 @@ export function PayrollEditor({ data }: { data: PayrollEditorData }) {
               strong
             />
             <Line
-              label={`หักลา (${data.leaveHours} ชม.)`}
+              label={`หักลาเกินสิทธิ์ (${data.unpaidLeaveHours} จาก ${data.leaveHours} ชม.)`}
               value={data.leaveDeduction > 0 ? `-${formatBaht(data.leaveDeduction)}` : "-"}
               className="text-red-600"
             />
@@ -242,24 +243,35 @@ export function PayrollEditor({ data }: { data: PayrollEditorData }) {
 
         <Card>
           <CardHeader>
-            <CardTitle>วันลาที่หัก ({data.leaveDetails.length} วัน)</CardTitle>
+            <CardTitle>วันลาในเดือนนี้ ({data.leaveDetails.length} วัน)</CardTitle>
           </CardHeader>
           <CardContent>
             {data.leaveDetails.length === 0 ? (
               <p className="text-sm text-muted-foreground">ไม่มีวันลาที่อนุมัติในเดือนนี้</p>
             ) : (
               <div className="space-y-1 text-sm">
-                {data.leaveDetails.map((d) => (
-                  <div key={d.date} className="flex justify-between gap-2">
-                    <span>
-                      {formatThaiDate(new Date(d.date))} · {LEAVE_TYPE_LABELS[d.type] ?? d.type} ·{" "}
-                      {LEAVE_PERIOD_LABELS[d.period] ?? d.period}
-                    </span>
-                    <span className="text-red-600 whitespace-nowrap">
-                      {d.hours} ชม. (-{formatBaht(d.hours * data.hourlyRate)})
-                    </span>
-                  </div>
-                ))}
+                {data.leaveDetails.map((d) => {
+                  const unpaid = leaveDetailUnpaidHours(d);
+                  return (
+                    <div key={d.date} className="flex justify-between gap-2">
+                      <span>
+                        {formatThaiDate(new Date(d.date))} · {LEAVE_TYPE_LABELS[d.type] ?? d.type} ·{" "}
+                        {LEAVE_PERIOD_LABELS[d.period] ?? d.period}
+                      </span>
+                      {unpaid > 0 ? (
+                        <span className="text-red-600 whitespace-nowrap">
+                          {d.hours} ชม. · หัก {unpaid} ชม. (-{formatBaht(unpaid * data.hourlyRate)})
+                        </span>
+                      ) : (
+                        <span className="text-green-700 whitespace-nowrap">{d.hours} ชม. · ได้รับค่าจ้าง</span>
+                      )}
+                    </div>
+                  );
+                })}
+                <p className="pt-2 text-xs text-muted-foreground">
+                  ลาภายในสิทธิ์ตามกฎหมาย (ป่วย 30 วัน, กิจ 3 วัน, พักร้อนตามที่ตั้งไว้ ฯลฯ) ได้รับค่าจ้าง
+                  หักเฉพาะส่วนที่เกินสิทธิ์หรือการลาไม่รับค่าจ้าง
+                </p>
               </div>
             )}
           </CardContent>

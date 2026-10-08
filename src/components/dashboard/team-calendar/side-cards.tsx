@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import { formatLeaveHours, LEAVE_MAIN_TYPES } from "@/lib/leave-policy";
+import type { LeaveBalanceSummary } from "@/data/leave-balances";
 import { useRouter } from "next/navigation";
 import { Ship, UserCheck, UserMinus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -141,9 +144,11 @@ export function PendingLeavesCard({
 export function MyLeavesCard({
   leaves,
   currentUserId,
+  balance,
 }: {
   leaves: CalendarLeaveItem[];
   currentUserId: string;
+  balance?: LeaveBalanceSummary | null;
 }) {
   const router = useRouter();
   return (
@@ -154,7 +159,24 @@ export function MyLeavesCard({
           การลาของฉัน
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
+        {balance && (
+          <Link
+            href="/profile?tab=leave"
+            className="flex flex-wrap gap-x-3 gap-y-1 rounded-md bg-muted/50 px-2.5 py-2 text-xs hover:bg-muted"
+          >
+            <span className="text-muted-foreground">คงเหลือปีนี้:</span>
+            {LEAVE_MAIN_TYPES.map((t) => {
+              const remaining = balance.balances[t].remainingHours;
+              return (
+                <span key={t}>
+                  {LEAVE_TYPE_LABELS[t].replace("ลา", "")} {remaining === null ? "-" : formatLeaveHours(remaining)}
+                </span>
+              );
+            })}
+            <span className="ml-auto text-primary">ดูทั้งหมด →</span>
+          </Link>
+        )}
         {leaves.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
             ยังไม่มีการลา กด &quot;ขอลา&quot; ในปฏิทินเพื่อส่งคำขอ
