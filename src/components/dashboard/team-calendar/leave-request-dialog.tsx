@@ -110,10 +110,18 @@ export function LeaveRequestDialog({
     startTransition(async () => {
       try {
         if (leave) {
-          await updateLeaveRequest(leave.id, values);
+          const result = await updateLeaveRequest(leave.id, values);
+          if (result.error) {
+            toast.error(result.error);
+            return;
+          }
           toast.success("แก้ไขการลาเรียบร้อยแล้ว");
         } else {
-          await createLeaveRequest(values);
+          const result = await createLeaveRequest(values);
+          if (result.error) {
+            toast.error(result.error);
+            return;
+          }
           toast.success(
             isAdmin ? "บันทึกวันลาเรียบร้อยแล้ว" : "ส่งคำขอลาแล้ว รอแอดมินอนุมัติ"
           );

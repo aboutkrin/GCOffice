@@ -5,6 +5,7 @@ import { chinaShipmentSchema } from "@/lib/validators";
 import { toUTCNoon } from "@/lib/thai-date";
 import { assertAdmin, requireUserAction } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { actionErrorMessage } from "@/lib/action-error";
 
 const SHIPMENT_STATUSES = ["SHIPPED", "ARRIVED_TH", "RECEIVED", "CANCELLED"] as const;
 type ShipmentStatus = (typeof SHIPMENT_STATUSES)[number];
@@ -32,23 +33,33 @@ function shipmentData(validated: ReturnType<typeof chinaShipmentSchema.parse>) {
   };
 }
 
-export async function createChinaShipment(data: unknown) {
-  const user = await requireUserAction();
-  const validated = chinaShipmentSchema.parse(data);
-  await prisma.chinaShipment.create({
-    data: { ...shipmentData(validated), createdById: user.id },
-  });
-  revalidatePath("/dashboard");
+export async function createChinaShipment(data: unknown): Promise<{ error?: string }> {
+  try {
+    const user = await requireUserAction();
+    const validated = chinaShipmentSchema.parse(data);
+    await prisma.chinaShipment.create({
+      data: { ...shipmentData(validated), createdById: user.id },
+    });
+    revalidatePath("/dashboard");
+  } catch (err) {
+    return { error: actionErrorMessage(err) };
+  }
+  return {};
 }
 
-export async function updateChinaShipment(id: string, data: unknown) {
-  await requireUserAction();
-  const validated = chinaShipmentSchema.parse(data);
-  await prisma.chinaShipment.update({
-    where: { id },
-    data: shipmentData(validated),
-  });
-  revalidatePath("/dashboard");
+export async function updateChinaShipment(id: string, data: unknown): Promise<{ error?: string }> {
+  try {
+    await requireUserAction();
+    const validated = chinaShipmentSchema.parse(data);
+    await prisma.chinaShipment.update({
+      where: { id },
+      data: shipmentData(validated),
+    });
+    revalidatePath("/dashboard");
+  } catch (err) {
+    return { error: actionErrorMessage(err) };
+  }
+  return {};
 }
 
 /**

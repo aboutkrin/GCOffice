@@ -18,18 +18,14 @@ function getDirectUrl(): string | undefined {
     try {
       const parsed = new URL(url);
 
-      // Detect Supabase pooler URLs (e.g. aws-1-region.pooler.supabase.co)
-      // and convert to direct connection (e.g. db.PROJECT_REF.supabase.co)
+      // Detect Supabase pooler URLs (e.g. aws-1-region.pooler.supabase.com:6543)
+      // and switch to the session pooler on the same host (port 5432). Unlike the
+      // direct db.PROJECT_REF.supabase.co host (IPv6-only), the pooler is reachable
+      // over IPv4 from Vercel builds, and session mode supports migrations.
       if (parsed.hostname.includes(".pooler.supabase.")) {
-        const userParts = parsed.username.split(".");
-        if (userParts.length >= 2) {
-          const projectRef = userParts.slice(1).join(".");
-          parsed.hostname = `db.${projectRef}.supabase.co`;
-          parsed.username = userParts[0]; // "postgres"
-          parsed.port = "5432";
-          parsed.searchParams.delete("pgbouncer");
-          return parsed.toString();
-        }
+        parsed.port = "5432";
+        parsed.searchParams.delete("pgbouncer");
+        return parsed.toString();
       }
       return url;
     } catch {

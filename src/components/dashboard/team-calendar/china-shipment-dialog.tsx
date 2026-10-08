@@ -85,10 +85,18 @@ export function ChinaShipmentDialog({
     startTransition(async () => {
       try {
         if (shipment) {
-          await updateChinaShipment(shipment.id, values);
+          const result = await updateChinaShipment(shipment.id, values);
+          if (result.error) {
+            toast.error(result.error);
+            return;
+          }
           toast.success("แก้ไขรายการของจากจีนเรียบร้อยแล้ว");
         } else {
-          await createChinaShipment(values);
+          const result = await createChinaShipment(values);
+          if (result.error) {
+            toast.error(result.error);
+            return;
+          }
           toast.success("บันทึกของจากจีนเรียบร้อยแล้ว");
         }
         onOpenChange(false);
