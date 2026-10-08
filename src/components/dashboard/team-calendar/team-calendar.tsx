@@ -136,8 +136,8 @@ function chipClass(ev: DayEvent): string {
   if (ev.kind === "holiday") return "bg-red-100 text-red-800 border-red-200";
   if (ev.kind === "leave") {
     return ev.item.status === "PENDING"
-      ? "bg-amber-50 text-amber-800 border-amber-300 border-dashed"
-      : "bg-blue-100 text-blue-800 border-blue-200";
+      ? "bg-orange-50 text-orange-800 border-orange-300 border-dashed"
+      : "bg-orange-100 text-orange-800 border-orange-200";
   }
   if (ev.milestone === "eta") return "bg-sky-50 text-sky-800 border-sky-300 border-dashed";
   if (ev.milestone === "received") return "bg-green-100 text-green-800 border-green-200";
@@ -375,7 +375,7 @@ export function TeamCalendar({
 
   const filterButtons: { key: Filter; label: string; dot: string }[] = [
     { key: "holiday", label: "วันหยุดบริษัท", dot: "bg-red-400" },
-    { key: "leave", label: "วันลา", dot: "bg-blue-400" },
+    { key: "leave", label: "วันลา", dot: "bg-orange-400" },
     { key: "shipment", label: "ของจากจีน", dot: "bg-sky-400" },
   ];
 
