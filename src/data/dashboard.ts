@@ -7,6 +7,8 @@ export interface HolidayItem {
   id: string;
   name: string;
   date: string;
+  /** COMPANY = office closed, PUBLIC = general holiday the office still works */
+  type: "COMPANY" | "PUBLIC";
 }
 
 
@@ -533,14 +535,16 @@ export async function getHolidaysForMonth(
         id: true,
         name: true,
         date: true,
+        type: true,
       },
-      orderBy: { date: "asc" },
+      orderBy: [{ date: "asc" }, { type: "asc" }],
     });
 
     return holidays.map((h) => ({
       id: h.id,
       name: h.name,
       date: h.date.toISOString(),
+      type: h.type,
     }));
   } catch {
     return [];

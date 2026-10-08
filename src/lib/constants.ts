@@ -173,6 +173,16 @@ export const STOCK_AVAILABILITY_LABELS = {
   reserved: "จอง",
   available: "พร้อมขาย",
 } as const;
+export const HOLIDAY_TYPE_LABELS: Record<string, string> = {
+  COMPANY: "วันหยุดบริษัท",
+  PUBLIC: "วันหยุดทั่วไป",
+};
+
+export const HOLIDAY_TYPE_COLORS: Record<string, string> = {
+  COMPANY: "bg-red-100 text-red-800",
+  PUBLIC: "bg-gray-100 text-gray-600",
+};
+
 export const LEAVE_TYPE_LABELS: Record<string, string> = {
   ANNUAL: "ลาพักร้อน",
   SICK: "ลาป่วย",

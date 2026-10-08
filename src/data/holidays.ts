@@ -23,6 +23,10 @@ export async function getHolidayById(id: string) {
   }
 }
 
+/**
+ * Holidays skipped by delivery-date math. Includes PUBLIC holidays too: even
+ * when the office works, carriers are closed so nothing ships that day.
+ */
 export async function getActiveHolidays() {
   try {
     const data = await prisma.holiday.findMany({

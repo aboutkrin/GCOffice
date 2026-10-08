@@ -57,7 +57,15 @@ type DayEvent =
   | { kind: "leave"; item: CalendarLeaveItem }
   | { kind: "shipment"; milestone: ShipmentMilestone; item: CalendarShipmentItem };
 
-type Filter = "holiday" | "leave" | "shipment";
+type Filter = "holiday" | "publicHoliday" | "leave" | "shipment";
+
+/** COMPANY = the office is closed; PUBLIC = a general holiday the office still works. */
+const isOfficeHoliday = (ev: DayEvent) => ev.kind === "holiday" && ev.item.type !== "PUBLIC";
+
+function filterOf(ev: DayEvent): Filter {
+  if (ev.kind === "holiday") return isOfficeHoliday(ev) ? "holiday" : "publicHoliday";
+  return ev.kind;
+}
 
 const MILESTONE_LABELS: Record<ShipmentMilestone, string> = {
   shipped: "จีนส่งของ",
@@ -133,7 +141,11 @@ function chipLabel(ev: DayEvent): string {
 }
 
 function chipClass(ev: DayEvent): string {
-  if (ev.kind === "holiday") return "bg-red-100 text-red-800 border-red-200";
+  if (ev.kind === "holiday") {
+    return isOfficeHoliday(ev)
+      ? "bg-red-100 text-red-800 border-red-200"
+      : "bg-gray-100 text-gray-600 border-gray-200";
+  }
   if (ev.kind === "leave") {
     return ev.item.status === "PENDING"
       ? "bg-orange-50 text-orange-800 border-orange-300 border-dashed"
@@ -269,6 +281,7 @@ export function TeamCalendar({
   const [isPending, startTransition] = useTransition();
   const [filters, setFilters] = useState<Record<Filter, boolean>>({
     holiday: true,
+    publicHoliday: true,
     leave: true,
     shipment: true,
   });
@@ -327,7 +340,7 @@ export function TeamCalendar({
   const onChanged = () => router.refresh();
 
   const eventMap = useMemo(() => buildEventMap(data, year, month), [data, year, month]);
-  const visible = (ev: DayEvent) => filters[ev.kind];
+  const visible = (ev: DayEvent) => filters[filterOf(ev)];
 
   const todayKey = thaiTodayKey();
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
@@ -375,6 +388,7 @@ export function TeamCalendar({
 
   const filterButtons: { key: Filter; label: string; dot: string }[] = [
     { key: "holiday", label: "วันหยุดบริษัท", dot: "bg-red-400" },
+    { key: "publicHoliday", label: "วันหยุดทั่วไป", dot: "bg-gray-400" },
     { key: "leave", label: "วันลา", dot: "bg-orange-400" },
     { key: "shipment", label: "ของจากจีน", dot: "bg-sky-400" },
   ];
@@ -487,7 +501,7 @@ export function TeamCalendar({
                   }
                   const key = keyFor(year, month, day);
                   const isHoliday = (eventMap.get(key) ?? []).some(
-                    (e) => e.kind === "holiday" && visible(e)
+                    (e) => isOfficeHoliday(e) && visible(e)
                   );
                   const hiddenMobile = hiddenCount(week.segments, col, MOBILE_LANES);
                   const hiddenDesktop = hiddenCount(week.segments, col, DESKTOP_LANES);
@@ -555,7 +569,7 @@ export function TeamCalendar({
           </div>
 
           <p className="mt-2 text-xs text-muted-foreground">
-            กรอบเส้นประ = วันลารออนุมัติ / วันที่คาดว่าของจะถึง · กดที่วันเพื่อดูรายละเอียดหรือเพิ่มรายการ
+            สีเทา = วันหยุดทั่วไป (ออฟฟิศทำงาน) · กรอบเส้นประ = วันลารออนุมัติ / วันที่คาดว่าของจะถึง · กดที่วันเพื่อดูรายละเอียดหรือเพิ่มรายการ
           </p>
         </CardContent>
       </Card>
@@ -572,6 +586,19 @@ export function TeamCalendar({
 
           <div className="space-y-3">
             {selectedEvents.map((ev, i) => {
+              if (ev.kind === "holiday" && !isOfficeHoliday(ev)) {
+                return (
+                  <div key={i} className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                      <CalendarOff className="h-4 w-4" />
+                      วันหยุดทั่วไป: {ev.item.name}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      ออฟฟิศทำงานปกติ · ขนส่งหยุด (นับเป็นวันหยุดตอนคำนวณวันส่งของ)
+                    </div>
+                  </div>
+                );
+              }
               if (ev.kind === "holiday") {
                 return (
                   <div key={i} className="rounded-md border border-red-200 bg-red-50 p-3">

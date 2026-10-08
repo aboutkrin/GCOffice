@@ -17,6 +17,7 @@ import {
 import { createHolidayRange, updateHoliday } from "@/actions/holiday-actions";
 import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
 import { cn } from "@/lib/utils";
+import { HOLIDAY_TYPE_LABELS } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,21 @@ import {
 } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+const HOLIDAY_TYPE_OPTIONS = [
+  {
+    value: "COMPANY",
+    dot: "bg-red-400",
+    selectedClass: "border-red-300 bg-red-50 ring-1 ring-red-300",
+    description: "ออฟฟิศหยุดจริง (แสดงสีแดงบนปฏิทิน)",
+  },
+  {
+    value: "PUBLIC",
+    dot: "bg-gray-400",
+    selectedClass: "border-gray-300 bg-gray-50 ring-1 ring-gray-300",
+    description: "ที่อื่นหยุด แต่ออฟฟิศทำงานปกติ (แสดงสีเทา)",
+  },
+] as const;
+
 interface HolidayFormProps {
   initialData?: any;
 }
@@ -54,6 +70,7 @@ export function HolidayForm({ initialData }: HolidayFormProps) {
       name: initialData?.name ?? "",
       date: initialData?.date ? new Date(initialData.date) : undefined,
       isRecurring: initialData?.isRecurring ?? false,
+      type: initialData?.type ?? "COMPANY",
     },
   });
 
@@ -65,6 +82,7 @@ export function HolidayForm({ initialData }: HolidayFormProps) {
       startDate: undefined as unknown as Date,
       endDate: undefined as unknown as Date,
       isRecurring: false,
+      type: "COMPANY",
     },
   });
 
@@ -223,6 +241,40 @@ export function HolidayForm({ initialData }: HolidayFormProps) {
                 )}
               </FormItem>
             )}
+
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ประเภทวันหยุด</FormLabel>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {HOLIDAY_TYPE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => field.onChange(opt.value)}
+                        className={cn(
+                          "rounded-lg border p-3 text-left transition-colors",
+                          field.value === opt.value
+                            ? opt.selectedClass
+                            : "hover:bg-accent/50"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                          <span className={cn("h-2.5 w-2.5 rounded-full", opt.dot)} />
+                          {HOLIDAY_TYPE_LABELS[opt.value]}
+                        </div>
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {opt.description}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
