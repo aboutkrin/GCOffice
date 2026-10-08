@@ -30,6 +30,7 @@ function shipmentData(validated: ReturnType<typeof chinaShipmentSchema.parse>) {
     shippedDate: toUTCNoon(validated.shippedDate),
     etaDate: validated.etaDate ? toUTCNoon(validated.etaDate) : null,
     note: validated.note?.trim() || null,
+    imageUrls: validated.imageUrls,
   };
 }
 

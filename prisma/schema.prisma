@@ -503,6 +503,8 @@ model ChinaShipment {
   receivedDate DateTime?           @map("received_date") @db.Date
   status       ChinaShipmentStatus @default(SHIPPED)
   note         String?             @db.Text
+  /// Photos of the goods in this shipment (tiles/colours), shown on the team calendar
+  imageUrls    String[]            @default([]) @map("image_urls")
 
   createdById String  @map("created_by_id") @db.Uuid
   createdBy   Profile @relation("ChinaShipmentCreatedBy", fields: [createdById], references: [id])

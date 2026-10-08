@@ -19,6 +19,7 @@ import {
 } from "@/lib/constants";
 import type { CalendarLeaveItem, CalendarShipmentItem } from "@/data/team-calendar";
 import { LeaveActionButtons, ShipmentStatusButtons } from "./item-actions";
+import { ShipmentImageThumbs } from "./shipment-images";
 
 function daysUntil(iso: string): number {
   const todayKey = new Intl.DateTimeFormat("en-CA", {
@@ -79,6 +80,7 @@ export function UpcomingShipmentsCard({ shipments }: { shipments: CalendarShipme
                       {CHINA_SHIPMENT_STATUS_LABELS[s.status]}
                     </Badge>
                   </div>
+                  <ShipmentImageThumbs urls={s.imageUrls} size="sm" />
                   <ShipmentStatusButtons shipment={s} onChanged={() => router.refresh()} />
                 </li>
               );

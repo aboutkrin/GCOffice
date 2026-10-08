@@ -49,6 +49,7 @@ import type {
 import { LeaveRequestDialog } from "./leave-request-dialog";
 import { ChinaShipmentDialog } from "./china-shipment-dialog";
 import { LeaveActionButtons, ShipmentStatusButtons } from "./item-actions";
+import { ShipmentImageThumbs } from "./shipment-images";
 
 type ShipmentMilestone = "shipped" | "eta" | "arrived" | "received";
 
@@ -727,6 +728,11 @@ export function TeamCalendar({
                         </div>
                       )}
                       {s.note && <div className="mt-1 text-sm">{s.note}</div>}
+                      {s.imageUrls.length > 0 && (
+                        <div className="mt-2">
+                          <ShipmentImageThumbs urls={s.imageUrls} />
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <Badge className={cn("shrink-0", CHINA_SHIPMENT_STATUS_COLORS[s.status])}>

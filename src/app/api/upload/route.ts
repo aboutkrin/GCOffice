@@ -31,6 +31,7 @@ const ALLOWED_FOLDERS = new Set([
   "promptpay-qr",
   "shop-logos",
   "supplier-invoices",
+  "china-shipments",
 ]);
 
 function fail(code: UploadErrorCode, status: number) {

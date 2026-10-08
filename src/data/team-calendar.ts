@@ -25,6 +25,7 @@ export interface CalendarShipmentItem {
   arrivedDate: string | null;
   receivedDate: string | null;
   note: string | null;
+  imageUrls: string[];
 }
 
 export interface TeamCalendarData {
@@ -101,6 +102,7 @@ type ShipmentRow = {
   arrivedDate: Date | null;
   receivedDate: Date | null;
   note: string | null;
+  imageUrls: string[];
 };
 
 function toShipmentItem(s: ShipmentRow): CalendarShipmentItem {
@@ -115,6 +117,7 @@ function toShipmentItem(s: ShipmentRow): CalendarShipmentItem {
     arrivedDate: iso(s.arrivedDate),
     receivedDate: iso(s.receivedDate),
     note: s.note,
+    imageUrls: s.imageUrls,
   };
 }
 
