@@ -10,7 +10,8 @@ import {
   type DeliveryScheduleItem,
   type HolidayItem,
 } from "@/data/dashboard";
-import { assertAdmin } from "@/lib/auth";
+import { getTeamCalendar, type TeamCalendarData } from "@/data/team-calendar";
+import { assertAdmin, requireUserAction } from "@/lib/auth";
 
 export async function fetchYearlyStatsAction(
   year: number
@@ -44,4 +45,12 @@ export async function markDocumentShippedAction(
 ): Promise<void> {
   const { updateDocumentStatus } = await import("@/actions/document-actions");
   await updateDocumentStatus(id, "SHIPPED");
+}
+
+export async function fetchTeamCalendarAction(
+  year: number,
+  month: number
+): Promise<TeamCalendarData> {
+  await requireUserAction();
+  return getTeamCalendar(year, month);
 }

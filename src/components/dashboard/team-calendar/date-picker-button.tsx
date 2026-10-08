@@ -1,0 +1,47 @@
+"use client";
+
+import { CalendarIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
+import { cn } from "@/lib/utils";
+
+interface DatePickerButtonProps {
+  value: Date | null | undefined;
+  onChange: (date: Date | undefined) => void;
+  placeholder?: string;
+}
+
+/** Single-date picker that stores the picked calendar day as UTC noon. */
+export function DatePickerButton({
+  value,
+  onChange,
+  placeholder = "เลือกวันที่",
+}: DatePickerButtonProps) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn(
+            "w-full justify-start text-left font-normal",
+            !value && "text-muted-foreground"
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {value ? formatThaiDate(value, "short") : placeholder}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={value ?? undefined}
+          defaultMonth={value ?? undefined}
+          onSelect={(date) => onChange(date ? toUTCNoon(date) : undefined)}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}

@@ -17,6 +17,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { YearlyStatsCards } from "@/components/dashboard/yearly-stats-cards";
 import { RevenueExpenseSection } from "@/components/dashboard/revenue-expense-section";
 import { DeliverySchedule } from "@/components/dashboard/delivery-schedule";
+import { TeamCalendarSection } from "@/components/dashboard/team-calendar/team-calendar-section";
 import { formatBaht } from "@/lib/thai-currency";
 import { formatThaiDate, getThaiNow } from "@/lib/thai-date";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
@@ -36,7 +37,13 @@ export default async function DashboardPage() {
     ]);
     return (
       <div>
-        <PageHeader title="แดชบอร์ด" description="กำหนดส่งสินค้า" />
+        <PageHeader title="แดชบอร์ด" description="ปฏิทินทีมและกำหนดส่งสินค้า" />
+        {user && (
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold mb-4">ปฏิทินทีม</h2>
+            <TeamCalendarSection user={user} />
+          </div>
+        )}
         <DeliverySchedule
           initialData={deliverySchedule}
           initialYear={currentYear}
@@ -132,6 +139,14 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* Team calendar: company holidays, leave, shipments from China */}
+      {user && (
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4">ปฏิทินทีม</h2>
+          <TeamCalendarSection user={user} />
+        </div>
+      )}
 
       {/* Yearly Stats */}
       <YearlyStatsCards initialData={yearlyStats} />

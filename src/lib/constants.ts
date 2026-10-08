@@ -173,3 +173,47 @@ export const STOCK_AVAILABILITY_LABELS = {
   reserved: "จอง",
   available: "พร้อมขาย",
 } as const;
+export const LEAVE_TYPE_LABELS: Record<string, string> = {
+  ANNUAL: "ลาพักร้อน",
+  SICK: "ลาป่วย",
+  PERSONAL: "ลากิจ",
+  OTHER: "อื่นๆ",
+};
+
+export const LEAVE_TYPE_OPTIONS = ["ANNUAL", "SICK", "PERSONAL", "OTHER"] as const;
+
+export const LEAVE_PERIOD_LABELS: Record<string, string> = {
+  FULL_DAY: "ทั้งวัน",
+  MORNING: "ครึ่งเช้า",
+  AFTERNOON: "ครึ่งบ่าย",
+};
+
+export const LEAVE_PERIOD_OPTIONS = ["FULL_DAY", "MORNING", "AFTERNOON"] as const;
+
+export const LEAVE_STATUS_LABELS: Record<string, string> = {
+  PENDING: "รออนุมัติ",
+  APPROVED: "อนุมัติแล้ว",
+  REJECTED: "ไม่อนุมัติ",
+  CANCELLED: "ยกเลิก",
+};
+
+export const LEAVE_STATUS_COLORS: Record<string, string> = {
+  PENDING: "bg-amber-100 text-amber-800",
+  APPROVED: "bg-green-100 text-green-800",
+  REJECTED: "bg-red-100 text-red-800",
+  CANCELLED: "bg-gray-100 text-gray-600",
+};
+
+export const CHINA_SHIPMENT_STATUS_LABELS: Record<string, string> = {
+  SHIPPED: "จีนส่งแล้ว",
+  ARRIVED_TH: "ถึงไทยแล้ว",
+  RECEIVED: "รับเข้าคลังแล้ว",
+  CANCELLED: "ยกเลิก",
+};
+
+export const CHINA_SHIPMENT_STATUS_COLORS: Record<string, string> = {
+  SHIPPED: "bg-sky-100 text-sky-800",
+  ARRIVED_TH: "bg-violet-100 text-violet-800",
+  RECEIVED: "bg-green-100 text-green-800",
+  CANCELLED: "bg-gray-100 text-gray-600",
+};
