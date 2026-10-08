@@ -233,9 +233,10 @@ export async function getEmployeeSalaries(): Promise<EmployeeSalaryRow[]> {
 }
 
 /** An employee's own CONFIRMED payslips, newest first (บัญชีของฉัน). */
-export async function getMyPayslips(profileId: string) {
+/** An employee's payslips, newest first: CONFIRMED only, or every status for the admin view. */
+export async function getMyPayslips(profileId: string, { includeDrafts = false } = {}) {
   const payrolls = await prisma.payroll.findMany({
-    where: { profileId, status: "CONFIRMED" },
+    where: { profileId, ...(includeDrafts ? {} : { status: "CONFIRMED" }) },
     orderBy: [{ year: "desc" }, { month: "desc" }],
     select: {
       id: true,
@@ -243,11 +244,13 @@ export async function getMyPayslips(profileId: string) {
       month: true,
       netPay: true,
       leaveDeduction: true,
+      status: true,
       confirmedAt: true,
     },
   });
   return payrolls.map((p) => ({
     id: p.id,
+    status: p.status as string,
     year: p.year,
     month: p.month,
     netPay: Number(p.netPay),

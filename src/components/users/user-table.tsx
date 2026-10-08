@@ -9,7 +9,7 @@ import {
   flexRender,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Trash2, Search } from "lucide-react";
+import { CalendarDays, FileText, MoreHorizontal, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { deleteUser } from "@/actions/user-actions";
@@ -59,9 +59,9 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
       header: "ชื่อ",
       cell: ({ row }) => (
         <div>
-          <div className="font-medium">
+          <Link href={`/users/${row.original.id}`} className="font-medium hover:underline">
             {[row.original.firstName, row.original.lastName].filter(Boolean).join(" ") || "-"}
-          </div>
+          </Link>
           {row.original.id === currentUserId && (
             <div className="text-xs text-muted-foreground">คุณ</div>
           )}
@@ -109,9 +109,21 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
-              <Link href={`/users/${row.original.id}`}>
+              <Link href={`/users/${row.original.id}?tab=leave`}>
+                <CalendarDays className="size-4" />
+                วันลา
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/users/${row.original.id}?tab=payslips`}>
+                <FileText className="size-4" />
+                สลิปเงินเดือน
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={`/users/${row.original.id}?tab=profile`}>
                 <Pencil className="size-4" />
-                แก้ไข
+                แก้ไขโปรไฟล์
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem
