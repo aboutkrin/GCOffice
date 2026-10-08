@@ -38,18 +38,18 @@ export default async function DashboardPage() {
     return (
       <div>
         <PageHeader title="แดชบอร์ด" description="ปฏิทินทีมและกำหนดส่งสินค้า" />
-        {user && (
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4">ปฏิทินทีม</h2>
-            <TeamCalendarSection user={user} />
-          </div>
-        )}
         <DeliverySchedule
           initialData={deliverySchedule}
           initialYear={currentYear}
           initialMonth={currentMonth}
           initialHolidays={holidays}
         />
+        {user && (
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold mb-4">ปฏิทินทีม</h2>
+            <TeamCalendarSection user={user} />
+          </div>
+        )}
       </div>
     );
   }
@@ -140,14 +140,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Team calendar: company holidays, leave, shipments from China */}
-      {user && (
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-4">ปฏิทินทีม</h2>
-          <TeamCalendarSection user={user} />
-        </div>
-      )}
-
       {/* Yearly Stats */}
       <YearlyStatsCards initialData={yearlyStats} />
 
@@ -169,6 +161,14 @@ export default async function DashboardPage() {
           initialHolidays={holidays}
         />
       </div>
+
+      {/* Team calendar: company holidays, leave, shipments from China */}
+      {user && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold mb-4">ปฏิทินทีม</h2>
+          <TeamCalendarSection user={user} />
+        </div>
+      )}
 
       {/* Recent Documents */}
       <div className="mt-8">
