@@ -47,6 +47,7 @@ function rowFigures(row: PayrollMonthRow) {
     paidDays: p.paidDays,
     baseAmount: p.baseAmount,
     leaveHours: p.leaveHours,
+    unpaidLeaveHours: p.unpaidLeaveHours,
     leaveDeduction: p.leaveDeduction,
     totalEarnings: p.totalEarnings,
     totalDeductions: p.totalDeductions,
@@ -174,7 +175,7 @@ export function PayrollMonthTable({ rows, year, month, currentYear }: PayrollMon
                       {f.leaveDeduction > 0 ? (
                         <>
                           -{formatBaht(f.leaveDeduction)}
-                          <div className="text-xs text-muted-foreground">{f.leaveHours} ชม.</div>
+                          <div className="text-xs text-muted-foreground">{f.unpaidLeaveHours} ชม.</div>
                         </>
                       ) : (
                         "-"

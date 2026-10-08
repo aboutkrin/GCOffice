@@ -6,6 +6,7 @@ import { toUTCNoon } from "@/lib/thai-date";
 import { assertAdmin, requireUserAction } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { actionErrorMessage } from "@/lib/action-error";
+import { getCompanyHolidaysForYear, getMyLeaveSummary } from "@/data/leave-balances";
 
 function leaveData(validated: ReturnType<typeof leaveRequestSchema.parse>) {
   return {
@@ -109,4 +110,21 @@ export async function reviewLeaveRequest(id: string, data: unknown) {
     },
   });
   revalidatePath("/dashboard");
+}
+
+/**
+ * Leave balance for the leave dialog: STAFF get their own, ADMIN anyone's.
+ * Holidays are returned so the dialog can count the request's working days.
+ */
+export async function fetchLeaveBalanceAction(profileId: string | undefined, year: number) {
+  const user = await requireUserAction();
+  const target = user.role === "ADMIN" && profileId ? profileId : user.id;
+  const [{ summary }, holidays] = await Promise.all([
+    getMyLeaveSummary(target, year),
+    getCompanyHolidaysForYear(year),
+  ]);
+  return {
+    summary,
+    holidays: holidays.map((h) => ({ date: new Date(h.date).toISOString(), isRecurring: h.isRecurring })),
+  };
 }

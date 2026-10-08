@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 import { leaveRequestSchema, type LeaveRequestFormData } from "@/lib/validators";
-import { createLeaveRequest, updateLeaveRequest } from "@/actions/leave-actions";
+import {
+  createLeaveRequest,
+  fetchLeaveBalanceAction,
+  updateLeaveRequest,
+} from "@/actions/leave-actions";
+import { formatLeaveHours, leaveRequestHours, type LeaveHolidayInput } from "@/lib/leave-policy";
+import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
+import type { LeaveBalanceSummary } from "@/data/leave-balances";
 import {
   LEAVE_PERIOD_LABELS,
   LEAVE_PERIOD_OPTIONS,
@@ -105,6 +112,9 @@ export function LeaveRequestDialog({
   const endDate = form.watch("endDate");
   const isSingleDay =
     !!startDate && !!endDate && startDate.toDateString() === endDate.toDateString();
+  const type = form.watch("type");
+  const period = form.watch("period");
+  const profileId = form.watch("profileId");
 
   function onSubmit(values: LeaveRequestFormData) {
     startTransition(async () => {
@@ -202,6 +212,17 @@ export function LeaveRequestDialog({
               )}
             />
 
+            {open && (
+              <LeaveBalanceHint
+                profileId={isAdmin ? profileId : currentUserId}
+                type={type}
+                period={period}
+                startDate={startDate}
+                endDate={endDate}
+                editing={leave}
+              />
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
@@ -288,5 +309,99 @@ export function LeaveRequestDialog({
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+type BalanceData = { summary: LeaveBalanceSummary; holidays: LeaveHolidayInput[] };
+
+/** Remaining quota of the chosen type, and a warning when this request goes beyond it. */
+function LeaveBalanceHint({
+  profileId,
+  type,
+  period,
+  startDate,
+  endDate,
+  editing,
+}: {
+  profileId: string | undefined;
+  type: string;
+  period: string;
+  startDate: Date | undefined;
+  endDate: Date | undefined;
+  editing: CalendarLeaveItem | null | undefined;
+}) {
+  const year = (startDate ?? new Date()).getFullYear();
+  const key = `${profileId ?? ""}:${year}`;
+  const [loaded, setLoaded] = useState<{ key: string; data: BalanceData } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchLeaveBalanceAction(profileId, year)
+      .then((data) => {
+        if (!cancelled) setLoaded({ key, data });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [profileId, year, key]);
+
+  const data = loaded?.key === key ? loaded.data : null;
+  if (!data || !startDate || !endDate || endDate < startDate) return null;
+
+  const balance = data.summary.balances[type];
+  if (!balance) return null;
+
+  // Picker dates are local midnight; quota math reads UTC calendar dates
+  const requestHours = leaveRequestHours(
+    { type, period, startDate: toUTCNoon(startDate), endDate: toUTCNoon(endDate) },
+    data.holidays
+  );
+  // An edited request is already counted in used/pending — take it out first
+  let ownHours = 0;
+  if (editing && editing.type === type && (editing.status === "APPROVED" || editing.status === "PENDING")) {
+    ownHours = leaveRequestHours(
+      { type, period: editing.period, startDate: editing.startDate, endDate: editing.endDate },
+      data.holidays
+    );
+  }
+  const pending = data.summary.pendingHours[type] - (editing?.status === "PENDING" ? ownHours : 0);
+  const used = balance.usedHours - (editing?.status === "APPROVED" ? ownHours : 0);
+  const paidUsed = Math.min(used, balance.paidQuotaHours ?? Infinity);
+  const paidLeft =
+    balance.paidQuotaHours === null ? Infinity : Math.max(0, balance.paidQuotaHours - paidUsed - pending);
+  const remaining =
+    balance.remainingHours === null
+      ? null
+      : Math.max(0, balance.remainingHours + (editing?.status === "APPROVED" ? ownHours : 0) - pending);
+  const unpaid = Math.max(0, requestHours - paidLeft);
+
+  const eligibleFrom = data.summary.annualEligibleFrom;
+  const notEligible = type === "ANNUAL" && eligibleFrom && toUTCNoon(startDate) < new Date(eligibleFrom);
+
+  return (
+    <div className="rounded-md border bg-muted/40 p-3 text-sm space-y-1">
+      <div>
+        {LEAVE_TYPE_LABELS[type]}: {remaining === null ? "ไม่จำกัดจำนวน" : `คงเหลือ ${formatLeaveHours(remaining)}`}
+        {pending > 0 && <span className="text-muted-foreground"> (หักคำขอที่รออนุมัติแล้ว)</span>}
+      </div>
+      {requestHours > 0 && <div className="text-muted-foreground">คำขอนี้ {formatLeaveHours(requestHours)}</div>}
+      {notEligible ? (
+        <div className="text-red-600">
+          ยังไม่ได้สิทธิ์ลาพักร้อน (ได้สิทธิ์ {formatThaiDate(new Date(eligibleFrom))}) — จะถูกหักเงินเดือน
+        </div>
+      ) : (
+        unpaid > 0 && (
+          <div className="text-red-600">
+            {balance.paidQuotaHours === 0
+              ? "การลาประเภทนี้ไม่ได้รับค่าจ้าง — จะถูกหักเงินเดือน"
+              : `เกินสิทธิ์ที่ได้รับค่าจ้าง ${formatLeaveHours(unpaid)} — ส่วนนี้จะถูกหักเงินเดือน`}
+          </div>
+        )
+      )}
+      {type === "SICK" && requestHours >= 24 && (
+        <div className="text-amber-700">ลาป่วยตั้งแต่ 3 วันทำงานขึ้นไป กรุณาเตรียมใบรับรองแพทย์</div>
+      )}
+    </div>
   );
 }

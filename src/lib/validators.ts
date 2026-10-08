@@ -477,7 +477,10 @@ const optionalDate = z.preprocess(
 export const leaveRequestSchema = z.object({
   /** Only honoured for ADMIN; STAFF always request leave for themselves. */
   profileId: z.string().optional(),
-  type: z.enum(["ANNUAL", "SICK", "PERSONAL", "OTHER"], { error: "กรุณาเลือกประเภทการลา" }),
+  type: z.enum(
+    ["SICK", "PERSONAL", "ANNUAL", "MATERNITY", "PATERNITY", "CHILDCARE", "STERILIZATION", "MILITARY", "OTHER"],
+    { error: "กรุณาเลือกประเภทการลา" }
+  ),
   startDate: z.coerce.date({ error: "กรุณาเลือกวันที่เริ่มลา" }),
   endDate: z.coerce.date({ error: "กรุณาเลือกวันที่สิ้นสุด" }),
   period: z.enum(["FULL_DAY", "MORNING", "AFTERNOON"]).default("FULL_DAY"),
@@ -513,6 +516,12 @@ export const employeeSalarySchema = z.object({
   monthlySalary: z.coerce.number({ error: "กรุณาระบุเงินเดือน" }).min(0, "เงินเดือนต้องไม่ติดลบ"),
   startDate: optionalDate,
   endDate: optionalDate,
+  annualLeaveDays: z.coerce
+    .number({ error: "กรุณาระบุจำนวนวันลาพักร้อน" })
+    .int("ต้องเป็นจำนวนเต็ม")
+    .min(0, "ต้องไม่ติดลบ")
+    .max(60, "มากเกินไป")
+    .default(6),
   notes: z.string().max(500, "หมายเหตุยาวเกินไป").optional(),
 }).refine(
   (data) => !data.startDate || !data.endDate || data.endDate >= data.startDate,

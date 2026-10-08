@@ -25,6 +25,8 @@ import {
   UserCog,
   Settings,
   Banknote,
+  CalendarCheck,
+  CircleUser,
 } from "lucide-react";
 
 export type NavItem = {
@@ -50,6 +52,7 @@ export function isNavGroup(entry: NavEntry): entry is NavGroup {
 
 export const MAIN_NAV: NavEntry[] = [
   { href: "/dashboard", label: "แดชบอร์ด", icon: LayoutDashboard },
+  { href: "/profile", label: "บัญชีของฉัน", icon: CircleUser },
   { href: "/customers", label: "ลูกค้า", icon: Users },
   {
     label: "เอกสาร",
@@ -99,6 +102,7 @@ export const SETTINGS_NAV: NavItem[] = [
   { href: "/payment-terms", label: "เงื่อนไขชำระเงิน", icon: ClipboardList, adminOnly: true },
   { href: "/holidays", label: "วันหยุด", icon: CalendarOff, adminOnly: true },
   { href: "/payroll", label: "เงินเดือนพนักงาน", icon: Banknote, adminOnly: true },
+  { href: "/payroll/leave", label: "สรุปวันลาพนักงาน", icon: CalendarCheck, adminOnly: true },
   { href: "/companies", label: "บริษัท", icon: Building2, adminOnly: true },
   { href: "/website-sync", label: "ซิงค์เว็บไซต์", icon: Globe, adminOnly: true },
   { href: "/users", label: "ผู้ใช้งาน", icon: UserCog, adminOnly: true },

@@ -7,6 +7,7 @@ import {
   getTeamMembers,
   getUpcomingShipments,
 } from "@/data/team-calendar";
+import { getMyLeaveSummary } from "@/data/leave-balances";
 import { TeamCalendar } from "./team-calendar";
 import { MyLeavesCard, PendingLeavesCard, UpcomingShipmentsCard } from "./side-cards";
 
@@ -18,12 +19,13 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
   const { year, month } = getThaiNow();
   const isAdmin = user.role === "ADMIN";
 
-  const [calendar, upcoming, pending, myLeaves, members] = await Promise.all([
+  const [calendar, upcoming, pending, myLeaves, members, myBalance] = await Promise.all([
     getTeamCalendar(year, month),
     getUpcomingShipments(),
     isAdmin ? getPendingLeaves() : Promise.resolve([]),
     isAdmin ? Promise.resolve([]) : getMyLeaves(user.id),
     isAdmin ? getTeamMembers() : Promise.resolve([]),
+    isAdmin ? Promise.resolve(null) : getMyLeaveSummary(user.id, year).then((r) => r.summary),
   ]);
 
   return (
@@ -42,7 +44,7 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
         {isAdmin ? (
           <PendingLeavesCard leaves={pending} currentUserId={user.id} />
         ) : (
-          <MyLeavesCard leaves={myLeaves} currentUserId={user.id} />
+          <MyLeavesCard leaves={myLeaves} currentUserId={user.id} balance={myBalance} />
         )}
         <UpcomingShipmentsCard shipments={upcoming} />
       </div>
