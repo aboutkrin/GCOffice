@@ -45,7 +45,7 @@ Key models:
 - **StockMovement** — IN/OUT/ADJUSTMENT/INITIAL movements per product or colour variant. `Product.stockQuantity` is the sum of its variants' stock once variants exist. `src/data/stock.ts` aggregates by `productSku`, so **existing SKUs must never be rewritten**
 - **Holiday** — Company holidays (admin-managed at `/holidays`). Drives working-day math for delivery dates (`src/lib/delivery-date.ts`), so **employee leave must never be stored here**
 - **LeaveRequest** — Employee leave (type ANNUAL/SICK/PERSONAL/OTHER, FULL_DAY/MORNING/AFTERNOON, status PENDING → APPROVED/REJECTED, or CANCELLED). STAFF request for themselves (PENDING); ADMIN can record leave for anyone (auto-APPROVED) and approve/reject. Actions in `src/actions/leave-actions.ts`
-- **ChinaShipment** — Shipments from China: shippedDate, etaDate, arrivedDate, receivedDate with status SHIPPED → ARRIVED_TH → RECEIVED (or CANCELLED). Any user can add/advance; only ADMIN can delete. Actions in `src/actions/china-shipment-actions.ts`
+- **ChinaShipment** — Shipments from China: `title` = "เลข Tracking / รายการสินค้า" (shown on the calendar), `containerNo` = "เลขล็อต"; shippedDate, etaDate, arrivedDate, receivedDate with status SHIPPED → ARRIVED_TH → RECEIVED (or CANCELLED). Any user can add/advance; only ADMIN can delete. Actions in `src/actions/china-shipment-actions.ts`
 - **CatalogSyncLog** — One row per website sync run (trigger, scope, counters, dry-run `details`)
 - **Document** — Quotations and invoices with status workflow (DRAFT → SENT → CONFIRMED → CANCELLED)
 - **DocumentLineItem** / **DocumentPaymentTerm** — Cascade-deleted children of Document

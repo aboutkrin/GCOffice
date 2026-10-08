@@ -639,7 +639,7 @@ export function TeamCalendar({
                       </div>
                       {(s.containerNo || s.supplier) && (
                         <div className="text-sm text-muted-foreground">
-                          {[s.containerNo && `ตู้/Tracking: ${s.containerNo}`, s.supplier]
+                          {[s.containerNo && `ล็อต: ${s.containerNo}`, s.supplier]
                             .filter(Boolean)
                             .join(" · ")}
                         </div>
