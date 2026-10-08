@@ -435,6 +435,9 @@ model Holiday {
   name        String
   date        DateTime @db.Date
   isRecurring Boolean  @default(false) @map("is_recurring")
+  /// COMPANY = the office is closed (red, skipped in delivery-date math);
+  /// PUBLIC = a general public holiday the office still works (grey, reference only)
+  type        HolidayType @default(COMPANY)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -607,6 +610,11 @@ enum Status {
 enum UserRole {
   ADMIN
   STAFF
+}
+
+enum HolidayType {
+  COMPANY
+  PUBLIC
 }
 
 enum LeaveType {

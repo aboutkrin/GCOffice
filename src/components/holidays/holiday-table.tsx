@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { deleteHoliday, deleteHolidayGroup } from "@/actions/holiday-actions";
 import { formatThaiDate } from "@/lib/thai-date";
+import { HOLIDAY_TYPE_COLORS, HOLIDAY_TYPE_LABELS } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ interface HolidayGroup {
   startDate: string;
   endDate: string;
   isRecurring: boolean;
+  type: string;
 }
 
 function groupHolidays(holidays: any[]): HolidayGroup[] {
@@ -54,6 +56,7 @@ function groupHolidays(holidays: any[]): HolidayGroup[] {
     startDate: holidays[0].date,
     endDate: holidays[0].date,
     isRecurring: holidays[0].isRecurring,
+    type: holidays[0].type,
   };
 
   for (let i = 1; i < holidays.length; i++) {
@@ -67,6 +70,7 @@ function groupHolidays(holidays: any[]): HolidayGroup[] {
     if (
       h.name === current.name &&
       h.isRecurring === current.isRecurring &&
+      h.type === current.type &&
       diffDays >= 0 &&
       diffDays <= 1
     ) {
@@ -80,6 +84,7 @@ function groupHolidays(holidays: any[]): HolidayGroup[] {
         startDate: h.date,
         endDate: h.date,
         isRecurring: h.isRecurring,
+        type: h.type,
       };
     }
   }
@@ -112,16 +117,20 @@ interface HolidayTableProps {
 
 export function HolidayTable({ holidays }: HolidayTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "COMPANY" | "PUBLIC">("ALL");
   const [deleteGroup, setDeleteGroup] = useState<HolidayGroup | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const groups = useMemo(() => groupHolidays(holidays), [holidays]);
 
   const filteredGroups = useMemo(() => {
-    if (!globalFilter) return groups;
     const search = globalFilter.toLowerCase();
-    return groups.filter((g) => g.name.toLowerCase().includes(search));
-  }, [groups, globalFilter]);
+    return groups.filter(
+      (g) =>
+        (typeFilter === "ALL" || g.type === typeFilter) &&
+        (!search || g.name.toLowerCase().includes(search))
+    );
+  }, [groups, globalFilter, typeFilter]);
 
   function handleDelete() {
     if (!deleteGroup) return;
@@ -143,14 +152,29 @@ export function HolidayTable({ holidays }: HolidayTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-        <Input
-          placeholder="ค้นหาวันหยุด..."
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          className="pl-9"
-        />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            placeholder="ค้นหาวันหยุด..."
+            value={globalFilter}
+            onChange={(e) => setGlobalFilter(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex gap-1">
+          {(["ALL", "COMPANY", "PUBLIC"] as const).map((t) => (
+            <Button
+              key={t}
+              type="button"
+              size="sm"
+              variant={typeFilter === t ? "default" : "outline"}
+              onClick={() => setTypeFilter(t)}
+            >
+              {t === "ALL" ? "ทั้งหมด" : HOLIDAY_TYPE_LABELS[t]}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="rounded-md border">
@@ -160,6 +184,7 @@ export function HolidayTable({ holidays }: HolidayTableProps) {
               <TableHead>ชื่อวันหยุด</TableHead>
               <TableHead>วันที่</TableHead>
               <TableHead>ประเภท</TableHead>
+              <TableHead>การเกิดซ้ำ</TableHead>
               <TableHead>จัดการ</TableHead>
             </TableRow>
           </TableHeader>
@@ -175,6 +200,11 @@ export function HolidayTable({ holidays }: HolidayTableProps) {
                         ({getDayCount(group.startDate, group.endDate)} วัน)
                       </span>
                     )}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={HOLIDAY_TYPE_COLORS[group.type]}>
+                      {HOLIDAY_TYPE_LABELS[group.type]}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     {group.isRecurring ? (
@@ -211,7 +241,7 @@ export function HolidayTable({ holidays }: HolidayTableProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   ไม่พบข้อมูลวันหยุด
                 </TableCell>
               </TableRow>

@@ -15,9 +15,11 @@ export async function createHoliday(data: unknown) {
       name: validated.name,
       date: toUTCNoon(validated.date),
       isRecurring: validated.isRecurring,
+      type: validated.type,
     },
   });
   revalidatePath("/holidays");
+  revalidatePath("/dashboard");
   return serialize(holiday);
 }
 
@@ -37,9 +39,11 @@ export async function createHolidayRange(data: unknown) {
       name: validated.name,
       date,
       isRecurring: validated.isRecurring,
+      type: validated.type,
     })),
   });
   revalidatePath("/holidays");
+  revalidatePath("/dashboard");
 }
 
 export async function updateHoliday(id: string, data: unknown) {
@@ -51,9 +55,11 @@ export async function updateHoliday(id: string, data: unknown) {
       name: validated.name,
       date: toUTCNoon(validated.date),
       isRecurring: validated.isRecurring,
+      type: validated.type,
     },
   });
   revalidatePath("/holidays");
+  revalidatePath("/dashboard");
   return serialize(holiday);
 }
 
@@ -61,10 +67,12 @@ export async function deleteHoliday(id: string) {
   await assertAdmin();
   await prisma.holiday.delete({ where: { id } });
   revalidatePath("/holidays");
+  revalidatePath("/dashboard");
 }
 
 export async function deleteHolidayGroup(ids: string[]) {
   await assertAdmin();
   await prisma.holiday.deleteMany({ where: { id: { in: ids } } });
   revalidatePath("/holidays");
+  revalidatePath("/dashboard");
 }

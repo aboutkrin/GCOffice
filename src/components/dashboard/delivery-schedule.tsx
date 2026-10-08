@@ -316,7 +316,7 @@ export function DeliverySchedule({
                     className={cn(
                       "text-center py-1 border-r border-gray-200 last:border-r-0",
                       day.isWeekend && "bg-gray-50",
-                      day.holiday && "bg-red-50"
+                      day.holiday && (day.holiday.type === "PUBLIC" ? "bg-gray-100" : "bg-red-50")
                     )}
                     title={day.holiday?.name}
                   >
@@ -339,7 +339,10 @@ export function DeliverySchedule({
                     </div>
                     {day.holiday && (
                       <div
-                        className="w-1.5 h-1.5 rounded-full bg-red-400 mx-auto mt-0.5"
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full mx-auto mt-0.5",
+                          day.holiday.type === "PUBLIC" ? "bg-gray-400" : "bg-red-400"
+                        )}
                         title={day.holiday.name}
                       />
                     )}
