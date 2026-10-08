@@ -52,6 +52,12 @@ const HOLIDAY_TYPE_OPTIONS = [
     selectedClass: "border-gray-300 bg-gray-50 ring-1 ring-gray-300",
     description: "ที่อื่นหยุด แต่ออฟฟิศทำงานปกติ (แสดงสีเทา)",
   },
+  {
+    value: "CHINA",
+    dot: "border border-dashed border-red-500 bg-red-100",
+    selectedClass: "border-dashed border-red-400 bg-red-50 ring-1 ring-red-300",
+    description: "จีนหยุด ออฟฟิศทำงานปกติ แต่วันส่งของจะเลื่อนออกไป (กรอบแดงเส้นประ)",
+  },
 ] as const;
 
 interface HolidayFormProps {
@@ -248,7 +254,7 @@ export function HolidayForm({ initialData }: HolidayFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>ประเภทวันหยุด</FormLabel>
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2 sm:grid-cols-3">
                     {HOLIDAY_TYPE_OPTIONS.map((opt) => (
                       <button
                         key={opt.value}

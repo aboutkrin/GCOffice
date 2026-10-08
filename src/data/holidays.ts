@@ -24,8 +24,9 @@ export async function getHolidayById(id: string) {
 }
 
 /**
- * Holidays skipped by delivery-date math. Includes PUBLIC holidays too: even
- * when the office works, carriers are closed so nothing ships that day.
+ * Holidays skipped by delivery-date math. Includes PUBLIC and CHINA holidays
+ * too: even when the office works, carriers are closed (or China doesn't ship)
+ * so deliveries are pushed back.
  */
 export async function getActiveHolidays() {
   try {

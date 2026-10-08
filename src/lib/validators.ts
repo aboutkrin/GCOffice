@@ -115,7 +115,7 @@ export const holidaySchema = z.object({
   name: z.string().min(1, "กรุณาระบุชื่อวันหยุด"),
   date: z.coerce.date({ error: "กรุณาเลือกวันที่" }),
   isRecurring: z.boolean().default(false),
-  type: z.enum(["COMPANY", "PUBLIC"]).default("COMPANY"),
+  type: z.enum(["COMPANY", "PUBLIC", "CHINA"]).default("COMPANY"),
 });
 
 export const holidayRangeSchema = z.object({
@@ -123,7 +123,7 @@ export const holidayRangeSchema = z.object({
   startDate: z.coerce.date({ error: "กรุณาเลือกวันที่เริ่มต้น" }),
   endDate: z.coerce.date({ error: "กรุณาเลือกวันที่สิ้นสุด" }),
   isRecurring: z.boolean().default(false),
-  type: z.enum(["COMPANY", "PUBLIC"]).default("COMPANY"),
+  type: z.enum(["COMPANY", "PUBLIC", "CHINA"]).default("COMPANY"),
 }).refine(
   (data) => data.endDate >= data.startDate,
   { message: "วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น", path: ["endDate"] }

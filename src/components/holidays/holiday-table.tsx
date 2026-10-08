@@ -117,7 +117,7 @@ interface HolidayTableProps {
 
 export function HolidayTable({ holidays }: HolidayTableProps) {
   const [globalFilter, setGlobalFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"ALL" | "COMPANY" | "PUBLIC">("ALL");
+  const [typeFilter, setTypeFilter] = useState<"ALL" | "COMPANY" | "PUBLIC" | "CHINA">("ALL");
   const [deleteGroup, setDeleteGroup] = useState<HolidayGroup | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -163,7 +163,7 @@ export function HolidayTable({ holidays }: HolidayTableProps) {
           />
         </div>
         <div className="flex gap-1">
-          {(["ALL", "COMPANY", "PUBLIC"] as const).map((t) => (
+          {(["ALL", "COMPANY", "PUBLIC", "CHINA"] as const).map((t) => (
             <Button
               key={t}
               type="button"

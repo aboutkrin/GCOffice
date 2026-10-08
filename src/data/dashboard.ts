@@ -7,8 +7,9 @@ export interface HolidayItem {
   id: string;
   name: string;
   date: string;
-  /** COMPANY = office closed, PUBLIC = general holiday the office still works */
-  type: "COMPANY" | "PUBLIC";
+  /** COMPANY = office closed, PUBLIC = general holiday the office still works,
+   *  CHINA = Chinese holiday (office works, China doesn't ship) */
+  type: "COMPANY" | "PUBLIC" | "CHINA";
 }
 
 
