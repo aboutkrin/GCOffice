@@ -43,6 +43,9 @@ Key models:
 - **Product** — SKU-based catalog with categories, images, dimensions, pricing, cost fields and stock. `source` is `MANUAL` (created in GCOffice), `WEBSITE` (mirrored from goodchoiceth.com) or `WOOCOMMERCE` (legacy rows from the retired WooCommerce sync; `woocommerceId` is kept only to match website products by `wpPostId`)
 - **ProductColorVariant** — Colour variants per product (name unique per product, colourHex, imageUrl, price, stock). Rows with `websiteVariantId` are website-owned; `websiteActive === false` renders the badge "ไม่แสดงบนเว็บ" but the colour stays selectable in documents
 - **StockMovement** — IN/OUT/ADJUSTMENT/INITIAL movements per product or colour variant. `Product.stockQuantity` is the sum of its variants' stock once variants exist. `src/data/stock.ts` aggregates by `productSku`, so **existing SKUs must never be rewritten**
+- **Holiday** — Company holidays (admin-managed at `/holidays`). Drives working-day math for delivery dates (`src/lib/delivery-date.ts`), so **employee leave must never be stored here**
+- **LeaveRequest** — Employee leave (type ANNUAL/SICK/PERSONAL/OTHER, FULL_DAY/MORNING/AFTERNOON, status PENDING → APPROVED/REJECTED, or CANCELLED). STAFF request for themselves (PENDING); ADMIN can record leave for anyone (auto-APPROVED) and approve/reject. Actions in `src/actions/leave-actions.ts`
+- **ChinaShipment** — Shipments from China: shippedDate, etaDate, arrivedDate, receivedDate with status SHIPPED → ARRIVED_TH → RECEIVED (or CANCELLED). Any user can add/advance; only ADMIN can delete. Actions in `src/actions/china-shipment-actions.ts`
 - **CatalogSyncLog** — One row per website sync run (trigger, scope, counters, dry-run `details`)
 - **Document** — Quotations and invoices with status workflow (DRAFT → SENT → CONFIRMED → CANCELLED)
 - **DocumentLineItem** / **DocumentPaymentTerm** — Cascade-deleted children of Document
@@ -107,6 +110,10 @@ Field ownership (enforced in `sync.ts`, `src/actions/product-actions.ts` and the
 WEBSITE products cannot be deleted in GCOffice (delete on the website instead); their product fields are read-only in the form with a link to `${CATALOG_API_URL}/admin/products/<websiteProductId>`. `saveColorVariantsInTransaction` never deletes website-owned variants and updates only their `price`.
 
 `DocumentLineItem.colorVariantSku` snapshots the website colour code (`ProductColorVariant.sku`) when a colour is picked and is printed after the colour name (`สี: สีฟ้า (YSP125-Q302)`); `colorVariantName` stays the bare colour name because stock deduction (`stock-actions.ts`, `data/stock.ts`) matches the variant on it.
+
+### Dashboard Team Calendar
+
+`src/components/dashboard/team-calendar/` — "ปฏิทินทีม" on `/dashboard` for both ADMIN and STAFF (`TeamCalendarSection` server component). Month grid (agenda list on mobile) showing company holidays, approved + pending leave (pending drawn dashed) and China shipment milestones; side cards for pending leave approvals (ADMIN) / "การลาของฉัน" (STAFF) and upcoming shipments. Data from `src/data/team-calendar.ts`; month navigation via `fetchTeamCalendarAction`. Mutations call `router.refresh()` and the calendar re-syncs from the new server props.
 
 ### Custom Hooks
 

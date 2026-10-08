@@ -417,3 +417,50 @@ export const userUpdateSchema = z.object({
 
 export type UserCreateFormData = z.infer<typeof userCreateSchema>;
 export type UserUpdateFormData = z.infer<typeof userUpdateSchema>;
+
+// ============================================================
+// TEAM CALENDAR
+// ============================================================
+
+const optionalDate = z.preprocess(
+  (val) => (val === null || val === undefined || val === "" ? null : val),
+  z.coerce.date().nullable()
+).optional();
+
+export const leaveRequestSchema = z.object({
+  /** Only honoured for ADMIN; STAFF always request leave for themselves. */
+  profileId: z.string().optional(),
+  type: z.enum(["ANNUAL", "SICK", "PERSONAL", "OTHER"], { error: "กรุณาเลือกประเภทการลา" }),
+  startDate: z.coerce.date({ error: "กรุณาเลือกวันที่เริ่มลา" }),
+  endDate: z.coerce.date({ error: "กรุณาเลือกวันที่สิ้นสุด" }),
+  period: z.enum(["FULL_DAY", "MORNING", "AFTERNOON"]).default("FULL_DAY"),
+  reason: z.string().max(500, "เหตุผลยาวเกินไป").optional(),
+}).refine(
+  (data) => data.endDate >= data.startDate,
+  { message: "วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มลา", path: ["endDate"] }
+).refine(
+  (data) =>
+    data.period === "FULL_DAY" ||
+    data.startDate.toDateString() === data.endDate.toDateString(),
+  { message: "ลาครึ่งวันได้เฉพาะการลา 1 วัน", path: ["period"] }
+);
+
+export const leaveReviewSchema = z.object({
+  approve: z.boolean(),
+  note: z.string().max(500).optional(),
+});
+
+export const chinaShipmentSchema = z.object({
+  title: z.string().min(1, "กรุณาระบุชื่อล็อต / รายการสินค้า"),
+  containerNo: z.string().optional(),
+  supplier: z.string().optional(),
+  shippedDate: z.coerce.date({ error: "กรุณาเลือกวันที่จีนส่งของ" }),
+  etaDate: optionalDate,
+  note: z.string().optional(),
+}).refine(
+  (data) => !data.etaDate || data.etaDate >= data.shippedDate,
+  { message: "วันที่คาดว่าถึงต้องไม่ก่อนวันที่ส่ง", path: ["etaDate"] }
+);
+
+export type LeaveRequestFormData = z.infer<typeof leaveRequestSchema>;
+export type ChinaShipmentFormData = z.infer<typeof chinaShipmentSchema>;

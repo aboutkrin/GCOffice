@@ -33,6 +33,10 @@ model Profile {
   stockMovements        StockMovement[] @relation("StockMovementCreatedBy")
   stockDocumentsCreated StockDocument[] @relation("StockDocumentCreatedBy")
   stockDocumentsPosted  StockDocument[] @relation("StockDocumentPostedBy")
+  leaveRequests         LeaveRequest[]  @relation("LeaveOwner")
+  leavesReviewed        LeaveRequest[]  @relation("LeaveReviewer")
+  leavesCreated         LeaveRequest[]  @relation("LeaveCreatedBy")
+  chinaShipmentsCreated ChinaShipment[] @relation("ChinaShipmentCreatedBy")
 
   @@map("profiles")
 }
@@ -439,6 +443,64 @@ model Holiday {
 }
 
 // ============================================================
+// TEAM CALENDAR — employee leave & shipments from China
+// ============================================================
+
+/// Employee leave. Kept separate from Holiday: Holiday drives working-day
+/// math for delivery dates (src/lib/delivery-date.ts), leave must not.
+model LeaveRequest {
+  id        String      @id @default(cuid())
+  profileId String      @map("profile_id") @db.Uuid
+  profile   Profile     @relation("LeaveOwner", fields: [profileId], references: [id])
+  type      LeaveType
+  startDate DateTime    @map("start_date") @db.Date
+  endDate   DateTime    @map("end_date") @db.Date
+  /// Half-day periods are only allowed when startDate == endDate.
+  period    LeavePeriod @default(FULL_DAY)
+  reason    String?     @db.Text
+  status    LeaveStatus @default(PENDING)
+
+  reviewedById String?   @map("reviewed_by_id") @db.Uuid
+  reviewedBy   Profile?  @relation("LeaveReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime? @map("reviewed_at")
+  reviewNote   String?   @map("review_note")
+
+  createdById String  @map("created_by_id") @db.Uuid
+  createdBy   Profile @relation("LeaveCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([startDate, endDate])
+  @@index([profileId, status])
+  @@map("leave_requests")
+}
+
+model ChinaShipment {
+  id           String              @id @default(cuid())
+  title        String
+  containerNo  String?             @map("container_no")
+  supplier     String?
+  shippedDate  DateTime            @map("shipped_date") @db.Date
+  etaDate      DateTime?           @map("eta_date") @db.Date
+  arrivedDate  DateTime?           @map("arrived_date") @db.Date
+  receivedDate DateTime?           @map("received_date") @db.Date
+  status       ChinaShipmentStatus @default(SHIPPED)
+  note         String?             @db.Text
+
+  createdById String  @map("created_by_id") @db.Uuid
+  createdBy   Profile @relation("ChinaShipmentCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([shippedDate])
+  @@index([etaDate])
+  @@index([status])
+  @@map("china_shipments")
+}
+
+// ============================================================
 // MONTHLY EXPENSES
 // ============================================================
 
@@ -545,6 +607,33 @@ enum Status {
 enum UserRole {
   ADMIN
   STAFF
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  PERSONAL
+  OTHER
+}
+
+enum LeavePeriod {
+  FULL_DAY
+  MORNING
+  AFTERNOON
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ChinaShipmentStatus {
+  SHIPPED
+  ARRIVED_TH
+  RECEIVED
+  CANCELLED
 }
 
 enum CustomerType {

@@ -1,4 +1,4 @@
-const THAI_MONTHS = [
+export const THAI_MONTHS = [
   "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
   "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม",
   "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
@@ -68,3 +68,5 @@ export function toUTCNoon(date: Date): Date {
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0)
   );
 }
+
+export const THAI_DAY_LABELS = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];

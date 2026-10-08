@@ -22,14 +22,8 @@ import {
   markDocumentShippedAction,
 } from "@/actions/dashboard-actions";
 import type { DeliveryScheduleItem, HolidayItem } from "@/data/dashboard";
+import { THAI_MONTHS, THAI_DAY_LABELS as DAY_LABELS } from "@/lib/thai-date";
 
-const THAI_MONTHS = [
-  "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
-  "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม",
-  "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
-];
-
-const DAY_LABELS = ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."];
 
 interface DeliveryScheduleProps {
   initialData: DeliveryScheduleItem[];
