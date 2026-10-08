@@ -9,12 +9,11 @@ import { Loader2, CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
 import {
-  holidaySchema,
   holidayRangeSchema,
-  type HolidayFormData,
   type HolidayRangeFormData,
 } from "@/lib/validators";
-import { createHolidayRange, updateHoliday } from "@/actions/holiday-actions";
+import { createHolidayRange, updateHolidayGroup } from "@/actions/holiday-actions";
+import { getDayCount, type HolidayGroup } from "@/lib/holiday-groups";
 import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
 import { cn } from "@/lib/utils";
 import { HOLIDAY_TYPE_LABELS } from "@/lib/constants";
@@ -52,50 +51,45 @@ const HOLIDAY_TYPE_OPTIONS = [
     selectedClass: "border-gray-300 bg-gray-50 ring-1 ring-gray-300",
     description: "ที่อื่นหยุด แต่ออฟฟิศทำงานปกติ (แสดงสีเทา)",
   },
+  {
+    value: "CHINA",
+    dot: "border border-dashed border-red-500 bg-red-100",
+    selectedClass: "border-dashed border-red-400 bg-red-50 ring-1 ring-red-300",
+    description: "จีนหยุด ออฟฟิศทำงานปกติ แต่วันส่งของจะเลื่อนออกไป (กรอบแดงเส้นประ)",
+  },
 ] as const;
 
 interface HolidayFormProps {
-  initialData?: any;
+  /** The multi-day group being edited (all its days are replaced on save) */
+  initialData?: HolidayGroup;
 }
 
 export function HolidayForm({ initialData }: HolidayFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const isEditing = !!initialData;
 
-  // --- Edit mode: single-date form ---
-  const editForm = useForm<HolidayFormData>({
-    resolver: zodResolver(holidaySchema) as any,
-    defaultValues: {
-      name: initialData?.name ?? "",
-      date: initialData?.date ? new Date(initialData.date) : undefined,
-      isRecurring: initialData?.isRecurring ?? false,
-      type: initialData?.type ?? "COMPANY",
-    },
-  });
+  const initialRange: DateRange | undefined = initialData
+    ? { from: new Date(initialData.startDate), to: new Date(initialData.endDate) }
+    : undefined;
 
-  // --- Create mode: range form ---
-  const createForm = useForm<HolidayRangeFormData>({
+  const form = useForm<HolidayRangeFormData>({
     resolver: zodResolver(holidayRangeSchema) as any,
     defaultValues: {
-      name: "",
-      startDate: undefined as unknown as Date,
-      endDate: undefined as unknown as Date,
-      isRecurring: false,
-      type: "COMPANY",
+      name: initialData?.name ?? "",
+      startDate: initialRange?.from as Date,
+      endDate: initialRange?.to as Date,
+      isRecurring: initialData?.isRecurring ?? false,
+      type: (initialData?.type as HolidayRangeFormData["type"]) ?? "COMPANY",
     },
   });
 
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(initialRange);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const form = (isEditing ? editForm : createForm) as any;
-
-  function onSubmit(values: any) {
+  function onSubmit(values: HolidayRangeFormData) {
     startTransition(async () => {
       try {
-        if (isEditing) {
-          await updateHoliday(initialData.id, values);
+        if (initialData) {
+          await updateHolidayGroup(initialData.ids, values);
           toast.success("บันทึกวันหยุดเรียบร้อยแล้ว");
         } else {
           await createHolidayRange(values);
@@ -130,117 +124,81 @@ export function HolidayForm({ initialData }: HolidayFormProps) {
               )}
             />
 
-            {isEditing ? (
-              <FormField
-                control={editForm.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>วันที่</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value
-                              ? formatThaiDate(field.value, "short")
-                              : "เลือกวันที่"}
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={(date) =>
-                            field.onChange(date ? toUTCNoon(date) : undefined)
-                          }
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            ) : (
-              <FormItem>
-                <FormLabel>ช่วงวันที่</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !dateRange?.from && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateRange?.from ? (
-                        dateRange.to ? (
-                          <>
-                            {formatThaiDate(dateRange.from, "short")} -{" "}
-                            {formatThaiDate(dateRange.to, "short")}
-                          </>
+                <FormItem>
+                  <FormLabel>ช่วงวันที่</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !dateRange?.from && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateRange?.from ? (
+                          dateRange.to ? (
+                            <>
+                              {formatThaiDate(dateRange.from, "short")} -{" "}
+                              {formatThaiDate(dateRange.to, "short")}
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                ({getDayCount(dateRange.from, dateRange.to)} วัน)
+                              </span>
+                            </>
+                          ) : (
+                            formatThaiDate(dateRange.from, "short")
+                          )
                         ) : (
-                          formatThaiDate(dateRange.from, "short")
-                        )
-                      ) : (
-                        "เลือกช่วงวันที่"
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="range"
-                      selected={dateRange}
-                      onSelect={(range) => {
-                        const normalized = range
-                          ? {
-                              from: range.from
-                                ? toUTCNoon(range.from)
-                                : undefined,
-                              to: range.to
-                                ? toUTCNoon(range.to)
-                                : undefined,
-                            }
-                          : undefined;
-                        setDateRange(normalized);
-                        if (normalized?.from) {
-                          createForm.setValue("startDate", normalized.from, {
-                            shouldValidate: true,
-                          });
-                        }
-                        if (normalized?.to) {
-                          createForm.setValue("endDate", normalized.to, {
-                            shouldValidate: true,
-                          });
-                        } else if (normalized?.from) {
-                          createForm.setValue("endDate", normalized.from, {
-                            shouldValidate: true,
-                          });
-                        }
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-                {createForm.formState.errors.startDate && (
-                  <p className="text-sm font-medium text-destructive">
-                    {createForm.formState.errors.startDate.message}
-                  </p>
-                )}
-                {createForm.formState.errors.endDate && (
-                  <p className="text-sm font-medium text-destructive">
-                    {createForm.formState.errors.endDate.message}
-                  </p>
-                )}
-              </FormItem>
-            )}
+                          "เลือกช่วงวันที่"
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="range"
+                        defaultMonth={dateRange?.from}
+                        selected={dateRange}
+                        onSelect={(range) => {
+                          const normalized = range
+                            ? {
+                                from: range.from
+                                  ? toUTCNoon(range.from)
+                                  : undefined,
+                                to: range.to
+                                  ? toUTCNoon(range.to)
+                                  : undefined,
+                              }
+                            : undefined;
+                          setDateRange(normalized);
+                          if (normalized?.from) {
+                            form.setValue("startDate", normalized.from, {
+                              shouldValidate: true,
+                            });
+                          }
+                          if (normalized?.to) {
+                            form.setValue("endDate", normalized.to, {
+                              shouldValidate: true,
+                            });
+                          } else if (normalized?.from) {
+                            form.setValue("endDate", normalized.from, {
+                              shouldValidate: true,
+                            });
+                          }
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {form.formState.errors.startDate && (
+                    <p className="text-sm font-medium text-destructive">
+                      {form.formState.errors.startDate.message}
+                    </p>
+                  )}
+                  {form.formState.errors.endDate && (
+                    <p className="text-sm font-medium text-destructive">
+                      {form.formState.errors.endDate.message}
+                    </p>
+                  )}
+                </FormItem>
 
             <FormField
               control={form.control}
@@ -248,7 +206,7 @@ export function HolidayForm({ initialData }: HolidayFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>ประเภทวันหยุด</FormLabel>
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2 sm:grid-cols-3">
                     {HOLIDAY_TYPE_OPTIONS.map((opt) => (
                       <button
                         key={opt.value}

@@ -176,11 +176,13 @@ export const STOCK_AVAILABILITY_LABELS = {
 export const HOLIDAY_TYPE_LABELS: Record<string, string> = {
   COMPANY: "วันหยุดบริษัท",
   PUBLIC: "วันหยุดทั่วไป",
+  CHINA: "วันหยุดจีน",
 };
 
 export const HOLIDAY_TYPE_COLORS: Record<string, string> = {
   COMPANY: "bg-red-100 text-red-800",
   PUBLIC: "bg-gray-100 text-gray-600",
+  CHINA: "border border-dashed border-red-400 bg-red-50 text-red-700",
 };
 
 export const LEAVE_TYPE_LABELS: Record<string, string> = {
@@ -213,6 +215,19 @@ export const LEAVE_STATUS_COLORS: Record<string, string> = {
   REJECTED: "bg-red-100 text-red-800",
   CANCELLED: "bg-gray-100 text-gray-600",
 };
+
+export const PAYROLL_STATUS_LABELS: Record<string, string> = {
+  DRAFT: "ฉบับร่าง",
+  CONFIRMED: "ยืนยันแล้ว",
+};
+
+export const PAYROLL_STATUS_COLORS: Record<string, string> = {
+  DRAFT: "bg-amber-100 text-amber-800",
+  CONFIRMED: "bg-green-100 text-green-800",
+};
+
+/** Expense category that confirmed payrolls are posted into (created on demand). */
+export const PAYROLL_EXPENSE_CATEGORY = "เงินเดือนพนักงาน";
 
 export const CHINA_SHIPMENT_STATUS_LABELS: Record<string, string> = {
   SHIPPED: "จีนส่งแล้ว",

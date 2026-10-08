@@ -54,9 +54,10 @@ const profileNameSelect = {
   email: true,
 } as const;
 
+/** Team calendar shows people by their username; real name / email only as a fallback. */
 export function profileDisplayName(p: ProfileName): string {
   const name = [p.firstName, p.lastName].filter(Boolean).join(" ");
-  return name || p.fullName || p.username || p.email;
+  return p.username || name || p.fullName || p.email;
 }
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);

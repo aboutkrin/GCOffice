@@ -24,6 +24,7 @@ import {
   History,
   UserCog,
   Settings,
+  Banknote,
 } from "lucide-react";
 
 export type NavItem = {
@@ -97,6 +98,7 @@ export const SETTINGS_NAV: NavItem[] = [
   { href: "/categories", label: "หมวดหมู่สินค้า", icon: Tags, adminOnly: true },
   { href: "/payment-terms", label: "เงื่อนไขชำระเงิน", icon: ClipboardList, adminOnly: true },
   { href: "/holidays", label: "วันหยุด", icon: CalendarOff, adminOnly: true },
+  { href: "/payroll", label: "เงินเดือนพนักงาน", icon: Banknote, adminOnly: true },
   { href: "/companies", label: "บริษัท", icon: Building2, adminOnly: true },
   { href: "/website-sync", label: "ซิงค์เว็บไซต์", icon: Globe, adminOnly: true },
   { href: "/users", label: "ผู้ใช้งาน", icon: UserCog, adminOnly: true },
