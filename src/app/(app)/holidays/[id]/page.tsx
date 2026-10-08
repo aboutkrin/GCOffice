@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
-import { getHolidayById } from "@/data/holidays";
+import { getHolidayGroupById } from "@/data/holidays";
 import { Button } from "@/components/ui/button";
 import { HolidayForm } from "@/components/holidays/holiday-form";
 
@@ -14,9 +14,9 @@ export const dynamic = 'force-dynamic';
 
 export default async function EditHolidayPage({ params }: EditHolidayPageProps) {
   const { id } = await params;
-  const holiday = await getHolidayById(id);
+  const group = await getHolidayGroupById(id);
 
-  if (!holiday) {
+  if (!group) {
     notFound();
   }
 
@@ -30,11 +30,11 @@ export default async function EditHolidayPage({ params }: EditHolidayPageProps) 
         </Button>
         <div>
           <h1 className="text-2xl font-bold">แก้ไขวันหยุด</h1>
-          <p className="text-muted-foreground text-sm">{holiday.name}</p>
+          <p className="text-muted-foreground text-sm">{group.name}</p>
         </div>
       </div>
 
-      <HolidayForm initialData={holiday} />
+      <HolidayForm initialData={group} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { deleteHoliday, deleteHolidayGroup } from "@/actions/holiday-actions";
 import { formatThaiDate } from "@/lib/thai-date";
 import { HOLIDAY_TYPE_COLORS, HOLIDAY_TYPE_LABELS } from "@/lib/constants";
+import { groupHolidays, getDayCount, type HolidayGroup } from "@/lib/holiday-groups";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,69 +37,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface HolidayGroup {
-  ids: string[];
-  name: string;
-  startDate: string;
-  endDate: string;
-  isRecurring: boolean;
-  type: string;
-}
-
-function groupHolidays(holidays: any[]): HolidayGroup[] {
-  if (holidays.length === 0) return [];
-
-  const groups: HolidayGroup[] = [];
-  let current: HolidayGroup = {
-    ids: [holidays[0].id],
-    name: holidays[0].name,
-    startDate: holidays[0].date,
-    endDate: holidays[0].date,
-    isRecurring: holidays[0].isRecurring,
-    type: holidays[0].type,
-  };
-
-  for (let i = 1; i < holidays.length; i++) {
-    const h = holidays[i];
-    const prevDate = new Date(current.endDate);
-    const currDate = new Date(h.date);
-    const diffMs = currDate.getTime() - prevDate.getTime();
-    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-
-    // Allow merging for same date (duplicates, diffDays=0) or consecutive date (diffDays=1)
-    if (
-      h.name === current.name &&
-      h.isRecurring === current.isRecurring &&
-      h.type === current.type &&
-      diffDays >= 0 &&
-      diffDays <= 1
-    ) {
-      current.ids.push(h.id);
-      current.endDate = h.date;
-    } else {
-      groups.push(current);
-      current = {
-        ids: [h.id],
-        name: h.name,
-        startDate: h.date,
-        endDate: h.date,
-        isRecurring: h.isRecurring,
-        type: h.type,
-      };
-    }
-  }
-  groups.push(current);
-
-  return groups;
-}
-
-function getDayCount(startDate: string, endDate: string): number {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diffMs = end.getTime() - start.getTime();
-  return Math.round(diffMs / (1000 * 60 * 60 * 24)) + 1;
-}
 
 function formatGroupDate(startDate: string, endDate: string): string {
   const start = new Date(startDate);

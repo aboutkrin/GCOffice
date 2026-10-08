@@ -15,6 +15,17 @@ function rethrowDuplicateHoliday(err: unknown): never {
   throw err;
 }
 
+function eachDay(startDate: Date, endDate: Date): Date[] {
+  const dates: Date[] = [];
+  const end = toUTCNoon(endDate);
+  const current = toUTCNoon(startDate);
+  while (current <= end) {
+    dates.push(new Date(current));
+    current.setUTCDate(current.getUTCDate() + 1);
+  }
+  return dates;
+}
+
 export async function createHoliday(data: unknown) {
   await assertAdmin();
   const validated = holidaySchema.parse(data);
@@ -36,14 +47,7 @@ export async function createHoliday(data: unknown) {
 export async function createHolidayRange(data: unknown) {
   await assertAdmin();
   const validated = holidayRangeSchema.parse(data);
-  const dates: Date[] = [];
-  const start = toUTCNoon(validated.startDate);
-  const end = toUTCNoon(validated.endDate);
-  const current = new Date(start);
-  while (current <= end) {
-    dates.push(new Date(current));
-    current.setUTCDate(current.getUTCDate() + 1);
-  }
+  const dates = eachDay(validated.startDate, validated.endDate);
   await prisma.holiday.createMany({
     data: dates.map((date) => ({
       name: validated.name,
@@ -58,23 +62,29 @@ export async function createHolidayRange(data: unknown) {
   revalidatePath("/dashboard");
 }
 
-export async function updateHoliday(id: string, data: unknown) {
+/**
+ * Replaces a multi-day holiday group (the rows `ids`, as grouped on the
+ * /holidays table) with the edited name/type/recurrence over the new range.
+ */
+export async function updateHolidayGroup(ids: string[], data: unknown) {
   await assertAdmin();
-  const validated = holidaySchema.parse(data);
-  const holiday = await prisma.holiday
-    .update({
-      where: { id },
-      data: {
+  const validated = holidayRangeSchema.parse(data);
+  if (ids.length === 0) throw new Error("ไม่พบวันหยุดที่ต้องการแก้ไข");
+  const dates = eachDay(validated.startDate, validated.endDate);
+  await prisma.$transaction([
+    prisma.holiday.deleteMany({ where: { id: { in: ids } } }),
+    prisma.holiday.createMany({
+      data: dates.map((date) => ({
         name: validated.name,
-        date: toUTCNoon(validated.date),
+        date,
         isRecurring: validated.isRecurring,
         type: validated.type,
-      },
-    })
-    .catch(rethrowDuplicateHoliday);
+      })),
+      skipDuplicates: true,
+    }),
+  ]);
   revalidatePath("/holidays");
   revalidatePath("/dashboard");
-  return serialize(holiday);
 }
 
 export async function deleteHoliday(id: string) {
