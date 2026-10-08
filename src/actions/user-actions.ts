@@ -130,6 +130,11 @@ export async function deleteUser(id: string) {
     throw new Error("ผู้ใช้นี้มีเอกสารในระบบ กรุณาปิดการใช้งานแทนการลบ");
   }
 
+  const payrollCount = await prisma.payroll.count({ where: { profileId: id } });
+  if (payrollCount > 0) {
+    throw new Error("ผู้ใช้นี้มีประวัติเงินเดือนในระบบ กรุณาปิดการใช้งานแทนการลบ");
+  }
+
   const admin = createAdminClient();
   const { error } = await admin.auth.admin.deleteUser(id);
   if (error) throw new Error(error.message);

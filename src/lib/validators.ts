@@ -464,5 +464,29 @@ export const chinaShipmentSchema = z.object({
   { message: "วันที่คาดว่าถึงต้องไม่ก่อนวันที่ส่ง", path: ["etaDate"] }
 );
 
+export const employeeSalarySchema = z.object({
+  monthlySalary: z.coerce.number({ error: "กรุณาระบุเงินเดือน" }).min(0, "เงินเดือนต้องไม่ติดลบ"),
+  startDate: optionalDate,
+  endDate: optionalDate,
+  notes: z.string().max(500, "หมายเหตุยาวเกินไป").optional(),
+}).refine(
+  (data) => !data.startDate || !data.endDate || data.endDate >= data.startDate,
+  { message: "วันสุดท้ายต้องไม่ก่อนวันเริ่มงาน", path: ["endDate"] }
+);
+
+export const payrollItemSchema = z.object({
+  kind: z.enum(["EARNING", "DEDUCTION"]),
+  name: z.string().trim().min(1, "กรุณาระบุชื่อรายการ"),
+  amount: z.coerce.number({ error: "กรุณาระบุจำนวนเงิน" }).min(0, "จำนวนเงินต้องไม่ติดลบ"),
+});
+
+export const payrollUpdateSchema = z.object({
+  items: z.array(payrollItemSchema),
+  notes: z.string().max(1000, "หมายเหตุยาวเกินไป").optional(),
+});
+
+export type EmployeeSalaryFormData = z.infer<typeof employeeSalarySchema>;
+export type PayrollItemFormData = z.infer<typeof payrollItemSchema>;
+export type PayrollUpdateFormData = z.infer<typeof payrollUpdateSchema>;
 export type LeaveRequestFormData = z.infer<typeof leaveRequestSchema>;
 export type ChinaShipmentFormData = z.infer<typeof chinaShipmentSchema>;

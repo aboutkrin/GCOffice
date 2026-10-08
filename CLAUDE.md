@@ -46,6 +46,8 @@ Key models:
 - **Holiday** — Holidays (admin-managed at `/holidays`), `type` COMPANY (office closed — red on calendars), PUBLIC (general public holiday the office still works — grey, reference only) or CHINA (Chinese holiday, e.g. Golden Week — red dashed; office works but China doesn't ship). All types are skipped by delivery-date math because carriers are closed / China doesn't ship. The office works Mon–Sat: only Sunday is a weekend (red) on calendars and in `delivery-date.ts`. Drives working-day math for delivery dates (`src/lib/delivery-date.ts`), so **employee leave must never be stored here**
 - **LeaveRequest** — Employee leave (type ANNUAL/SICK/PERSONAL/OTHER, FULL_DAY/MORNING/AFTERNOON, status PENDING → APPROVED/REJECTED, or CANCELLED). STAFF request for themselves (PENDING); ADMIN can record leave for anyone (auto-APPROVED) and approve/reject. Actions in `src/actions/leave-actions.ts`
 - **ChinaShipment** — Shipments from China: `title` = "เลข Tracking / รายการสินค้า" (shown on the calendar), `containerNo` = "เลขล็อต"; shippedDate, etaDate, arrivedDate, receivedDate with status SHIPPED → ARRIVED_TH → RECEIVED (or CANCELLED). Any user can add/advance; only ADMIN can delete. Actions in `src/actions/china-shipment-actions.ts`
+- **EmployeeSalary** — One per Profile: `monthlySalary`, optional `startDate` / `endDate` (pro-rated first/last month). Managed at `/payroll/employees`
+- **Payroll** / **PayrollItem** — One payslip per employee per month (`@@unique([profileId, year, month])`) with snapshot rates/totals and `leaveDetails` JSON; items are extra EARNING/DEDUCTION lines. DRAFT → CONFIRMED; confirming posts `netPay` as an `Expense` (`expenseId`). See "Payroll" below
 - **CatalogSyncLog** — One row per website sync run (trigger, scope, counters, dry-run `details`)
 - **Document** — Quotations and invoices with status workflow (DRAFT → SENT → CONFIRMED → CANCELLED)
 - **DocumentLineItem** / **DocumentPaymentTerm** — Cascade-deleted children of Document
@@ -114,6 +116,14 @@ WEBSITE products cannot be deleted in GCOffice (delete on the website instead); 
 ### Dashboard Team Calendar
 
 `src/components/dashboard/team-calendar/` — "ปฏิทินทีม" on `/dashboard` for both ADMIN and STAFF (`TeamCalendarSection` server component). Month grid (same grid on mobile, like a phone calendar: multi-day leave and consecutive same-name holidays (e.g. Golden Week) are one bar spanning their days, split at week boundaries; bars packed into lanes with "+N" overflow, `buildWeekRows`) showing company holidays, approved + pending leave (pending drawn dashed) and China shipment milestones; side cards for pending leave approvals (ADMIN) / "การลาของฉัน" (STAFF) and upcoming shipments. Data from `src/data/team-calendar.ts`; month navigation via `fetchTeamCalendarAction`. Mutations call `router.refresh()` and the calendar re-syncs from the new server props.
+
+### Payroll (เงินเดือนพนักงาน)
+
+`/payroll` (under การตั้งค่า, ADMIN only). Pure math in `src/lib/payroll.ts` (`calculatePayroll`), data in `src/data/payroll.ts`, actions in `src/actions/payroll-actions.ts`.
+- Every month is 30 days: daily rate = salary ÷ 30, hourly = daily ÷ 8 (9:00–18:00 with a 1h lunch). A full month pays the full salary (28/31-day months too); a month with `startDate`/`endDate` inside it pays daily × calendar days worked (Sundays are **not** removed), capped at 30.
+- All APPROVED `LeaveRequest`s are deducted by the hour: FULL_DAY 8h, MORNING 3h, AFTERNOON 5h. Sundays and COMPANY holidays inside a leave are skipped.
+- DRAFT payslips are recalculated from the current salary + leave on every save/confirm. `confirmPayroll` creates an `Expense` in category "เงินเดือนพนักงาน" (`PAYROLL_EXPENSE_CATEGORY`, created on demand) dated the last day of the month, so it flows into `/expenses` and the dashboard expense totals; `unconfirmPayroll` deletes that expense. Printable slip at `/payroll/[id]/slip`.
+- Users with payslips cannot be deleted (deactivate instead).
 
 ### Custom Hooks
 
