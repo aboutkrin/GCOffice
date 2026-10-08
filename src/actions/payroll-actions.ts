@@ -26,6 +26,7 @@ function payrollFields(result: PayrollCalcResult, employeeName: string) {
     paidDays: result.paidDays,
     baseAmount: result.baseAmount,
     leaveHours: result.leaveHours,
+    unpaidLeaveHours: result.unpaidLeaveHours,
     leaveDeduction: result.leaveDeduction,
     leaveDetails: result.leaveDetails as object[],
     totalEarnings: result.totalEarnings,
@@ -67,6 +68,7 @@ export async function saveEmployeeSalary(profileId: string, data: unknown): Prom
       monthlySalary: validated.monthlySalary,
       startDate: validated.startDate ? toUTCNoon(validated.startDate) : null,
       endDate: validated.endDate ? toUTCNoon(validated.endDate) : null,
+      annualLeaveDays: validated.annualLeaveDays,
       notes: validated.notes?.trim() || null,
     };
     await prisma.employeeSalary.upsert({

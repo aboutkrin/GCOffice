@@ -189,10 +189,25 @@ export const LEAVE_TYPE_LABELS: Record<string, string> = {
   ANNUAL: "ลาพักร้อน",
   SICK: "ลาป่วย",
   PERSONAL: "ลากิจ",
-  OTHER: "อื่นๆ",
+  MATERNITY: "ลาคลอด",
+  PATERNITY: "ลาช่วยภรรยาคลอดบุตร",
+  CHILDCARE: "ลาเลี้ยงดูบุตรป่วย",
+  STERILIZATION: "ลาทำหมัน",
+  MILITARY: "ลารับราชการทหาร",
+  OTHER: "ลาไม่รับค่าจ้าง/อื่นๆ",
 };
 
-export const LEAVE_TYPE_OPTIONS = ["ANNUAL", "SICK", "PERSONAL", "OTHER"] as const;
+export const LEAVE_TYPE_OPTIONS = [
+  "SICK",
+  "PERSONAL",
+  "ANNUAL",
+  "MATERNITY",
+  "PATERNITY",
+  "CHILDCARE",
+  "STERILIZATION",
+  "MILITARY",
+  "OTHER",
+] as const;
 
 export const LEAVE_PERIOD_LABELS: Record<string, string> = {
   FULL_DAY: "ทั้งวัน",

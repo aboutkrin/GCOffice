@@ -9,6 +9,7 @@ import { Loader2, Pencil } from "lucide-react";
 
 import { saveEmployeeSalary } from "@/actions/payroll-actions";
 import type { EmployeeSalaryRow } from "@/data/payroll";
+import { DEFAULT_ANNUAL_LEAVE_DAYS } from "@/lib/leave-policy";
 import { employeeSalarySchema, type EmployeeSalaryFormData } from "@/lib/validators";
 import { formatBaht } from "@/lib/thai-currency";
 import { formatThaiDate } from "@/lib/thai-date";
@@ -60,6 +61,7 @@ export function EmployeeSalaryTable({ rows }: { rows: EmployeeSalaryRow[] }) {
               <TableHead className="text-right">ค่าแรง/ชม.</TableHead>
               <TableHead>วันเริ่มงาน</TableHead>
               <TableHead>วันสุดท้าย</TableHead>
+              <TableHead className="text-right">พักร้อน/ปี</TableHead>
               <TableHead className="w-[1%]" />
             </TableRow>
           </TableHeader>
@@ -88,6 +90,9 @@ export function EmployeeSalaryTable({ rows }: { rows: EmployeeSalaryRow[] }) {
                   <TableCell className="text-right">{daily != null ? formatBaht(daily / 8) : "-"}</TableCell>
                   <TableCell>{row.startDate ? formatThaiDate(new Date(row.startDate), "short") : "-"}</TableCell>
                   <TableCell>{row.endDate ? formatThaiDate(new Date(row.endDate), "short") : "-"}</TableCell>
+                  <TableCell className="text-right">
+                    {row.annualLeaveDays != null ? `${row.annualLeaveDays} วัน` : "-"}
+                  </TableCell>
                   <TableCell>
                     <Button variant="outline" size="sm" onClick={() => setEditing(row)}>
                       <Pencil className="size-4" />
@@ -121,6 +126,7 @@ function SalaryForm({ row, onDone }: { row: EmployeeSalaryRow; onDone: () => voi
       monthlySalary: row.monthlySalary ?? ("" as unknown as number),
       startDate: dateInputValue(row.startDate) as unknown as Date,
       endDate: dateInputValue(row.endDate) as unknown as Date,
+      annualLeaveDays: row.annualLeaveDays ?? DEFAULT_ANNUAL_LEAVE_DAYS,
       notes: row.notes ?? "",
     },
   });
@@ -184,6 +190,22 @@ function SalaryForm({ row, onDone }: { row: EmployeeSalaryRow; onDone: () => voi
           {dateField("startDate", "วันเริ่มงาน", "เดือนแรกคิดตามวันที่ทำงานจริง")}
           {dateField("endDate", "วันทำงานวันสุดท้าย", "เว้นว่างถ้ายังทำงานอยู่")}
         </div>
+        <FormField
+          control={form.control}
+          name="annualLeaveDays"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>วันลาพักร้อนที่ได้ค่าจ้าง (วัน/ปี)</FormLabel>
+              <FormControl>
+                <Input type="number" inputMode="numeric" min={0} step={1} {...field} />
+              </FormControl>
+              <FormDescription>
+                กฎหมายกำหนดไม่น้อยกว่า 6 วันทำงาน/ปี ได้สิทธิ์เมื่อทำงานครบ 1 ปีนับจากวันเริ่มงาน
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="notes"
