@@ -113,7 +113,7 @@ WEBSITE products cannot be deleted in GCOffice (delete on the website instead); 
 
 ### Dashboard Team Calendar
 
-`src/components/dashboard/team-calendar/` — "ปฏิทินทีม" on `/dashboard` for both ADMIN and STAFF (`TeamCalendarSection` server component). Month grid (agenda list on mobile) showing company holidays, approved + pending leave (pending drawn dashed) and China shipment milestones; side cards for pending leave approvals (ADMIN) / "การลาของฉัน" (STAFF) and upcoming shipments. Data from `src/data/team-calendar.ts`; month navigation via `fetchTeamCalendarAction`. Mutations call `router.refresh()` and the calendar re-syncs from the new server props.
+`src/components/dashboard/team-calendar/` — "ปฏิทินทีม" on `/dashboard` for both ADMIN and STAFF (`TeamCalendarSection` server component). Month grid (same grid on mobile, like a phone calendar: multi-day leave is one bar spanning its days, split at week boundaries; bars packed into lanes with "+N" overflow, `buildWeekRows`) showing company holidays, approved + pending leave (pending drawn dashed) and China shipment milestones; side cards for pending leave approvals (ADMIN) / "การลาของฉัน" (STAFF) and upcoming shipments. Data from `src/data/team-calendar.ts`; month navigation via `fetchTeamCalendarAction`. Mutations call `router.refresh()` and the calendar re-syncs from the new server props.
 
 ### Custom Hooks
 

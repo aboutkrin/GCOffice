@@ -112,55 +112,55 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
   return (
     <div className="grid gap-4 lg:grid-cols-5">
       {/* Revenue & Expense Line Chart - takes 3/5 width */}
-      <Card className="lg:col-span-3">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
+      <Card className="min-w-0 lg:col-span-3">
+        <CardHeader className="gap-3">
+          <div className="flex items-start justify-between gap-2">
             <CardTitle className="text-base font-semibold">
               ภาพรวมรายรับและรายจ่ายตลอดทั้งปี
             </CardTitle>
-            <div className="flex gap-6 mt-2">
-              <div>
-                <span className="text-sm text-muted-foreground">รายได้</span>
-                <p className="text-lg font-bold text-[oklch(0.45_0.15_260)]">
-                  {formatBaht(data.totalRevenue)}
-                </p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">VAT</span>
-                <p className="text-lg font-bold text-muted-foreground">
-                  {formatBaht(data.totalVat)}
-                </p>
-              </div>
-              <div>
-                <span className="text-sm text-muted-foreground">ต้นทุน</span>
-                <p className="text-lg font-bold text-[oklch(0.55_0.2_25)]">
-                  {formatBaht(data.totalExpense)}
-                </p>
-              </div>
+            <Select
+              value={data.year.toString()}
+              onValueChange={handleYearChange}
+              disabled={isPending}
+            >
+              <SelectTrigger className="w-[120px] shrink-0 sm:w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {data.availableYears.map((y) => (
+                  <SelectItem key={y} value={y.toString()}>
+                    พ.ศ. {y + 543}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-6">
+            <div className="min-w-0">
+              <span className="text-xs text-muted-foreground sm:text-sm">รายได้</span>
+              <p className="break-all text-sm font-bold tabular-nums text-[oklch(0.45_0.15_260)] sm:text-lg">
+                {formatBaht(data.totalRevenue)}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs text-muted-foreground sm:text-sm">VAT</span>
+              <p className="break-all text-sm font-bold tabular-nums text-muted-foreground sm:text-lg">
+                {formatBaht(data.totalVat)}
+              </p>
+            </div>
+            <div className="min-w-0">
+              <span className="text-xs text-muted-foreground sm:text-sm">ต้นทุน</span>
+              <p className="break-all text-sm font-bold tabular-nums text-[oklch(0.55_0.2_25)] sm:text-lg">
+                {formatBaht(data.totalExpense)}
+              </p>
             </div>
           </div>
-          <Select
-            value={data.year.toString()}
-            onValueChange={handleYearChange}
-            disabled={isPending}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {data.availableYears.map((y) => (
-                <SelectItem key={y} value={y.toString()}>
-                  พ.ศ. {y + 543}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={lineChartConfig} className="aspect-auto h-[300px] w-full">
+          <ChartContainer config={lineChartConfig} className="aspect-auto h-[240px] w-full sm:h-[300px]">
             <LineChart
               data={data.monthlyData}
-              margin={{ top: 5, right: 10, left: 10, bottom: 0 }}
+              margin={{ top: 5, right: 8, left: 0, bottom: 0 }}
             >
               <CartesianGrid vertical={false} />
               <XAxis
@@ -179,7 +179,7 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
                       ? `${(value / 1000).toFixed(0)}k`
                       : value.toString()
                 }
-                width={50}
+                width={44}
               />
               <Tooltip content={<LineChartTooltip />} />
               <ChartLegend content={<ChartLegendContent payload={[]} />} />
@@ -205,9 +205,9 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
       </Card>
 
       {/* Monthly Profit Bar Chart - takes 2/5 width */}
-      <Card className="lg:col-span-2">
-        <CardHeader className="flex flex-row items-start justify-between">
-          <div>
+      <Card className="min-w-0 lg:col-span-2">
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
             <CardTitle className="text-base font-semibold">
               {isCurrentYear ? "กำไรเดือนนี้" : `กำไรรวม พ.ศ. ${data.yearBE}`}
             </CardTitle>
@@ -219,7 +219,7 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
               {formatBaht(thisMonthProfit)}
             </p>
           </div>
-          <div className="text-right">
+          <div className="min-w-0 sm:text-right">
             <span className="text-sm text-muted-foreground">กำไรรวมทุกเดือน</span>
             <p
               className={`text-lg font-bold ${
@@ -231,10 +231,10 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
           </div>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={profitChartConfig} className="aspect-auto h-[300px] w-full">
+          <ChartContainer config={profitChartConfig} className="aspect-auto h-[240px] w-full sm:h-[300px]">
             <BarChart
               data={data.monthlyData}
-              margin={{ top: 5, right: 10, left: 10, bottom: 0 }}
+              margin={{ top: 5, right: 8, left: 0, bottom: 0 }}
             >
               <CartesianGrid vertical={false} />
               <XAxis
@@ -253,7 +253,7 @@ export function RevenueExpenseSection({ initialData }: RevenueExpenseSectionProp
                   if (abs >= 1000) return `${(value / 1000).toFixed(0)}k`;
                   return value.toString();
                 }}
-                width={50}
+                width={44}
               />
               <ChartTooltip
                 content={
