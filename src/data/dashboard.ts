@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { DocumentType, DocumentStatus } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { getThaiNow } from "@/lib/thai-date";
+import { computeDocumentProfits, PROFIT_DOC_SELECT } from "@/data/document-profit";
 
 export interface HolidayItem {
   id: string;
@@ -371,24 +372,58 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
     }
   }
 
-  const [revenueData, vatData, expenseData, yearsData] = await Promise.all([
+  // Cost of the goods actually sold (landed cost from import lots) + what we
+  // paid to deliver, on the same documents and dates as revenue. Import lots
+  // themselves are stock, not an expense. Documents already covered by a legacy
+  // vendor_costs row (counted above) are skipped so nothing is counted twice.
+  async function fetchCostOfSalesData() {
+    try {
+      const docs = await prisma.document.findMany({
+        where: {
+          type: "QUOTATION",
+          status: { in: ["CONFIRMED", "SHIPPED", "BILLED"] },
+          documentDate: {
+            gte: new Date(Date.UTC(year, 0, 1)),
+            lt: new Date(Date.UTC(year + 1, 0, 1)),
+          },
+          vendorCosts: { none: {} },
+          invoices: { none: { vendorCosts: { some: {} } } },
+        },
+        select: { ...PROFIT_DOC_SELECT, documentDate: true },
+      });
+      const profits = await computeDocumentProfits(docs);
+      const byMonth = new Map<number, number>();
+      docs.forEach((doc, i) => {
+        const month = doc.documentDate.getUTCMonth() + 1;
+        const cost = profits[i].cogs + profits[i].actualDeliveryCost;
+        byMonth.set(month, (byMonth.get(month) ?? 0) + cost);
+      });
+      return [...byMonth].map(([month, total]) => ({ month, total }));
+    } catch {
+      return [] as { month: number; total: number }[];
+    }
+  }
+
+  const [revenueData, vatData, expenseData, costOfSalesData, yearsData] = await Promise.all([
     fetchInvoiceRevenueData(),
     fetchInvoiceVatData(),
     fetchExpenseData(),
+    fetchCostOfSalesData(),
     fetchAvailableYears(),
   ]);
 
   // Build full 12-month array
   // Revenue = gross revenue minus VAT
-  // Expense = monthly operating expenses + vendor costs (purchase order costs)
+  // Expense = monthly operating expenses + legacy vendor costs + cost of sales
   const monthlyData: MonthlyRevenueExpenseData[] = Array.from({ length: 12 }, (_, i) => {
     const monthNum = i + 1;
     const rev = revenueData.find((d) => d.month === monthNum);
     const vat = vatData.find((d) => d.month === monthNum);
     const exp = expenseData.find((d) => d.month === monthNum);
+    const cos = costOfSalesData.find((d) => d.month === monthNum);
     const revenue = rev?.total ?? 0;
     const vatAmount = vat?.total ?? 0;
-    const expense = exp?.total ?? 0;
+    const expense = (exp?.total ?? 0) + Math.round((cos?.total ?? 0) * 100) / 100;
     return {
       month: monthNum,
       monthLabel: THAI_MONTHS_SHORT[i],

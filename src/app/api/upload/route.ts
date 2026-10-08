@@ -30,6 +30,7 @@ const ALLOWED_FOLDERS = new Set([
   "bank-logos",
   "promptpay-qr",
   "shop-logos",
+  "supplier-invoices",
 ]);
 
 function fail(code: UploadErrorCode, status: number) {
@@ -74,19 +75,27 @@ export async function POST(request: Request) {
       return fail("TOO_LARGE", 413);
     }
 
+    // Supplier invoices (proforma invoices from China) may also be PDFs
+    const isPdf =
+      folder === "supplier-invoices" &&
+      (file.type === "application/pdf" || /\.pdf$/i.test(file.name));
+
     // Resolve the real content type — browsers report "" for HEIC files
-    const contentType = resolveImageMimeType(file.name, file.type);
+    const contentType = isPdf ? "application/pdf" : resolveImageMimeType(file.name, file.type);
     if (!contentType) {
       return fail("INVALID_TYPE", 400);
     }
 
     // Generate unique filename from the resolved type, not the user's filename
-    const uniqueName = `${crypto.randomUUID()}.${extensionForMimeType(contentType)}`;
+    const uniqueName = `${crypto.randomUUID()}.${isPdf ? "pdf" : extensionForMimeType(contentType)}`;
     const path = `${folder}/${uniqueName}`;
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    if (isPdf && buffer.subarray(0, 5).toString("latin1") !== "%PDF-") {
+      return fail("INVALID_TYPE", 400);
+    }
 
     // Upload using the admin client to bypass storage RLS
     const admin = createAdminClient();

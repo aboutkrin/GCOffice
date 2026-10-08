@@ -344,6 +344,9 @@ export function ProductCostTable({
               <TableHead className="w-[100px] text-right">เรทค่าส่ง/กก.</TableHead>
               <TableHead className="w-[100px] text-right">ค่าส่ง/กล่อง</TableHead>
               <TableHead className="w-[100px] text-right">รวมต้นทุน</TableHead>
+              <TableHead className="w-[110px] text-right" title="ต้นทุนถึงไทยต่อกล่อง เฉลี่ยจากล็อตนำเข้า (ใช้คิดกำไรในบิลก่อนช่องที่กรอกเอง)">
+                ต้นทุนจากล็อต
+              </TableHead>
               <TableHead className="w-[100px] text-right">ราคาขาย</TableHead>
               <TableHead className="w-[100px] text-right">กำไร/กล่อง</TableHead>
               <TableHead className="w-[80px] text-right">กำไร %</TableHead>
@@ -427,6 +430,9 @@ export function ProductCostTable({
                     <TableCell className="text-right font-medium text-sm">
                       {totalCost !== null ? formatNumber(totalCost) : "-"}
                     </TableCell>
+                    <TableCell className="text-right font-semibold text-sm text-emerald-700">
+                      {product.landedCost != null ? formatNumber(product.landedCost) : "-"}
+                    </TableCell>
                     <TableCell className="text-right font-medium text-sm text-blue-600">
                       {formatNumber(product.basePrice)}
                     </TableCell>
@@ -472,7 +478,7 @@ export function ProductCostTable({
               })
             ) : (
               <TableRow>
-                <TableCell colSpan={14} className="h-24 text-center">
+                <TableCell colSpan={15} className="h-24 text-center">
                   ไม่พบข้อมูลสินค้า
                 </TableCell>
               </TableRow>

@@ -37,6 +37,7 @@ model Profile {
   leavesReviewed        LeaveRequest[]  @relation("LeaveReviewer")
   leavesCreated         LeaveRequest[]  @relation("LeaveCreatedBy")
   chinaShipmentsCreated ChinaShipment[] @relation("ChinaShipmentCreatedBy")
+  importLotsCreated     ImportLot[]     @relation("ImportLotCreatedBy")
   employeeSalary        EmployeeSalary?
   payrolls              Payroll[]       @relation("PayrollEmployee")
   payrollsCreated       Payroll[]       @relation("PayrollCreatedBy")
@@ -171,6 +172,8 @@ model Product {
   colorVariants      ProductColorVariant[]
   documentLineItems  DocumentLineItem[]
   stockDocumentLines StockDocumentLine[]
+  supplierItems      SupplierInvoiceItem[]
+  supplierAliases    SupplierCodeAlias[]
 
   @@map("products")
 }
@@ -254,6 +257,9 @@ model Document {
   freeShipping         Boolean  @default(false) @map("free_shipping")
   freeShippingLocation String?  @map("free_shipping_location") @db.Text
   pickupAtShowroom     Boolean  @default(false) @map("pickup_at_showroom")
+  /// What the company actually paid to deliver this order (office -> site).
+  /// A direct cost of the sale for profit; shippingCost above is what the customer is charged.
+  actualDeliveryCost   Decimal? @map("actual_delivery_cost") @db.Decimal(12, 2)
   grandTotal     Decimal       @default(0) @map("grand_total") @db.Decimal(12, 2)
 
   /// Deposit VAT invoice: a normal INVOICE flagged as a deposit, carrying one
@@ -334,6 +340,8 @@ model DocumentLineItem {
   quantity     Int
   unitPrice    Decimal  @map("unit_price") @db.Decimal(12, 2)
   lineTotal    Decimal  @map("line_total") @db.Decimal(12, 2)
+  /// Manually entered landed cost per unit (THB). Null = use the average from import lots.
+  unitCost     Decimal? @map("unit_cost") @db.Decimal(12, 2)
 
   /// Stable identity backing reservation/issue matching. Nullable: legacy rows
   /// backfilled by (sku) / (productId, name); may stay null when unmatched
@@ -498,6 +506,8 @@ model ChinaShipment {
 
   createdById String  @map("created_by_id") @db.Uuid
   createdBy   Profile @relation("ChinaShipmentCreatedBy", fields: [createdById], references: [id])
+
+  importLots ImportLot[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -680,8 +690,115 @@ model VendorCostItem {
 }
 
 // ============================================================
+// IMPORT LOTS (China proforma invoices -> landed cost per box)
+// See src/lib/landed-cost.ts for the allocation rules.
+// ============================================================
+
+model ImportLot {
+  id              String        @id @default(cuid())
+  name            String
+  orderDate       DateTime      @map("order_date") @db.Date
+  chinaShipmentId String?       @map("china_shipment_id")
+  chinaShipment   ChinaShipment? @relation(fields: [chinaShipmentId], references: [id], onDelete: SetNull)
+  transportMode   TransportMode @default(SEA) @map("transport_mode")
+  /// China -> Thailand freight, THB per kg (truck ~15, sea ~10)
+  ratePerKg       Decimal       @map("rate_per_kg") @db.Decimal(10, 2)
+  /// Actual freight from the forwarder's bill; replaces weight x ratePerKg when set
+  freightOverride Decimal?      @map("freight_override") @db.Decimal(12, 2)
+  /// Other lot-level THB costs (customs, unloading), allocated like freight
+  otherCost       Decimal       @default(0) @map("other_cost") @db.Decimal(12, 2)
+  exchangeRate    Decimal       @map("exchange_rate") @db.Decimal(10, 4)
+  /// Denormalized totals, recomputed on every save
+  totalWeightKg   Decimal       @default(0) @map("total_weight_kg") @db.Decimal(12, 2)
+  totalLanded     Decimal       @default(0) @map("total_landed") @db.Decimal(14, 2)
+  notes           String?       @db.Text
+
+  createdById String?  @map("created_by_id") @db.Uuid
+  createdBy   Profile? @relation("ImportLotCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  invoices SupplierInvoice[]
+
+  @@index([orderDate])
+  @@map("import_lots")
+}
+
+model SupplierInvoice {
+  id           String    @id @default(cuid())
+  lotId        String    @map("lot_id")
+  lot          ImportLot @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  sequence     Int
+  supplierName String    @map("supplier_name")
+  piNumber     String?   @map("pi_number")
+  piDate       DateTime? @map("pi_date") @db.Date
+  imageUrl     String?   @map("image_url")
+  /// China-side fees on the PI: [{ label, amountCny }] (pallet fee, freight to agent warehouse...)
+  fees         Json      @default("[]")
+  /// TOTAL printed on the PI, used only to check the entered lines
+  statedTotalCny Decimal? @map("stated_total_cny") @db.Decimal(14, 2)
+
+  items SupplierInvoiceItem[]
+
+  @@index([lotId])
+  @@map("supplier_invoices")
+}
+
+model SupplierInvoiceItem {
+  id           String          @id @default(cuid())
+  invoiceId    String          @map("invoice_id")
+  invoice      SupplierInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  sequence     Int
+  supplierCode String          @map("supplier_code")
+  description  String?
+  boxes        Int
+  sqm          Decimal?        @db.Decimal(10, 2)
+  amountCny    Decimal         @map("amount_cny") @db.Decimal(14, 2)
+  weightKg     Decimal?        @map("weight_kg") @db.Decimal(10, 2)
+
+  productId      String?              @map("product_id")
+  product        Product?             @relation(fields: [productId], references: [id], onDelete: SetNull)
+  colorVariantId String?              @map("color_variant_id")
+  colorVariant   ProductColorVariant? @relation(fields: [colorVariantId], references: [id], onDelete: SetNull)
+
+  /// Computed on save: goods + share of PI fees + share of lot freight/other, in THB
+  landedTotal  Decimal @default(0) @map("landed_total") @db.Decimal(14, 2)
+  landedPerBox Decimal @default(0) @map("landed_per_box") @db.Decimal(12, 2)
+
+  @@index([invoiceId])
+  @@index([productId])
+  @@index([colorVariantId])
+  @@map("supplier_invoice_items")
+}
+
+/// Remembers "supplier code X = our product/colour Y" so later PIs match automatically.
+model SupplierCodeAlias {
+  id             String               @id @default(cuid())
+  /// normalized supplier name ("" = any supplier)
+  supplierKey    String               @map("supplier_key")
+  /// normalized supplier code (uppercase, alphanumerics only)
+  codeKey        String               @map("code_key")
+  supplierCode   String               @map("supplier_code")
+  productId      String               @map("product_id")
+  product        Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  colorVariantId String?              @map("color_variant_id")
+  colorVariant   ProductColorVariant? @relation(fields: [colorVariantId], references: [id], onDelete: Cascade)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  @@unique([supplierKey, codeKey])
+  @@index([codeKey])
+  @@map("supplier_code_aliases")
+}
+
+// ============================================================
 // ENUMS
 // ============================================================
+
+enum TransportMode {
+  TRUCK
+  SEA
+}
 
 enum Status {
   ACTIVE
@@ -846,6 +963,8 @@ model ProductColorVariant {
   stockMovements     StockMovement[]
   documentLineItems  DocumentLineItem[]
   stockDocumentLines StockDocumentLine[]
+  supplierItems      SupplierInvoiceItem[]
+  supplierAliases    SupplierCodeAlias[]
 
   @@unique([productId, name])
   @@index([productId])

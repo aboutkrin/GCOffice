@@ -168,6 +168,8 @@ export interface ProductForCost {
   exchangeRate: number | null;
   weightPerBox: number | null;
   shippingCostPerBox: number | null;
+  /** Average landed cost per box from import lots (filled by the page) */
+  landedCost?: number | null;
 }
 
 export async function getProductsForCost(params?: {

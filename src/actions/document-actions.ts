@@ -63,6 +63,10 @@ async function resolveDepositDeductions(
   return { rows, total };
 }
 
+function lineCostKey(l: { productId?: string | null; colorVariantId?: string | null; productName: string; colorVariantName?: string | null }) {
+  return [l.productId || "", l.colorVariantId || "", l.productName, l.colorVariantName || ""].join("|");
+}
+
 export async function createDocument(data: unknown, options?: { asDraft?: boolean }) {
   try {
     const validated = documentSchema.parse(data);
@@ -372,6 +376,14 @@ export async function updateDocument(id: string, data: unknown) {
       }
       const netPayable = grandTotal - depositDeduction;
 
+      // Manually entered costs (profit card) survive the delete/recreate below
+      const keptCosts = new Map(
+        (await tx.documentLineItem.findMany({
+          where: { documentId: id, unitCost: { not: null } },
+          select: { productId: true, colorVariantId: true, productName: true, colorVariantName: true, unitCost: true },
+        })).map((l: Parameters<typeof lineCostKey>[0] & { unitCost: unknown }) => [lineCostKey(l), l.unitCost])
+      );
+
       // Delete old items
       await tx.documentLineItem.deleteMany({ where: { documentId: id } });
       await tx.documentPaymentTerm.deleteMany({ where: { documentId: id } });
@@ -447,6 +459,7 @@ export async function updateDocument(id: string, data: unknown) {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             lineTotal: item.quantity * Number(item.unitPrice),
+            unitCost: keptCosts.get(lineCostKey(item)) ?? null,
           })
         ),
       });

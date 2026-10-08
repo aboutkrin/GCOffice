@@ -289,6 +289,51 @@ export const vendorCostSchema = z.object({
 export type VendorCostItemFormData = z.infer<typeof vendorCostItemSchema>;
 export type VendorCostFormData = z.infer<typeof vendorCostSchema>;
 
+export const importLotFeeSchema = z.object({
+  label: z.string().min(1, "กรุณาระบุชื่อค่าใช้จ่าย"),
+  amountCny: z.coerce.number(),
+});
+
+export const importLotItemSchema = z.object({
+  supplierCode: z.string().trim().min(1, "กรุณาระบุรหัสสินค้าของร้านจีน"),
+  description: z.string().optional().nullable(),
+  boxes: z.coerce.number().int().min(1, "จำนวนกล่องต้องมากกว่า 0"),
+  sqm: z.coerce.number().min(0).optional().nullable(),
+  amountCny: z.coerce.number().min(0, "ยอดเงินต้องไม่ติดลบ"),
+  weightKg: z.coerce.number().min(0, "น้ำหนักต้องไม่ติดลบ").optional().nullable(),
+  productId: z.string().optional().nullable(),
+  colorVariantId: z.string().optional().nullable(),
+  /** Save "supplier code = this product" so the next PI matches automatically */
+  rememberAlias: z.boolean().optional(),
+});
+
+export const importLotInvoiceSchema = z.object({
+  supplierName: z.string().trim().min(1, "กรุณาระบุชื่อร้าน/โรงงาน"),
+  piNumber: z.string().optional().nullable(),
+  piDate: z.coerce.date().optional().nullable(),
+  imageUrl: z.string().optional().nullable(),
+  statedTotalCny: z.coerce.number().min(0).optional().nullable(),
+  fees: z.array(importLotFeeSchema).default([]),
+  items: z.array(importLotItemSchema).min(1, "ใบ PI ต้องมีสินค้าอย่างน้อย 1 รายการ"),
+});
+
+export const importLotSchema = z.object({
+  name: z.string().trim().min(1, "กรุณาระบุชื่อล็อต"),
+  orderDate: z.coerce.date({ error: "กรุณาเลือกวันที่สั่งซื้อ" }),
+  chinaShipmentId: z.string().optional().nullable(),
+  transportMode: z.enum(["TRUCK", "SEA"]),
+  ratePerKg: z.coerce.number().min(0, "เรทค่าส่งต้องไม่ติดลบ"),
+  freightOverride: z.coerce.number().min(0).optional().nullable(),
+  otherCost: z.coerce.number().min(0).default(0),
+  exchangeRate: z.coerce.number().positive("กรุณาระบุเรทเงินหยวน"),
+  notes: z.string().optional().nullable(),
+  invoices: z.array(importLotInvoiceSchema).min(1, "กรุณาเพิ่มใบ PI อย่างน้อย 1 ใบ"),
+});
+
+export type ImportLotFormData = z.infer<typeof importLotSchema>;
+export type ImportLotInvoiceFormData = z.infer<typeof importLotInvoiceSchema>;
+export type ImportLotItemFormData = z.infer<typeof importLotItemSchema>;
+
 export const colorVariantSchema = z.object({
   name: z.string().min(1, "กรุณาระบุชื่อสี"),
   colorHex: z.string().optional(),
