@@ -6,18 +6,28 @@ import { serialize } from "@/lib/utils";
 import { toUTCNoon } from "@/lib/thai-date";
 import { assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@/generated/prisma/client";
+
+function rethrowDuplicateHoliday(err: unknown): never {
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+    throw new Error("มีวันหยุดชื่อนี้ในวันที่นี้อยู่แล้ว");
+  }
+  throw err;
+}
 
 export async function createHoliday(data: unknown) {
   await assertAdmin();
   const validated = holidaySchema.parse(data);
-  const holiday = await prisma.holiday.create({
-    data: {
-      name: validated.name,
-      date: toUTCNoon(validated.date),
-      isRecurring: validated.isRecurring,
-      type: validated.type,
-    },
-  });
+  const holiday = await prisma.holiday
+    .create({
+      data: {
+        name: validated.name,
+        date: toUTCNoon(validated.date),
+        isRecurring: validated.isRecurring,
+        type: validated.type,
+      },
+    })
+    .catch(rethrowDuplicateHoliday);
   revalidatePath("/holidays");
   revalidatePath("/dashboard");
   return serialize(holiday);
@@ -41,6 +51,8 @@ export async function createHolidayRange(data: unknown) {
       isRecurring: validated.isRecurring,
       type: validated.type,
     })),
+    // Days that already have this holiday are left as they are (no duplicates)
+    skipDuplicates: true,
   });
   revalidatePath("/holidays");
   revalidatePath("/dashboard");
@@ -49,15 +61,17 @@ export async function createHolidayRange(data: unknown) {
 export async function updateHoliday(id: string, data: unknown) {
   await assertAdmin();
   const validated = holidaySchema.parse(data);
-  const holiday = await prisma.holiday.update({
-    where: { id },
-    data: {
-      name: validated.name,
-      date: toUTCNoon(validated.date),
-      isRecurring: validated.isRecurring,
-      type: validated.type,
-    },
-  });
+  const holiday = await prisma.holiday
+    .update({
+      where: { id },
+      data: {
+        name: validated.name,
+        date: toUTCNoon(validated.date),
+        isRecurring: validated.isRecurring,
+        type: validated.type,
+      },
+    })
+    .catch(rethrowDuplicateHoliday);
   revalidatePath("/holidays");
   revalidatePath("/dashboard");
   return serialize(holiday);

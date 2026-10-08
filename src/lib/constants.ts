@@ -176,11 +176,13 @@ export const STOCK_AVAILABILITY_LABELS = {
 export const HOLIDAY_TYPE_LABELS: Record<string, string> = {
   COMPANY: "วันหยุดบริษัท",
   PUBLIC: "วันหยุดทั่วไป",
+  CHINA: "วันหยุดจีน",
 };
 
 export const HOLIDAY_TYPE_COLORS: Record<string, string> = {
   COMPANY: "bg-red-100 text-red-800",
   PUBLIC: "bg-gray-100 text-gray-600",
+  CHINA: "border border-dashed border-red-400 bg-red-50 text-red-700",
 };
 
 export const LEAVE_TYPE_LABELS: Record<string, string> = {

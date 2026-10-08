@@ -57,13 +57,20 @@ type DayEvent =
   | { kind: "leave"; item: CalendarLeaveItem }
   | { kind: "shipment"; milestone: ShipmentMilestone; item: CalendarShipmentItem };
 
-type Filter = "holiday" | "publicHoliday" | "leave" | "shipment";
+type Filter = "holiday" | "publicHoliday" | "chinaHoliday" | "leave" | "shipment";
 
-/** COMPANY = the office is closed; PUBLIC = a general holiday the office still works. */
-const isOfficeHoliday = (ev: DayEvent) => ev.kind === "holiday" && ev.item.type !== "PUBLIC";
+/**
+ * COMPANY = the office is closed; PUBLIC = a general holiday the office still works;
+ * CHINA = a Chinese holiday (office works, but China doesn't ship).
+ */
+const isOfficeHoliday = (ev: DayEvent) => ev.kind === "holiday" && ev.item.type === "COMPANY";
 
 function filterOf(ev: DayEvent): Filter {
-  if (ev.kind === "holiday") return isOfficeHoliday(ev) ? "holiday" : "publicHoliday";
+  if (ev.kind === "holiday") {
+    if (ev.item.type === "PUBLIC") return "publicHoliday";
+    if (ev.item.type === "CHINA") return "chinaHoliday";
+    return "holiday";
+  }
   return ev.kind;
 }
 
@@ -142,6 +149,7 @@ function chipLabel(ev: DayEvent): string {
 
 function chipClass(ev: DayEvent): string {
   if (ev.kind === "holiday") {
+    if (ev.item.type === "CHINA") return "bg-red-50 text-red-700 border-red-400 border-dashed";
     return isOfficeHoliday(ev)
       ? "bg-red-100 text-red-800 border-red-200"
       : "bg-gray-100 text-gray-600 border-gray-200";
@@ -282,6 +290,7 @@ export function TeamCalendar({
   const [filters, setFilters] = useState<Record<Filter, boolean>>({
     holiday: true,
     publicHoliday: true,
+    chinaHoliday: true,
     leave: true,
     shipment: true,
   });
@@ -389,6 +398,7 @@ export function TeamCalendar({
   const filterButtons: { key: Filter; label: string; dot: string }[] = [
     { key: "holiday", label: "วันหยุดบริษัท", dot: "bg-red-400" },
     { key: "publicHoliday", label: "วันหยุดทั่วไป", dot: "bg-gray-400" },
+    { key: "chinaHoliday", label: "วันหยุดจีน", dot: "border border-dashed border-red-500 bg-red-100" },
     { key: "leave", label: "วันลา", dot: "bg-orange-400" },
     { key: "shipment", label: "ของจากจีน", dot: "bg-sky-400" },
   ];
@@ -481,7 +491,7 @@ export function TeamCalendar({
                   key={label}
                   className={cn(
                     "py-1 text-center text-[11px] font-medium sm:py-1.5 sm:text-xs",
-                    (i === 0 || i === 6) && "text-red-500"
+                    i === 0 && "text-red-500"
                   )}
                 >
                   {label}
@@ -512,14 +522,14 @@ export function TeamCalendar({
                       onClick={() => setSelectedDay(key)}
                       className={cn(
                         "flex min-h-[5rem] items-start justify-between gap-0.5 border-r p-0.5 text-left last:border-r-0 hover:bg-accent/50 md:min-h-[7.5rem] md:p-1",
-                        (col === 0 || col === 6 || isHoliday) && "bg-red-50/40",
+                        (col === 0 || isHoliday) && "bg-red-50/40",
                         key === todayKey && "bg-blue-50"
                       )}
                     >
                       <span
                         className={cn(
                           "flex h-5 min-w-5 items-center justify-center text-[11px] font-medium md:h-6 md:min-w-6 md:text-xs",
-                          (col === 0 || col === 6 || isHoliday) && "text-red-600",
+                          (col === 0 || isHoliday) && "text-red-600",
                           key === todayKey && "rounded-full bg-primary text-primary-foreground"
                         )}
                       >
@@ -569,7 +579,7 @@ export function TeamCalendar({
           </div>
 
           <p className="mt-2 text-xs text-muted-foreground">
-            สีเทา = วันหยุดทั่วไป (ออฟฟิศทำงาน) · กรอบเส้นประ = วันลารออนุมัติ / วันที่คาดว่าของจะถึง · กดที่วันเพื่อดูรายละเอียดหรือเพิ่มรายการ
+            สีเทา = วันหยุดทั่วไป (ออฟฟิศทำงาน) · แดงเส้นประ = วันหยุดจีน (ออฟฟิศทำงาน แต่จีนไม่ส่งของ) · กรอบเส้นประ = วันลารออนุมัติ / วันที่คาดว่าของจะถึง · กดที่วันเพื่อดูรายละเอียดหรือเพิ่มรายการ
           </p>
         </CardContent>
       </Card>
@@ -586,6 +596,19 @@ export function TeamCalendar({
 
           <div className="space-y-3">
             {selectedEvents.map((ev, i) => {
+              if (ev.kind === "holiday" && ev.item.type === "CHINA") {
+                return (
+                  <div key={i} className="rounded-md border border-dashed border-red-400 bg-red-50/60 p-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-red-700">
+                      <CalendarOff className="h-4 w-4" />
+                      วันหยุดจีน: {ev.item.name}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      ออฟฟิศทำงานปกติ · จีนไม่ส่งของ (นับเป็นวันหยุดตอนคำนวณวันส่งของ)
+                    </div>
+                  </div>
+                );
+              }
               if (ev.kind === "holiday" && !isOfficeHoliday(ev)) {
                 return (
                   <div key={i} className="rounded-md border border-gray-200 bg-gray-50 p-3">

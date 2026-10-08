@@ -436,11 +436,13 @@ model Holiday {
   date        DateTime @db.Date
   isRecurring Boolean  @default(false) @map("is_recurring")
   /// COMPANY = the office is closed (red, skipped in delivery-date math);
-  /// PUBLIC = a general public holiday the office still works (grey, reference only)
+  /// PUBLIC = a general public holiday the office still works (grey, reference only);
+  /// CHINA = Chinese holiday (red dashed): office works, but China doesn't ship
   type        HolidayType @default(COMPANY)
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
+  @@unique([date, name, type])
   @@index([date])
   @@map("holidays")
 }
@@ -615,6 +617,7 @@ enum UserRole {
 enum HolidayType {
   COMPANY
   PUBLIC
+  CHINA
 }
 
 enum LeaveType {
