@@ -9,6 +9,7 @@ export async function getImportLots(params?: { search?: string; year?: number })
   if (params?.search) {
     where.OR = [
       { name: { contains: params.search, mode: "insensitive" } },
+      { lotNumber: { contains: params.search, mode: "insensitive" } },
       { notes: { contains: params.search, mode: "insensitive" } },
       { invoices: { some: { supplierName: { contains: params.search, mode: "insensitive" } } } },
       { invoices: { some: { piNumber: { contains: params.search, mode: "insensitive" } } } },
@@ -45,6 +46,7 @@ export async function getImportLots(params?: { search?: string; year?: number })
       return {
         id: lot.id,
         name: lot.name,
+        lotNumber: lot.lotNumber,
         orderDate: lot.orderDate,
         transportMode: lot.transportMode,
         totalWeightKg: lot.totalWeightKg,

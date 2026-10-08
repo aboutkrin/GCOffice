@@ -47,7 +47,7 @@ export default async function ImportLotsPage({
 
       <form className="relative max-w-sm">
         <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-        <Input name="search" defaultValue={search} placeholder="ค้นหาล็อต ร้าน เลข PI หรือรหัสสินค้า" className="pl-9" />
+        <Input name="search" defaultValue={search} placeholder="ค้นหาเลข Tracking เลขล็อต ร้าน เลข PI หรือรหัสสินค้า" className="pl-9" />
       </form>
 
       {lots.length === 0 ? (
@@ -62,7 +62,7 @@ export default async function ImportLotsPage({
             <TableHeader>
               <TableRow>
                 <TableHead>วันที่สั่ง</TableHead>
-                <TableHead>ล็อต</TableHead>
+                <TableHead>Tracking / ล็อต</TableHead>
                 <TableHead>ร้าน / เลข PI</TableHead>
                 <TableHead className="text-right">กล่อง</TableHead>
                 <TableHead className="text-right">น้ำหนัก (กก.)</TableHead>
@@ -80,6 +80,9 @@ export default async function ImportLotsPage({
                     <Link href={`/import-lots/${lot.id}`} className="font-medium after:absolute after:inset-0">
                       {lot.name}
                     </Link>
+                    <p className="text-muted-foreground text-xs">
+                      {lot.lotNumber ? `ล็อต ${lot.lotNumber}` : "ยังไม่มีเลขล็อต"}
+                    </p>
                     <div className="text-muted-foreground flex items-center gap-1 text-xs">
                       {lot.transportMode === "TRUCK" ? <Truck className="size-3" /> : <Ship className="size-3" />}
                       {lot.transportMode === "TRUCK" ? "รถ" : "เรือ"}

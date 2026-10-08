@@ -318,7 +318,9 @@ export const importLotInvoiceSchema = z.object({
 });
 
 export const importLotSchema = z.object({
-  name: z.string().trim().min(1, "กรุณาระบุชื่อล็อต"),
+  /** Tracking no. (stored in ImportLot.name) */
+  name: z.string().trim().min(1, "กรุณาระบุเลข Tracking"),
+  lotNumber: z.string().trim().optional().nullable(),
   orderDate: z.coerce.date({ error: "กรุณาเลือกวันที่สั่งซื้อ" }),
   chinaShipmentId: z.string().optional().nullable(),
   transportMode: z.enum(["TRUCK", "SEA"]),

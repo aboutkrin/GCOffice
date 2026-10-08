@@ -92,6 +92,7 @@ async function saveAliases(tx: Prisma.TransactionClient, v: ImportLotFormData) {
 function lotFields(v: ImportLotFormData, landed: ReturnType<typeof computeLandedCosts>) {
   return {
     name: v.name,
+    lotNumber: v.lotNumber || null,
     orderDate: v.orderDate,
     chinaShipmentId: v.chinaShipmentId || null,
     transportMode: v.transportMode,

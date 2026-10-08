@@ -16,6 +16,7 @@ import { prepareImageFile } from "@/lib/image-file";
 import { uploadImage } from "@/lib/upload";
 import { uploadErrorMessage } from "@/lib/upload-errors";
 import { isPdfFile, MAX_PDF_PAGES, pdfToImages } from "@/lib/pdf-to-images";
+import { sliceTallImage } from "@/lib/image-slices";
 import { formatBaht, formatNumber } from "@/lib/thai-currency";
 import { CHINA_SHIPMENT_STATUS_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -103,7 +104,9 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /** Tracking no. (ImportLot.name) — known first; the lot no. comes later from the forwarder */
   const [name, setName] = useState<string>(initialData?.name ?? "");
+  const [lotNumber, setLotNumber] = useState<string>(initialData?.lotNumber ?? "");
   const [orderDate, setOrderDate] = useState<string>(
     dateToInput(initialData?.orderDate) || new Date().toISOString().slice(0, 10)
   );
@@ -156,6 +159,16 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
   const updateInvoice = (key: string) => (update: (prev: LotInvoiceState) => LotInvoiceState) =>
     setInvoices((prev) => prev.map((inv) => (inv.key === key ? update(inv) : inv)));
 
+  /** Linking a calendar shipment fills the tracking / lot no. when they are still empty */
+  const selectShipment = (value: string) => {
+    const id = value === "none" ? "" : value;
+    setChinaShipmentId(id);
+    const s = shipments.find((x) => x.id === id);
+    if (!s) return;
+    if (!name.trim() && s.title) setName(s.title);
+    if (!lotNumber.trim() && s.containerNo) setLotNumber(s.containerNo);
+  };
+
   const switchMode = (mode: TransportMode) => {
     setTransportMode(mode);
     setRatePerKg(DEFAULT_RATE_PER_KG[mode]);
@@ -190,9 +203,14 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
       } else {
         setReadingStage("กำลังเตรียมรูป...");
         const prepared = await prepareImageFile(file, undefined, { maxDimension: 3500, maxSizeMB: 4 });
+        // A whole PI as one long screenshot is cut into overlapping slices the AI can read
+        const slices = await sliceTallImage(prepared);
         setReadingStage("กำลังอัปโหลด...");
         imageUrl = await uploadImage("product-images", prepared, "supplier-invoices");
-        pageUrls = [imageUrl];
+        pageUrls =
+          slices.length > 1
+            ? await Promise.all(slices.map((s) => uploadImage("product-images", s, "supplier-invoices")))
+            : [imageUrl];
       }
     } catch (error) {
       setReadingStage(null);
@@ -201,7 +219,13 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
     }
 
     setReadingStage("AI กำลังอ่านใบ PI... (ประมาณ 10-60 วินาที)");
-    const res = await extractProformaInvoiceAction(pageUrls);
+    const res = await extractProformaInvoiceAction(pageUrls).catch((error) => {
+      console.error("PI extraction request failed:", error);
+      return {
+        success: false as const,
+        error: "AI ใช้เวลานานเกินไปหรือเชื่อมต่อไม่ได้ ลองอีกครั้ง หรือกรอก/วางข้อมูลเอง",
+      };
+    });
     setReadingStage(null);
 
     if (!res.success || !res.data) {
@@ -237,9 +261,6 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
         items: items.length ? items : [emptyItem()],
       }),
     ]);
-    if (!name) {
-      setName(pi.supplierName ? `ล็อต ${pi.supplierName}` : "");
-    }
     const unmatched = items.filter((it) => !it.match).length;
     toast.success(
       `อ่านได้ ${items.length} รายการ${unmatched ? ` · ยังไม่จับคู่ ${unmatched} รายการ` : ""} กรุณาตรวจทานก่อนบันทึก`
@@ -249,6 +270,7 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
   function handleSubmit() {
     const payload = {
       name,
+      lotNumber: lotNumber || null,
       orderDate: orderDate ? new Date(orderDate + "T12:00:00") : undefined,
       chinaShipmentId: chinaShipmentId || null,
       transportMode,
@@ -312,9 +334,19 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
           <CardTitle>ข้อมูลล็อต</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-1">
-            <label className="text-sm font-medium">ชื่อล็อต / เลขล็อต</label>
-            <Input value={name} placeholder="เช่น ล็อตเรือ ต.ค. 69" onChange={(e) => setName(e.target.value)} />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium">เลข Tracking</label>
+              <Input value={name} placeholder="เลข tracking no." onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">เลขล็อต</label>
+              <Input
+                value={lotNumber}
+                placeholder="ใส่ทีหลังได้"
+                onChange={(e) => setLotNumber(e.target.value)}
+              />
+            </div>
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium">วันที่สั่งซื้อ</label>
@@ -339,7 +371,7 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
-              <label className="text-sm font-medium">ค่าส่ง (฿/กก.)</label>
+              <label className="text-sm font-medium">ค่าส่งจีน → ไทย (฿/กก.)</label>
               <DecimalInput value={ratePerKg || ""} onChange={setRatePerKg} />
             </div>
             <div className="space-y-1">
@@ -367,7 +399,7 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
 
           <div className="space-y-1">
             <label className="text-sm font-medium">ผูกกับรายการขนส่งจีน (ปฏิทิน)</label>
-            <Select value={chinaShipmentId || "none"} onValueChange={(v) => setChinaShipmentId(v === "none" ? "" : v)}>
+            <Select value={chinaShipmentId || "none"} onValueChange={selectShipment}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -443,7 +475,10 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
       <Card className="sticky bottom-2 z-10 shadow-lg">
         <CardContent className="space-y-3 py-4">
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
-            <Stat label="สินค้า + ค่าใช้จ่ายจีน" value={`¥${formatNumber(landed.totalGoodsCny + landed.totalFeesCny)}`} />
+            <Stat
+              label="สินค้า + ค่าพาเลท/ค่าส่งในจีน"
+              value={`¥${formatNumber(landed.totalGoodsCny)} + ¥${formatNumber(landed.totalFeesCny)}`}
+            />
             <Stat label="จำนวน" value={`${totalBoxes.toLocaleString("th-TH")} กล่อง`} />
             <Stat label="น้ำหนักรวม" value={`${formatNumber(landed.totalWeightKg)} กก.`} />
             <Stat

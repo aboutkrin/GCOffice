@@ -700,7 +700,10 @@ model VendorCostItem {
 
 model ImportLot {
   id              String        @id @default(cuid())
+  /// Tracking no. (known first, from the factory / forwarder)
   name            String
+  /// Lot no. the forwarder assigns for the shipment to Thailand (known later)
+  lotNumber       String?       @map("lot_number")
   orderDate       DateTime      @map("order_date") @db.Date
   chinaShipmentId String?       @map("china_shipment_id")
   chinaShipment   ChinaShipment? @relation(fields: [chinaShipmentId], references: [id], onDelete: SetNull)
