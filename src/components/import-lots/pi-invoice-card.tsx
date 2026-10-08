@@ -45,6 +45,9 @@ interface PiInvoiceCardProps {
 
 const fmtCny = (n: number) => `¥${formatNumber(n)}`;
 
+/** The two China-side charges a PI usually carries below the products */
+const FEE_PRESETS = ["ค่าพาเลท", "ค่าส่งจากโรงงานไปโกดังชิปปิ้งจีน"];
+
 export function PiInvoiceCard({ index, invoice, landed, onChange, onRemove }: PiInvoiceCardProps) {
   const [matching, startMatching] = useTransition();
 
@@ -354,22 +357,37 @@ export function PiInvoiceCard({ index, invoice, landed, onChange, onRemove }: Pi
 
         {/* China-side fees on this PI */}
         <div className="space-y-2 rounded-lg border border-dashed p-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <p className="text-sm font-medium">ค่าใช้จ่ายฝั่งจีนในใบนี้ (¥)</p>
               <p className="text-muted-foreground text-xs">
-                เช่น ค่าพาเลท, ค่าส่งไปโกดังเอเจนต์ ระบบเฉลี่ยเข้าต้นทุนสินค้าในใบนี้ตามน้ำหนัก
+                ค่าพาเลท และค่าส่งจากโรงงานไปโกดังชิปปิ้งจีน ระบบเฉลี่ยเข้าต้นทุนสินค้าในใบนี้ตามน้ำหนัก
+                (ค่าส่งจีน → ไทยตามน้ำหนักคิดรวมทั้งล็อตด้านบน)
               </p>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setFees((fees) => [...fees, { key: newKey(), label: "", amountCny: 0 }])}
-            >
-              <Plus className="size-4" />
-              เพิ่ม
-            </Button>
+            <div className="flex flex-wrap gap-1">
+              {FEE_PRESETS.filter((label) => !invoice.fees.some((f) => f.label === label)).map((label) => (
+                <Button
+                  key={label}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setFees((fees) => [...fees, { key: newKey(), label, amountCny: 0 }])}
+                >
+                  <Plus className="size-4" />
+                  {label}
+                </Button>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setFees((fees) => [...fees, { key: newKey(), label: "", amountCny: 0 }])}
+              >
+                <Plus className="size-4" />
+                อื่นๆ
+              </Button>
+            </div>
           </div>
           {invoice.fees.map((fee) => (
             <div key={fee.key} className="flex items-center gap-2">

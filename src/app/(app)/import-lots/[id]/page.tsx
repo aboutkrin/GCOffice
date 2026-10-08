@@ -8,7 +8,7 @@ import { ImportLotForm } from "@/components/import-lots/import-lot-form";
 import { ImportLotDeleteButton } from "@/components/import-lots/import-lot-delete-button";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export default async function ImportLotPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,7 +26,10 @@ export default async function ImportLotPage({ params }: { params: Promise<{ id: 
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{lot.name}</h1>
+            <h1 className="text-2xl font-bold">
+              {lot.name}
+              {lot.lotNumber && <span className="text-muted-foreground font-normal"> · ล็อต {lot.lotNumber}</span>}
+            </h1>
             <p className="text-muted-foreground text-sm">แก้ไขได้ตลอด ต้นทุนเฉลี่ยของสินค้าจะคำนวณใหม่ทันที</p>
           </div>
         </div>

@@ -7,7 +7,7 @@ import { ImportLotForm } from "@/components/import-lots/import-lot-form";
 
 export const dynamic = "force-dynamic";
 // Reading a PI image with AI can take a while
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export default async function NewImportLotPage() {
   const shipments = await getChinaShipmentsForSelect();
