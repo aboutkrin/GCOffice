@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/utils";
+import { groupHolidays } from "@/lib/holiday-groups";
 
 export async function getHolidays() {
   try {
@@ -12,15 +13,13 @@ export async function getHolidays() {
   }
 }
 
-export async function getHolidayById(id: string) {
-  try {
-    const data = await prisma.holiday.findUnique({
-      where: { id },
-    });
-    return serialize(data);
-  } catch {
-    return null;
-  }
+/**
+ * The multi-day group (same grouping as the /holidays table) that contains
+ * the holiday `id`, so the edit page edits the whole range at once.
+ */
+export async function getHolidayGroupById(id: string) {
+  const groups = groupHolidays(await getHolidays());
+  return groups.find((g) => g.ids.includes(id)) ?? null;
 }
 
 /**
