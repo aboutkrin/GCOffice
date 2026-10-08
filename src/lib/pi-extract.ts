@@ -54,7 +54,10 @@ Rules:
 
 export class PiExtractConfigError extends Error {}
 
-export async function extractProformaInvoice(image: Uint8Array, mediaType: string): Promise<ExtractedPi> {
+/** `pages`: one image per PI page (a photo, or each page of a PDF rendered in the browser). */
+export async function extractProformaInvoice(
+  pages: { image: Uint8Array; mediaType: string }[]
+): Promise<ExtractedPi> {
   if (!process.env.AI_GATEWAY_API_KEY && !process.env.VERCEL_OIDC_TOKEN) {
     throw new PiExtractConfigError(
       "ยังไม่ได้ตั้งค่า AI_GATEWAY_API_KEY สำหรับอ่านใบ PI อัตโนมัติ กรุณากรอกหรือวางข้อมูลเอง"
@@ -69,8 +72,14 @@ export async function extractProformaInvoice(image: Uint8Array, mediaType: strin
       {
         role: "user",
         content: [
-          { type: "text", text: "Extract this proforma invoice." },
-          { type: "image", image, mediaType },
+          {
+            type: "text",
+            text:
+              pages.length > 1
+                ? `Extract this proforma invoice. It has ${pages.length} pages, in order; return one combined result.`
+                : "Extract this proforma invoice.",
+          },
+          ...pages.map((p) => ({ type: "image" as const, image: p.image, mediaType: p.mediaType })),
         ],
       },
     ],

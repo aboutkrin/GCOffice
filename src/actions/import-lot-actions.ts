@@ -171,26 +171,41 @@ export async function matchSupplierCodesAction(supplierName: string, codes: stri
 }
 
 /**
- * Reads an uploaded PI image (already in our Supabase storage) with AI and
- * returns the lines plus the product matches for their codes.
+ * Reads an uploaded PI with AI and returns the lines plus the product matches
+ * for their codes. `imageUrls` are the page images already in our Supabase
+ * storage: one photo, or every page of a PDF rendered in the browser.
  */
-export async function extractProformaInvoiceAction(imageUrl: string) {
+export async function extractProformaInvoiceAction(imageUrls: string[]) {
   try {
     await assertAdmin();
 
     const storagePrefix = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/`;
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !imageUrl.startsWith(storagePrefix)) {
-      return { success: false as const, error: "ไฟล์รูปไม่ถูกต้อง" };
+    const urls = imageUrls.slice(0, 8);
+    if (
+      !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      urls.length === 0 ||
+      urls.some((u) => typeof u !== "string" || !u.startsWith(storagePrefix))
+    ) {
+      return { success: false as const, error: "ไฟล์ใบ PI ไม่ถูกต้อง" };
     }
 
-    const res = await fetch(imageUrl);
-    if (!res.ok) return { success: false as const, error: "ไม่สามารถเปิดไฟล์รูปใบ PI ได้" };
-    const mediaType = res.headers.get("content-type")?.split(";")[0] || "image/jpeg";
-    const bytes = new Uint8Array(await res.arrayBuffer());
+    const pages = await Promise.all(
+      urls.map(async (url) => {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`fetch ${res.status}`);
+        const mediaType = res.headers.get("content-type")?.split(";")[0] || "image/jpeg";
+        if (!mediaType.startsWith("image/")) throw new Error(`not an image: ${mediaType}`);
+        return { image: new Uint8Array(await res.arrayBuffer()), mediaType };
+      })
+    ).catch((error) => {
+      console.error("PI image fetch failed:", error);
+      return null;
+    });
+    if (!pages) return { success: false as const, error: "ไม่สามารถเปิดไฟล์ใบ PI ได้" };
 
-    const pi = await extractProformaInvoice(bytes, mediaType);
+    const pi = await extractProformaInvoice(pages);
     if (pi.items.length === 0) {
-      return { success: false as const, error: "อ่านรายการสินค้าจากรูปไม่ได้ ลองใช้รูปที่ชัดขึ้น หรือกรอกเอง" };
+      return { success: false as const, error: "อ่านรายการสินค้าจากไฟล์ไม่ได้ ลองใช้ไฟล์ที่ชัดขึ้น หรือกรอกเอง" };
     }
     const matches = await matchSupplierCodes(
       pi.supplierName ?? "",

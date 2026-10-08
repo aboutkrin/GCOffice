@@ -15,6 +15,7 @@ import { importLotSchema } from "@/lib/validators";
 import { prepareImageFile } from "@/lib/image-file";
 import { uploadImage } from "@/lib/upload";
 import { uploadErrorMessage } from "@/lib/upload-errors";
+import { isPdfFile, MAX_PDF_PAGES, pdfToImages } from "@/lib/pdf-to-images";
 import { formatBaht, formatNumber } from "@/lib/thai-currency";
 import { CHINA_SHIPMENT_STATUS_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -161,20 +162,46 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
   };
 
   async function handlePiFile(file: File) {
+    /** Link kept on the PI: the original PDF when storage accepts it, else the (first) image */
     let imageUrl: string | null = null;
+    let pageUrls: string[] = [];
     try {
-      setReadingStage("กำลังเตรียมรูป...");
-      const prepared = await prepareImageFile(file, undefined, { maxDimension: 3500, maxSizeMB: 4 });
-      setReadingStage("กำลังอัปโหลด...");
-      imageUrl = await uploadImage("product-images", prepared, "supplier-invoices");
+      if (isPdfFile(file)) {
+        setReadingStage("กำลังแปลง PDF เป็นรูป...");
+        let pages: File[];
+        try {
+          pages = await pdfToImages(file);
+        } catch (error) {
+          console.error("PDF render failed:", error);
+          setReadingStage(null);
+          toast.error("เปิดไฟล์ PDF ไม่ได้ ไฟล์อาจเสียหรือมีรหัสผ่าน");
+          return;
+        }
+        if (pages.length === 0) {
+          setReadingStage(null);
+          toast.error("ไฟล์ PDF ไม่มีหน้า");
+          return;
+        }
+        setReadingStage("กำลังอัปโหลด...");
+        pageUrls = await Promise.all(
+          pages.map((page) => uploadImage("product-images", page, "supplier-invoices"))
+        );
+        imageUrl = await uploadImage("product-images", file, "supplier-invoices").catch(() => pageUrls[0]);
+      } else {
+        setReadingStage("กำลังเตรียมรูป...");
+        const prepared = await prepareImageFile(file, undefined, { maxDimension: 3500, maxSizeMB: 4 });
+        setReadingStage("กำลังอัปโหลด...");
+        imageUrl = await uploadImage("product-images", prepared, "supplier-invoices");
+        pageUrls = [imageUrl];
+      }
     } catch (error) {
       setReadingStage(null);
       toast.error(uploadErrorMessage(error));
       return;
     }
 
-    setReadingStage("AI กำลังอ่านใบ PI... (ประมาณ 10-40 วินาที)");
-    const res = await extractProformaInvoiceAction(imageUrl);
+    setReadingStage("AI กำลังอ่านใบ PI... (ประมาณ 10-60 วินาที)");
+    const res = await extractProformaInvoiceAction(pageUrls);
     setReadingStage(null);
 
     if (!res.success || !res.data) {
@@ -368,14 +395,15 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
           <div>
             <p className="font-semibold">เพิ่มใบ PI จากจีน</p>
             <p className="text-muted-foreground text-sm">
-              ถ่ายรูป/แคปหน้าจอใบ PI แล้วให้ AI อ่านรหัส จำนวนกล่อง ยอดเงิน น้ำหนัก และจับคู่สินค้าให้อัตโนมัติ
+              เลือกรูปถ่าย แคปหน้าจอ หรือไฟล์ PDF (สูงสุด {MAX_PDF_PAGES} หน้า) ให้ AI อ่านรหัส จำนวนกล่อง ยอดเงิน
+              น้ำหนัก และจับคู่สินค้าให้อัตโนมัติ
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap justify-center gap-2">
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*,.heic,.heif"
+              accept="image/*,.heic,.heif,application/pdf,.pdf"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
@@ -385,7 +413,7 @@ export function ImportLotForm({ initialData, shipments }: ImportLotFormProps) {
             />
             <Button type="button" disabled={readingStage != null} onClick={() => fileInputRef.current?.click()}>
               {readingStage ? <Loader2 className="size-4 animate-spin" /> : <ScanText className="size-4" />}
-              {readingStage ?? "อ่านใบ PI จากรูป"}
+              {readingStage ?? "อ่านใบ PI (รูป / PDF)"}
             </Button>
             <Button
               type="button"

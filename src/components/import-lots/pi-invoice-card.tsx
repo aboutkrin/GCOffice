@@ -118,7 +118,7 @@ export function PiInvoiceCard({ index, invoice, landed, onChange, onRemove }: Pi
                 rel="noreferrer"
                 className="text-primary inline-flex items-center gap-1 text-sm underline-offset-4 hover:underline"
               >
-                ดูรูปใบ PI <ExternalLink className="size-3.5" />
+                ดูไฟล์ใบ PI <ExternalLink className="size-3.5" />
               </a>
             )}
           </div>
