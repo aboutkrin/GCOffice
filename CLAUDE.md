@@ -9,7 +9,7 @@ GCOffice is a Thai-language business document management app (quotations & invoi
 ## Commands
 
 - `npm run dev` — Start dev server at localhost:3000
-- `npm run build` — Production build
+- `npm run build` — Production build; runs `prisma migrate deploy` first (a failed migration stops the build), except on Vercel Preview (`VERCEL_ENV=preview`), which skips migrations so unmerged branches never touch the database
 - `npm run lint` — ESLint
 - `npm run start` — Start production server
 - `npx prisma generate` — Regenerate Prisma client (runs automatically on `npm install` via postinstall)
