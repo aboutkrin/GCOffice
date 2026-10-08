@@ -216,6 +216,19 @@ export const LEAVE_STATUS_COLORS: Record<string, string> = {
   CANCELLED: "bg-gray-100 text-gray-600",
 };
 
+export const PAYROLL_STATUS_LABELS: Record<string, string> = {
+  DRAFT: "ฉบับร่าง",
+  CONFIRMED: "ยืนยันแล้ว",
+};
+
+export const PAYROLL_STATUS_COLORS: Record<string, string> = {
+  DRAFT: "bg-amber-100 text-amber-800",
+  CONFIRMED: "bg-green-100 text-green-800",
+};
+
+/** Expense category that confirmed payrolls are posted into (created on demand). */
+export const PAYROLL_EXPENSE_CATEGORY = "เงินเดือนพนักงาน";
+
 export const CHINA_SHIPMENT_STATUS_LABELS: Record<string, string> = {
   SHIPPED: "จีนส่งแล้ว",
   ARRIVED_TH: "ถึงไทยแล้ว",
