@@ -72,7 +72,7 @@ function buildDefaults(
   }
   return {
     profileId: currentUserId,
-    type: "ANNUAL",
+    type: "PERSONAL",
     startDate: defaultDate as Date,
     endDate: defaultDate as Date,
     period: "FULL_DAY",

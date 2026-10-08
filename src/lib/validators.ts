@@ -432,7 +432,7 @@ const optionalDate = z.preprocess(
 export const leaveRequestSchema = z.object({
   /** Only honoured for ADMIN; STAFF always request leave for themselves. */
   profileId: z.string().optional(),
-  type: z.enum(["ANNUAL", "SICK", "PERSONAL", "OTHER"], { error: "กรุณาเลือกประเภทการลา" }),
+  type: z.enum(["SICK", "PERSONAL", "OTHER"], { error: "กรุณาเลือกประเภทการลา" }),
   startDate: z.coerce.date({ error: "กรุณาเลือกวันที่เริ่มลา" }),
   endDate: z.coerce.date({ error: "กรุณาเลือกวันที่สิ้นสุด" }),
   period: z.enum(["FULL_DAY", "MORNING", "AFTERNOON"]).default("FULL_DAY"),

@@ -192,7 +192,8 @@ export const LEAVE_TYPE_LABELS: Record<string, string> = {
   OTHER: "อื่นๆ",
 };
 
-export const LEAVE_TYPE_OPTIONS = ["ANNUAL", "SICK", "PERSONAL", "OTHER"] as const;
+// ANNUAL (ลาพักร้อน) stays in LEAVE_TYPE_LABELS for old records but is not offered — the company has no annual leave.
+export const LEAVE_TYPE_OPTIONS = ["SICK", "PERSONAL", "OTHER"] as const;
 
 export const LEAVE_PERIOD_LABELS: Record<string, string> = {
   FULL_DAY: "ทั้งวัน",
