@@ -73,7 +73,9 @@ function replaceExtension(fileName: string, extension: string): string {
  */
 export async function prepareImageFile(
   file: File,
-  onStage?: (stage: PrepareStage) => void
+  onStage?: (stage: PrepareStage) => void,
+  /** Documents (supplier invoices) need more pixels than product photos to stay legible. */
+  options?: { maxDimension?: number; maxSizeMB?: number }
 ): Promise<File> {
   const mimeType = resolveImageMimeType(file.name, file.type);
   if (!mimeType) throw new UploadError("INVALID_TYPE");
@@ -118,8 +120,8 @@ export async function prepareImageFile(
           : "image/jpeg";
 
       const compressed = await imageCompression(prepared, {
-        maxWidthOrHeight: MAX_DIMENSION,
-        maxSizeMB: MAX_COMPRESSED_MB,
+        maxWidthOrHeight: options?.maxDimension ?? MAX_DIMENSION,
+        maxSizeMB: options?.maxSizeMB ?? MAX_COMPRESSED_MB,
         fileType: targetType,
         initialQuality: 0.85,
         // Avoid the library's default CDN-hosted web worker script.

@@ -46,6 +46,8 @@ Key models:
 - **Holiday** — Holidays (admin-managed at `/holidays`), `type` COMPANY (office closed — red on calendars) or PUBLIC (general public holiday the office still works — grey, reference only). Both types are skipped by delivery-date math because carriers are closed too. Drives working-day math for delivery dates (`src/lib/delivery-date.ts`), so **employee leave must never be stored here**
 - **LeaveRequest** — Employee leave (type ANNUAL/SICK/PERSONAL/OTHER, FULL_DAY/MORNING/AFTERNOON, status PENDING → APPROVED/REJECTED, or CANCELLED). STAFF request for themselves (PENDING); ADMIN can record leave for anyone (auto-APPROVED) and approve/reject. Actions in `src/actions/leave-actions.ts`
 - **ChinaShipment** — Shipments from China: `title` = "เลข Tracking / รายการสินค้า" (shown on the calendar), `containerNo` = "เลขล็อต"; shippedDate, etaDate, arrivedDate, receivedDate with status SHIPPED → ARRIVED_TH → RECEIVED (or CANCELLED). Any user can add/advance; only ADMIN can delete. Actions in `src/actions/china-shipment-actions.ts`
+- **ImportLot** / **SupplierInvoice** / **SupplierInvoiceItem** — Import lots ("ล็อตนำเข้า", `/import-lots`): one lot (optionally linked to a ChinaShipment) holds the Chinese supplier proforma invoices (PI), their lines (supplier code, boxes, Amount ¥, weight kg) and China-side fees. Each line stores `landedTotal` / `landedPerBox` (THB) computed on save by `src/lib/landed-cost.ts`. Replaces the old VendorCost flow (still readable under "ต้นทุนใบสั่งซื้อ (แบบเก่า)")
+- **SupplierCodeAlias** — Remembers "supplier code → our product/colour" per supplier so later PIs match automatically
 - **CatalogSyncLog** — One row per website sync run (trigger, scope, counters, dry-run `details`)
 - **Document** — Quotations and invoices with status workflow (DRAFT → SENT → CONFIRMED → CANCELLED)
 - **DocumentLineItem** / **DocumentPaymentTerm** — Cascade-deleted children of Document
@@ -111,6 +113,16 @@ WEBSITE products cannot be deleted in GCOffice (delete on the website instead); 
 
 `DocumentLineItem.colorVariantSku` snapshots the website colour code (`ProductColorVariant.sku`) when a colour is picked and is printed after the colour name (`สี: สีฟ้า (YSP125-Q302)`); `colorVariantName` stays the bare colour name because stock deduction (`stock-actions.ts`, `data/stock.ts`) matches the variant on it.
 
+### Import Lots & Profit (landed cost)
+
+- Landed cost per PI line = (Amount ¥ + share of that PI's fees) × lot exchange rate + share of the lot's China→Thailand freight (total kg × `ratePerKg`, truck 15 / sea 10 ฿/kg by default, or `freightOverride` = the forwarder's actual bill) + `otherCost`. Shares go by weight when every line has a weight, else by amount; money is split in satang (largest remainder) so lines always sum to the lot total. Pure and unit-tested (`tests/landed-cost.test.ts`, run with `npx tsx --test tests/landed-cost.test.ts`).
+- Freight is a product cost, **not** a monthly expense: unsold boxes carry it as stock value until they are sold.
+- Code matching (`matchSupplierCodes` in `src/data/import-lots.ts`): alias for this supplier → `ProductColorVariant.sku` (website colour code) → unambiguous alias of another supplier → `Product.sku` → product name containing the code. Codes compare via `normalizeCode` (uppercase alphanumerics).
+- Reading a PI image: `extractProformaInvoiceAction` → `src/lib/pi-extract.ts`, Vercel AI SDK through **Vercel AI Gateway** with an open-weight vision model (`PI_EXTRACT_MODEL`, default `alibaba/qwen3-vl-instruct`). Images upload to `product-images/supplier-invoices/`. Paste-from-Excel and manual entry work without AI.
+- Cost of a sold line (`resolveLineCost`): manual `DocumentLineItem.unitCost` → average landed cost of that colour variant over all lots → of the product → legacy `Product.costPrice × exchangeRate + shippingCostPerBox × weightPerBox`. `updateDocument` carries manual `unitCost` across its delete/recreate of line items.
+- `Document.actualDeliveryCost` = what we paid to deliver office → site (a direct cost; `shippingCost` is what the customer is charged). Both are edited on the admin-only "สรุปต้นทุน-กำไร" card under the quotation/invoice form (`DocumentProfitCard`, data in `src/data/document-profit.ts`).
+- Dashboard cost = monthly expenses + legacy vendor_costs + cost of sales (COGS + actual delivery) of the confirmed quotations it counts as revenue; quotations already covered by a legacy vendor_costs row are skipped.
+
 ### Dashboard Team Calendar
 
 `src/components/dashboard/team-calendar/` — "ปฏิทินทีม" on `/dashboard` for both ADMIN and STAFF (`TeamCalendarSection` server component). Month grid (same grid on mobile, like a phone calendar: multi-day leave is one bar spanning its days, split at week boundaries; bars packed into lanes with "+N" overflow, `buildWeekRows`) showing company holidays, approved + pending leave (pending drawn dashed) and China shipment milestones; side cards for pending leave approvals (ADMIN) / "การลาของฉัน" (STAFF) and upcoming shipments. Data from `src/data/team-calendar.ts`; month navigation via `fetchTeamCalendarAction`. Mutations call `router.refresh()` and the calendar re-syncs from the new server props.
@@ -129,6 +141,7 @@ WEBSITE products cannot be deleted in GCOffice (delete on the website instead); 
 - `SUPABASE_SERVICE_ROLE_KEY` — Supabase admin key (server-only)
 - `CRON_SECRET` — Bearer token Vercel sends to `/api/cron/*`
 - `CATALOG_API_URL` — goodchoiceth.com origin (e.g. `https://goodchoiceth.com`); also used for the admin edit links
+- `AI_GATEWAY_API_KEY` — Vercel AI Gateway key for reading PI images (not needed on Vercel when OIDC is enabled); `PI_EXTRACT_MODEL` optionally overrides the gateway model id
 - `CATALOG_API_KEY` — shared key: Bearer for `/api/catalog/*` on the website and HMAC secret for the webhook. Must equal the website's `CATALOG_API_KEY`; a pasted BOM is scrubbed by `cleanEnv()`
 
 ## Key Conventions
@@ -141,4 +154,4 @@ WEBSITE products cannot be deleted in GCOffice (delete on the website instead); 
 - Zod validation error messages are in Thai
 - Icons from `lucide-react`
 - Remote images from Supabase storage are allowed in `next.config.ts` (`*.supabase.co`)
-- No test framework is configured; there are no tests in this project
+- No test framework is configured; the few tests in `tests/` use `node:test` and run with `npx tsx --test <file>`

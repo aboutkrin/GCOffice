@@ -14,6 +14,7 @@ import {
   Wallet,
   ReceiptText,
   Truck,
+  Ship,
   Printer,
   Warehouse,
   PackagePlus,
@@ -85,8 +86,9 @@ export const MAIN_NAV: NavEntry[] = [
     icon: Calculator,
     items: [
       { href: "/product-costs", label: "ต้นทุนสินค้า", icon: Calculator, adminOnly: true },
-      { href: "/vendor-costs", label: "ต้นทุนใบสั่งซื้อ", icon: Truck, adminOnly: true },
+      { href: "/import-lots", label: "ล็อตนำเข้า (PI จีน)", icon: Ship, adminOnly: true },
       { href: "/expenses", label: "ค่าใช้จ่ายรายเดือน", icon: Wallet, adminOnly: true },
+      { href: "/vendor-costs", label: "ต้นทุนใบสั่งซื้อ (แบบเก่า)", icon: Truck, adminOnly: true },
     ],
   },
 ];
