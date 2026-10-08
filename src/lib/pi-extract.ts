@@ -5,11 +5,20 @@ import { z } from "zod";
 
 /**
  * Reads a Chinese supplier proforma invoice (PI) image into structured lines
- * through Vercel AI Gateway. The default is an open-weight vision model;
- * override with PI_EXTRACT_MODEL (any gateway "provider/model" id with vision).
+ * through Vercel AI Gateway, with open-weight vision models only.
+ * - PI_EXTRACT_MODEL: primary gateway "provider/model" id (needs vision + structured output)
+ * - PI_EXTRACT_FALLBACK_MODELS: comma-separated ids the gateway tries in order
+ *   when the primary fails or is unavailable ("" disables fallback)
  * Auth: AI_GATEWAY_API_KEY, or the Vercel OIDC token when deployed on Vercel.
  */
-export const DEFAULT_PI_MODEL = "alibaba/qwen3-vl-instruct";
+export const DEFAULT_PI_MODEL = "google/gemma-4-31b-it";
+export const DEFAULT_PI_FALLBACK_MODELS = ["alibaba/qwen3.8-27b"];
+
+function fallbackModels(): string[] {
+  const raw = process.env.PI_EXTRACT_FALLBACK_MODELS;
+  if (raw == null) return DEFAULT_PI_FALLBACK_MODELS;
+  return raw.split(",").map((m) => m.trim()).filter(Boolean);
+}
 
 const piSchema = z.object({
   supplierName: z.string().nullable().describe("Seller / factory company name"),
@@ -79,12 +88,13 @@ export async function extractProformaInvoice(
                 ? `Extract this proforma invoice. It has ${pages.length} pages, in order; return one combined result.`
                 : "Extract this proforma invoice.",
           },
-          ...pages.map((p) => ({ type: "image" as const, image: p.image, mediaType: p.mediaType })),
+          ...pages.map((p) => ({ type: "file" as const, data: p.image, mediaType: p.mediaType })),
         ],
       },
     ],
     temperature: 0,
     maxRetries: 1,
+    providerOptions: { gateway: { models: fallbackModels() } },
   });
 
   return cleanExtractedPi(output);
