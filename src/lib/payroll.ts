@@ -9,6 +9,7 @@
  *   into paid / unpaid hours against the yearly quotas in src/lib/leave-policy.ts. Only the
  *   unpaid hours (beyond the quota, or unpaid leave types) are deducted. The leaves passed
  *   in must cover the whole year up to the end of the month so earlier months use up quota.
+ *   ADMIN profiles (leaveAlwaysPaid) never have leave deducted.
  */
 
 import {
@@ -56,6 +57,8 @@ export interface PayrollCalcInput {
   annualLeaveDays?: number | null;
   /** Approved leave from 1 January of the year up to the end of the month */
   leaves: PayrollLeaveInput[];
+  /** ADMIN: leave is recorded but never deducted */
+  leaveAlwaysPaid?: boolean;
   holidays: PayrollHolidayInput[];
   items?: PayrollAdjustment[];
 }
@@ -135,6 +138,7 @@ export function calculatePayroll(input: PayrollCalcInput): PayrollCalcResult {
         holidays: input.holidays,
         annualLeaveDays: input.annualLeaveDays,
         startDate: input.startDate,
+        leaveAlwaysPaid: input.leaveAlwaysPaid,
       }).days.filter((d) => d.date >= fromKey && d.date <= toKey)
     : [];
   const leaveHours = leaveDetails.reduce((sum, d) => sum + d.hours, 0);

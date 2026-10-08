@@ -59,7 +59,8 @@ function summarize(
   year: number,
   leaves: LeaveRow[],
   holidays: LeaveHolidayInput[],
-  salary: { annualLeaveDays: number; startDate: Date | null } | null
+  salary: { annualLeaveDays: number; startDate: Date | null } | null,
+  leaveAlwaysPaid: boolean
 ) {
   const approved = allocateLeaveYear({
     year,
@@ -67,6 +68,7 @@ function summarize(
     holidays,
     annualLeaveDays: salary?.annualLeaveDays,
     startDate: salary?.startDate,
+    leaveAlwaysPaid,
   });
   const pending = allocateLeaveYear({
     year,
@@ -83,6 +85,12 @@ function summarize(
     annualEligibleFrom: approved.annualEligibleFrom,
   };
   return { summary, approvedDays: approved.days };
+}
+
+/** ADMIN leave is never deducted from salary (leaveAlwaysPaid in src/lib/leave-policy.ts). */
+async function isAdminProfile(profileId: string): Promise<boolean> {
+  const p = await prisma.profile.findUnique({ where: { id: profileId }, select: { role: true } });
+  return p?.role === "ADMIN";
 }
 
 async function leavesInYear(year: number, profileIds?: string[]) {
@@ -112,7 +120,7 @@ async function leavesInYear(year: number, profileIds?: string[]) {
 /** One employee's balance for the year plus every leave request (any status) in it. */
 export async function getMyLeaveSummary(profileId: string, year: number) {
   const { start, end } = yearBounds(year);
-  const [salary, holidays, counted, history] = await Promise.all([
+  const [salary, holidays, counted, history, isAdmin] = await Promise.all([
     prisma.employeeSalary.findUnique({
       where: { profileId },
       select: { annualLeaveDays: true, startDate: true },
@@ -123,8 +131,9 @@ export async function getMyLeaveSummary(profileId: string, year: number) {
       where: { profileId, startDate: { lte: end }, endDate: { gte: start } },
       orderBy: { startDate: "desc" },
     }),
+    isAdminProfile(profileId),
   ]);
-  const { summary, approvedDays } = summarize(year, counted, holidays, salary);
+  const { summary, approvedDays } = summarize(year, counted, holidays, salary, isAdmin);
 
   const unpaidById = new Map<string, number>();
   for (const day of approvedDays) {
@@ -163,6 +172,7 @@ export async function getTeamLeaveBalances(year: number): Promise<TeamLeaveRow[]
       where: { status: "ACTIVE" },
       select: {
         id: true,
+        role: true,
         ...profileNameSelect,
         employeeSalary: { select: { annualLeaveDays: true, startDate: true } },
       },
@@ -182,7 +192,7 @@ export async function getTeamLeaveBalances(year: number): Promise<TeamLeaveRow[]
     .map((p) => ({
       profileId: p.id,
       name: employeeDisplayName(p),
-      summary: summarize(year, byProfile.get(p.id) ?? [], holidays, p.employeeSalary).summary,
+      summary: summarize(year, byProfile.get(p.id) ?? [], holidays, p.employeeSalary, p.role === "ADMIN").summary,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "th"));
 }
@@ -190,13 +200,14 @@ export async function getTeamLeaveBalances(year: number): Promise<TeamLeaveRow[]
 /** Approved-leave balance of one employee for the year, counting leave up to the end of the given month. */
 export async function getLeaveBalancesAsOf(profileId: string, year: number, month: number) {
   const monthEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59));
-  const [salary, holidays, leaves] = await Promise.all([
+  const [salary, holidays, leaves, isAdmin] = await Promise.all([
     prisma.employeeSalary.findUnique({
       where: { profileId },
       select: { annualLeaveDays: true, startDate: true },
     }),
     getCompanyHolidaysForYear(year),
     leavesInYear(year, [profileId]),
+    isAdminProfile(profileId),
   ]);
   const upToMonth = leaves
     .filter((l) => l.status === "APPROVED" && l.startDate <= monthEnd)
@@ -207,5 +218,6 @@ export async function getLeaveBalancesAsOf(profileId: string, year: number, mont
     holidays,
     annualLeaveDays: salary?.annualLeaveDays,
     startDate: salary?.startDate,
+    leaveAlwaysPaid: isAdmin,
   }).balances;
 }

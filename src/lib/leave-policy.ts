@@ -8,6 +8,8 @@
  *   military) count every day.
  * - Days consume the paid quota of their type in date order; hours beyond it are unpaid
  *   and are what payroll deducts.
+ * - leaveAlwaysPaid (ADMIN profiles): leave is still recorded and counted against the
+ *   quotas, but every hour is paid — nothing is ever deducted from an admin's salary.
  * - ANNUAL: EmployeeSalary.annualLeaveDays per year, earned from the first anniversary of
  *   startDate (no startDate = already eligible). Annual leave taken before that is unpaid.
  */
@@ -120,6 +122,8 @@ export interface LeaveYearInput {
   annualLeaveDays?: number | null;
   /** Employment start (EmployeeSalary.startDate) — annual leave starts one year later */
   startDate?: Date | string | null;
+  /** ADMIN: every leave hour is paid (recorded and counted, never deducted from salary) */
+  leaveAlwaysPaid?: boolean;
 }
 
 const DAY_MS = 86_400_000;
@@ -217,8 +221,11 @@ export function allocateLeaveYear(input: LeaveYearInput): LeaveYearAllocation {
   for (const day of [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date))) {
     const balance = balances[day.type] ?? balances.OTHER;
     let paidLeft =
-      balance.paidQuotaHours === null ? Infinity : Math.max(0, balance.paidQuotaHours - balance.paidHours);
-    const beforeEligible = day.type === "ANNUAL" && eligible !== null && dayStamp(day.date) < eligible;
+      balance.paidQuotaHours === null || input.leaveAlwaysPaid
+        ? Infinity
+        : Math.max(0, balance.paidQuotaHours - balance.paidHours);
+    const beforeEligible =
+      !input.leaveAlwaysPaid && day.type === "ANNUAL" && eligible !== null && dayStamp(day.date) < eligible;
     if (beforeEligible) {
       paidLeft = 0;
       annualBeforeEligibleHours += day.hours;

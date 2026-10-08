@@ -99,3 +99,28 @@ test("payroll deducts only leave beyond the quota, remembering earlier months", 
   assert.equal(r.leaveDetails.length, 4);
   assert.equal(r.netPay, 22400);
 });
+
+test("admin leave (leaveAlwaysPaid) is recorded but never deducted", () => {
+  const leaves = [
+    leave("PERSONAL", "2026-03-02", "2026-03-06"), // 5 days, quota 3
+    leave("ANNUAL", "2026-03-09"), // before the first anniversary
+    leave("OTHER", "2026-03-10"), // unpaid type
+  ];
+  const r = calculatePayroll({
+    year: 2026,
+    month: 3,
+    monthlySalary: 24000,
+    startDate: d("2026-01-05"),
+    leaves,
+    leaveAlwaysPaid: true,
+    holidays: [],
+  });
+  assert.equal(r.leaveHours, 56);
+  assert.equal(r.unpaidLeaveHours, 0);
+  assert.equal(r.leaveDeduction, 0);
+  assert.equal(r.netPay, 24000);
+
+  const year = allocateLeaveYear({ year: 2026, leaves, holidays: [], leaveAlwaysPaid: true });
+  assert.equal(year.balances.PERSONAL.usedHours, 40);
+  assert.equal(year.balances.PERSONAL.unpaidHours, 0);
+});

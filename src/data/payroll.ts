@@ -82,7 +82,7 @@ export async function computePayrollFor(
 ): Promise<{ result: PayrollCalcResult; employeeName: string } | null> {
   const profile = await prisma.profile.findUnique({
     where: { id: profileId },
-    select: { ...profileNameSelect, employeeSalary: true },
+    select: { role: true, ...profileNameSelect, employeeSalary: true },
   });
   if (!profile?.employeeSalary) return null;
 
@@ -96,6 +96,7 @@ export async function computePayrollFor(
     endDate: salary.endDate,
     annualLeaveDays: salary.annualLeaveDays,
     leaves: leavesByProfile.get(profileId) ?? [],
+    leaveAlwaysPaid: profile.role === "ADMIN",
     holidays,
     items,
   });
@@ -134,7 +135,7 @@ export async function getPayrollMonth(year: number, month: number): Promise<Payr
           { payrolls: { some: { year, month } } },
         ],
       },
-      select: { id: true, ...profileNameSelect, employeeSalary: true },
+      select: { id: true, role: true, ...profileNameSelect, employeeSalary: true },
     }),
     prisma.payroll.findMany({ where: { year, month } }),
     getPayrollMonthInputs(year, month),
@@ -155,6 +156,7 @@ export async function getPayrollMonth(year: number, month: number): Promise<Payr
             endDate: salary.endDate,
             annualLeaveDays: salary.annualLeaveDays,
             leaves: inputs.leavesByProfile.get(profile.id) ?? [],
+            leaveAlwaysPaid: profile.role === "ADMIN",
             holidays: inputs.holidays,
           })
         : null;
