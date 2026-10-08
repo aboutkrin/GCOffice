@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -115,6 +116,7 @@ export function EmployeeSalaryTable({ rows }: { rows: EmployeeSalaryRow[] }) {
 function SalaryForm({ row, onDone }: { row: EmployeeSalaryRow; onDone: () => void }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [endDateUnknown, setEndDateUnknown] = useState(!row.endDate);
   const form = useForm<EmployeeSalaryFormData>({
     resolver: zodResolver(employeeSalarySchema) as unknown as Resolver<EmployeeSalaryFormData>,
     defaultValues: {
@@ -127,7 +129,10 @@ function SalaryForm({ row, onDone }: { row: EmployeeSalaryRow; onDone: () => voi
 
   function onSubmit(values: EmployeeSalaryFormData) {
     startTransition(async () => {
-      const res = await saveEmployeeSalary(row.profileId, values);
+      const res = await saveEmployeeSalary(
+        row.profileId,
+        endDateUnknown ? { ...values, endDate: undefined } : values
+      );
       if (res.error) {
         toast.error(res.error);
         return;
@@ -138,7 +143,7 @@ function SalaryForm({ row, onDone }: { row: EmployeeSalaryRow; onDone: () => voi
     });
   }
 
-  const dateField = (name: "startDate" | "endDate", label: string, description: string) => (
+  const dateField = (name: "startDate", label: string, description: string) => (
     <FormField
       control={form.control}
       name={name}
@@ -182,7 +187,40 @@ function SalaryForm({ row, onDone }: { row: EmployeeSalaryRow; onDone: () => voi
         />
         <div className="grid gap-4 sm:grid-cols-2">
           {dateField("startDate", "วันเริ่มงาน", "เดือนแรกคิดตามวันที่ทำงานจริง")}
-          {dateField("endDate", "วันทำงานวันสุดท้าย", "เว้นว่างถ้ายังทำงานอยู่")}
+          <FormField
+            control={form.control}
+            name="endDate"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center justify-between gap-2">
+                  <FormLabel>วันทำงานวันสุดท้าย</FormLabel>
+                  <label className="flex items-center gap-2 text-sm font-normal">
+                    <Switch
+                      checked={endDateUnknown}
+                      onCheckedChange={(checked) => {
+                        setEndDateUnknown(checked);
+                        if (checked) field.onChange("");
+                        form.clearErrors("endDate");
+                      }}
+                    />
+                    ไม่ระบุ
+                  </label>
+                </div>
+                <FormControl>
+                  <Input
+                    type="date"
+                    disabled={endDateUnknown}
+                    value={endDateUnknown ? "" : ((field.value as unknown as string) ?? "")}
+                    onChange={(e) => field.onChange(e.target.value)}
+                  />
+                </FormControl>
+                <FormDescription>
+                  {endDateUnknown ? "ยังทำงานอยู่ — ยังไม่ทราบวันลาออก" : "เดือนสุดท้ายคิดตามวันที่ทำงานจริง"}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </div>
         <FormField
           control={form.control}
