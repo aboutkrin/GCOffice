@@ -502,6 +502,8 @@ export const leaveReviewSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+export const CHINA_SHIPMENT_MAX_IMAGES = 12;
+
 export const chinaShipmentSchema = z.object({
   title: z.string().min(1, "กรุณาระบุเลข Tracking / รายการสินค้า"),
   containerNo: z.string().optional(),
@@ -509,6 +511,7 @@ export const chinaShipmentSchema = z.object({
   shippedDate: z.coerce.date({ error: "กรุณาเลือกวันที่จีนส่งของ" }),
   etaDate: optionalDate,
   note: z.string().optional(),
+  imageUrls: z.array(z.string().url()).max(CHINA_SHIPMENT_MAX_IMAGES, `ใส่รูปได้ไม่เกิน ${CHINA_SHIPMENT_MAX_IMAGES} รูป`).default([]),
 }).refine(
   (data) => !data.etaDate || data.etaDate >= data.shippedDate,
   { message: "วันที่คาดว่าถึงต้องไม่ก่อนวันที่ส่ง", path: ["etaDate"] }

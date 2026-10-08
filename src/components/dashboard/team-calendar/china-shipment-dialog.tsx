@@ -30,6 +30,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { DatePickerButton } from "./date-picker-button";
+import { ShipmentImagesInput } from "./shipment-images";
 
 interface ChinaShipmentDialogProps {
   open: boolean;
@@ -51,6 +52,7 @@ function buildDefaults(
       shippedDate: new Date(shipment.shippedDate),
       etaDate: shipment.etaDate ? new Date(shipment.etaDate) : null,
       note: shipment.note ?? "",
+      imageUrls: shipment.imageUrls ?? [],
     };
   }
   return {
@@ -60,6 +62,7 @@ function buildDefaults(
     shippedDate: defaultDate as Date,
     etaDate: null,
     note: "",
+    imageUrls: [],
   };
 }
 
@@ -111,7 +114,7 @@ export function ChinaShipmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{shipment ? "แก้ไขของจากจีน" : "เพิ่มของจากจีน"}</DialogTitle>
           <DialogDescription>
@@ -202,6 +205,18 @@ export function ChinaShipmentDialog({
                   <FormControl>
                     <Textarea rows={2} {...field} value={field.value ?? ""} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="imageUrls"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>รูปสินค้าในล็อตนี้</FormLabel>
+                  <ShipmentImagesInput value={field.value ?? []} onChange={field.onChange} />
                   <FormMessage />
                 </FormItem>
               )}
