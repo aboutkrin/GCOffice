@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { getLandedCostIndex, resolveLineCost, type CostSource } from "@/data/import-lots";
+import { parseCostBreakdown, type CostBreakdownPart } from "@/lib/line-cost";
 
 export interface DocumentProfitLine {
   id: string;
@@ -25,6 +26,8 @@ export interface DocumentProfitLine {
   costSnapshot: number | null;
   source: CostSource;
   manual: boolean;
+  /** Lots the manual cost was blended from (empty = typed by hand / not manual) */
+  costBreakdown: CostBreakdownPart[];
 }
 
 export interface DocumentProfit {
@@ -62,6 +65,7 @@ type DocForProfit = {
     lineTotal: unknown;
     unitCost: unknown;
     costSnapshot: unknown;
+    costBreakdown?: unknown;
   }[];
 };
 
@@ -88,6 +92,7 @@ export const PROFIT_DOC_SELECT = {
       lineTotal: true,
       unitCost: true,
       costSnapshot: true,
+      costBreakdown: true,
     },
   },
 };
@@ -121,6 +126,7 @@ export async function computeDocumentProfits(docs: DocForProfit[]): Promise<Docu
         costSnapshot: l.costSnapshot != null ? Number(l.costSnapshot) : null,
         source: resolved.source,
         manual: resolved.source === "manual",
+        costBreakdown: resolved.source === "manual" ? parseCostBreakdown(l.costBreakdown) : [],
       };
     });
     const revenue = Number(doc.grandTotal) - Number(doc.vatAmount);
