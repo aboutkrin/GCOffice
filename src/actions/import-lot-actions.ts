@@ -10,7 +10,8 @@ import { computeLandedCosts, normalizeCode, normalizeSupplier } from "@/lib/land
 import { matchSupplierCodes, searchLotItemsForCost } from "@/data/import-lots";
 import { lockDocumentLineCosts } from "@/data/document-profit";
 import { extractProformaInvoice, PiExtractConfigError } from "@/lib/pi-extract";
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
+import { blendLotCost, type CostBreakdownPart } from "@/lib/line-cost";
 
 type ActionResult<T = undefined> =
   | { success: true; data?: T }
@@ -229,7 +230,11 @@ export async function extractProformaInvoiceAction(imageUrls: string[]) {
 /** Profit card: actual delivery cost (office → site) and per-line manual costs. */
 export async function updateDocumentCosts(
   documentId: string,
-  data: { actualDeliveryCost: number | null; lines: { id: string; unitCost: number | null }[] }
+  data: {
+    actualDeliveryCost: number | null;
+    /** costBreakdown = the lots the boxes came from; unitCost is then recomputed from it */
+    lines: { id: string; unitCost: number | null; costBreakdown?: CostBreakdownPart[] | null }[];
+  }
 ): Promise<ActionResult> {
   try {
     await assertAdmin();
@@ -237,10 +242,33 @@ export async function updateDocumentCosts(
     if (delivery != null && (!Number.isFinite(delivery) || delivery < 0)) {
       return { success: false, error: "ค่าขนส่งต้องไม่ติดลบ" };
     }
+    const lines: { id: string; unitCost: number | null; costBreakdown: CostBreakdownPart[] | null }[] = [];
     for (const l of data.lines) {
+      const parts = l.costBreakdown?.length ? l.costBreakdown : null;
+      if (parts) {
+        if (parts.length > 20) return { success: false, error: "เลือกล็อตได้ไม่เกิน 20 รายการต่อสินค้า" };
+        if (parts.some((p) => !Number.isInteger(p.boxes))) {
+          return { success: false, error: "จำนวนกล่องต้องเป็นจำนวนเต็ม" };
+        }
+        const cost = blendLotCost(parts);
+        if (cost == null) return { success: false, error: "จำนวนกล่องต้องมากกว่า 0 และต้นทุนต้องไม่ติดลบ" };
+        lines.push({
+          id: l.id,
+          unitCost: cost,
+          costBreakdown: parts.map((p) => ({
+            lotItemId: String(p.lotItemId).slice(0, 64),
+            lotLabel: String(p.lotLabel).slice(0, 200),
+            supplierCode: String(p.supplierCode).slice(0, 100),
+            boxes: p.boxes,
+            landedPerBox: p.landedPerBox,
+          })),
+        });
+        continue;
+      }
       if (l.unitCost != null && (!Number.isFinite(l.unitCost) || l.unitCost < 0)) {
         return { success: false, error: "ต้นทุนต้องไม่ติดลบ" };
       }
+      lines.push({ id: l.id, unitCost: l.unitCost, costBreakdown: null });
     }
 
     await prisma.$transaction([
@@ -248,10 +276,13 @@ export async function updateDocumentCosts(
         where: { id: documentId },
         data: { actualDeliveryCost: delivery && delivery > 0 ? delivery : null },
       }),
-      ...data.lines.map((l) =>
+      ...lines.map((l) =>
         prisma.documentLineItem.updateMany({
           where: { id: l.id, documentId },
-          data: { unitCost: l.unitCost },
+          data: {
+            unitCost: l.unitCost,
+            costBreakdown: l.costBreakdown ? (l.costBreakdown as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+          },
         })
       ),
     ]);

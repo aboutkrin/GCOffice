@@ -9,6 +9,7 @@ import { AlertTriangle, Loader2, RefreshCw, TrendingUp } from "lucide-react";
 import { relockDocumentCosts, updateDocumentCosts } from "@/actions/import-lot-actions";
 import type { DocumentProfit } from "@/data/document-profit";
 import type { CostSource } from "@/data/import-lots";
+import { formatCostBreakdown, type CostBreakdownPart } from "@/lib/line-cost";
 import { formatBaht } from "@/lib/thai-currency";
 import { cn } from "@/lib/utils";
 
@@ -40,8 +41,10 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
   const [costs, setCosts] = useState<Record<string, number | "">>(() =>
     Object.fromEntries(profit.lines.map((l) => [l.id, l.manual && l.unitCost != null ? l.unitCost : ""]))
   );
-  // Lot line picked for a cost (label shown until the card reloads)
-  const [picked, setPicked] = useState<Record<string, string>>({});
+  // Lots the manual cost was blended from ([] = typed by hand)
+  const [breakdowns, setBreakdowns] = useState<Record<string, CostBreakdownPart[]>>(() =>
+    Object.fromEntries(profit.lines.map((l) => [l.id, l.costBreakdown]))
+  );
 
   const live = useMemo(() => {
     const lines = profit.lines.map((l) => {
@@ -62,7 +65,11 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
 
   const dirty =
     delivery !== profit.actualDeliveryCost ||
-    profit.lines.some((l) => (costs[l.id] === "" ? null : costs[l.id]) !== (l.manual ? l.unitCost : null));
+    profit.lines.some(
+      (l) =>
+        (costs[l.id] === "" ? null : costs[l.id]) !== (l.manual ? l.unitCost : null) ||
+        JSON.stringify(breakdowns[l.id] ?? []) !== JSON.stringify(l.costBreakdown)
+    );
 
   // A locked cost that no longer matches today's lot average (e.g. the bill was
   // confirmed before its lot was entered)
@@ -89,6 +96,7 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
         lines: profit.lines.map((l) => ({
           id: l.id,
           unitCost: costs[l.id] === "" || costs[l.id] == null ? null : Number(costs[l.id]),
+          costBreakdown: costs[l.id] === "" || costs[l.id] == null ? null : (breakdowns[l.id] ?? null),
         })),
       });
       if (!res.success) {
@@ -140,7 +148,11 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
                     )}
                   >
                     {l.effective == null && <AlertTriangle className="size-3" />}
-                    {l.isManual ? (picked[l.id] ?? SOURCE_LABELS.manual) : SOURCE_LABELS[l.suggestedSource]}
+                    {l.isManual
+                      ? breakdowns[l.id]?.length
+                        ? formatCostBreakdown(breakdowns[l.id])
+                        : SOURCE_LABELS.manual
+                      : SOURCE_LABELS[l.suggestedSource]}
                   </p>
                 </div>
               </div>
@@ -156,18 +168,15 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
                   placeholder={l.suggestedCost != null ? `${l.suggestedCost} /หน่วย` : "ต้นทุน/หน่วย"}
                   onChange={(v) => {
                     setCosts((prev) => ({ ...prev, [l.id]: v || "" }));
-                    setPicked((prev) => {
-                      const next = { ...prev };
-                      delete next[l.id];
-                      return next;
-                    });
+                    setBreakdowns((prev) => ({ ...prev, [l.id]: [] }));
                   }}
                 />
                 <LotCostPicker
                   line={l}
-                  onPick={(cost, label) => {
+                  breakdown={breakdowns[l.id] ?? []}
+                  onPick={(cost, parts) => {
                     setCosts((prev) => ({ ...prev, [l.id]: cost }));
-                    setPicked((prev) => ({ ...prev, [l.id]: `เลือกจาก${label} — กดบันทึกต้นทุน` }));
+                    setBreakdowns((prev) => ({ ...prev, [l.id]: parts }));
                   }}
                 />
               </div>

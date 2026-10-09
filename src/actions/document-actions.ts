@@ -5,7 +5,7 @@ import { documentSchema } from "@/lib/validators";
 import { generateDocumentNumber, generateCustomInvoiceNumber } from "@/lib/document-number";
 import { requireUserAction, assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { DocumentStatus, PaymentTermType } from "@/generated/prisma/client";
+import { DocumentStatus, PaymentTermType, type Prisma } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { flattenLineItemSpecs, lineItemsWithSpecsInclude } from "@/lib/line-item-specs";
 import { toUTCNoon } from "@/lib/thai-date";
@@ -378,15 +378,16 @@ export async function updateDocument(id: string, data: unknown) {
       const netPayable = grandTotal - depositDeduction;
 
       // Manually entered and locked costs (profit card) survive the delete/recreate below
-      const keptCosts = new Map<string, { unitCost: unknown; costSnapshot: unknown }>(
+      type KeptCost = { unitCost: unknown; costSnapshot: unknown; costBreakdown: unknown };
+      const keptCosts = new Map<string, KeptCost>(
         (await tx.documentLineItem.findMany({
           where: { documentId: id, OR: [{ unitCost: { not: null } }, { costSnapshot: { not: null } }] },
           select: {
             productId: true, colorVariantId: true, productName: true, colorVariantName: true,
-            unitCost: true, costSnapshot: true,
+            unitCost: true, costSnapshot: true, costBreakdown: true,
           },
-        })).map((l: Parameters<typeof lineCostKey>[0] & { unitCost: unknown; costSnapshot: unknown }) =>
-          [lineCostKey(l), { unitCost: l.unitCost, costSnapshot: l.costSnapshot }] as const)
+        })).map((l: Parameters<typeof lineCostKey>[0] & KeptCost) =>
+          [lineCostKey(l), { unitCost: l.unitCost, costSnapshot: l.costSnapshot, costBreakdown: l.costBreakdown }] as const)
       );
 
       // Delete old items
@@ -466,6 +467,7 @@ export async function updateDocument(id: string, data: unknown) {
             lineTotal: item.quantity * Number(item.unitPrice),
             unitCost: keptCosts.get(lineCostKey(item))?.unitCost ?? null,
             costSnapshot: keptCosts.get(lineCostKey(item))?.costSnapshot ?? null,
+            costBreakdown: (keptCosts.get(lineCostKey(item))?.costBreakdown ?? undefined) as Prisma.InputJsonValue | undefined,
           })
         ),
       });

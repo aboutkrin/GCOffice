@@ -34,3 +34,48 @@ export function resolveLineCost(
   }
   return { unitCost: null, source: "none" };
 }
+
+export interface LotCostPart {
+  boxes: number;
+  landedPerBox: number;
+}
+
+/** Cost per unit of a line whose boxes came from several lots: Σ(boxes × landed) ÷ Σboxes. */
+export function blendLotCost(parts: LotCostPart[]): number | null {
+  const boxes = parts.reduce((s, p) => s + p.boxes, 0);
+  if (!parts.length || boxes <= 0 || parts.some((p) => !(p.boxes > 0) || !(p.landedPerBox >= 0))) return null;
+  const total = parts.reduce((s, p) => s + p.boxes * p.landedPerBox, 0);
+  return Math.round((total / boxes) * 100) / 100;
+}
+
+/** One lot a line's boxes came from, as stored in `DocumentLineItem.costBreakdown`. */
+export interface CostBreakdownPart extends LotCostPart {
+  lotItemId: string;
+  /** e.g. "ล็อต 0018 · YC89" */
+  lotLabel: string;
+  supplierCode: string;
+}
+
+/** Read the stored JSON back, dropping anything malformed. */
+export function parseCostBreakdown(value: unknown): CostBreakdownPart[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((v) => {
+    if (!v || typeof v !== "object") return [];
+    const o = v as Record<string, unknown>;
+    const boxes = Number(o.boxes);
+    const landedPerBox = Number(o.landedPerBox);
+    if (!(boxes > 0) || !(landedPerBox >= 0)) return [];
+    return [{
+      lotItemId: String(o.lotItemId ?? ""),
+      lotLabel: String(o.lotLabel ?? ""),
+      supplierCode: String(o.supplierCode ?? ""),
+      boxes,
+      landedPerBox,
+    }];
+  });
+}
+
+/** "ล็อต 0018 ×5 · ล็อต 0012 ×1" */
+export function formatCostBreakdown(parts: CostBreakdownPart[]): string {
+  return parts.map((p) => `${p.lotLabel.split(" · ")[0]} ×${p.boxes.toLocaleString("th-TH")}`).join(" · ");
+}

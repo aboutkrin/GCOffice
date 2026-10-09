@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 
 import type { ProfitReportRow } from "@/data/profit-report";
-import type { CostSource } from "@/lib/line-cost";
+import { formatCostBreakdown, type CostSource } from "@/lib/line-cost";
 import { formatBaht } from "@/lib/thai-currency";
 import { formatThaiDateShort } from "@/lib/thai-date";
 import { cn } from "@/lib/utils";
@@ -128,7 +128,7 @@ export function ProfitReportTable({ rows }: { rows: ProfitReportRow[] }) {
                               l.unitCost == null ? "text-amber-700" : "text-muted-foreground"
                             )}
                           >
-                            {SOURCE_LABELS[l.source]}
+                            {l.costBreakdown.length > 0 ? formatCostBreakdown(l.costBreakdown) : SOURCE_LABELS[l.source]}
                           </span>
                           <span className="hidden text-right tabular-nums sm:block">
                             {l.unitCost != null ? `${formatBaht(l.unitCost)}/หน่วย` : "-"}

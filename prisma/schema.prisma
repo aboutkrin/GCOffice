@@ -349,6 +349,9 @@ model DocumentLineItem {
   /// Average landed cost per unit locked when the quotation was confirmed, so a
   /// later import lot doesn't change the profit of bills already sold.
   costSnapshot Decimal? @map("cost_snapshot") @db.Decimal(12, 2)
+  /// Lots the manual cost was blended from: [{ lotItemId, lotLabel, supplierCode,
+  /// boxes, landedPerBox }]. Snapshot so it survives lot edits; null = typed by hand.
+  costBreakdown Json? @map("cost_breakdown")
 
   /// Stable identity backing reservation/issue matching. Nullable: legacy rows
   /// backfilled by (sku) / (productId, name); may stay null when unmatched
