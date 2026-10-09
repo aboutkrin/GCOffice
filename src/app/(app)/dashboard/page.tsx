@@ -19,6 +19,7 @@ import { RevenueExpenseSection } from "@/components/dashboard/revenue-expense-se
 import { DeliverySchedule } from "@/components/dashboard/delivery-schedule";
 import { TeamCalendarSection } from "@/components/dashboard/team-calendar/team-calendar-section";
 import { formatBaht } from "@/lib/thai-currency";
+import { financeMonthHref } from "@/lib/finance";
 import { formatThaiDate, getThaiNow } from "@/lib/thai-date";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
 
@@ -98,9 +99,9 @@ export default async function DashboardPage() {
     {
       title: "ยอดขายเดือนนี้",
       value: formatBaht(stats.thisMonthConfirmedTotal),
-      subtitle: `ยอดไม่รวม VAT ${formatBaht(stats.thisMonthVatTotal)}`,
+      subtitle: `ไม่รวม VAT · VAT ${formatBaht(stats.thisMonthVatTotal)}`,
       icon: Banknote,
-      href: `/invoices?${monthParams}&status=PAID,DEPOSITED`,
+      href: financeMonthHref(currentYear, currentMonth),
     },
   ];
 
@@ -147,7 +148,11 @@ export default async function DashboardPage() {
       {isAdmin && revenueExpense && (
         <div className="mt-8">
           <h2 className="text-lg font-semibold mb-4">ภาพรวมรายรับและรายจ่ายตลอดทั้งปี</h2>
-          <RevenueExpenseSection initialData={revenueExpense} />
+          <RevenueExpenseSection
+            initialData={revenueExpense}
+            currentYear={currentYear}
+            currentMonth={currentMonth}
+          />
         </div>
       )}
 
