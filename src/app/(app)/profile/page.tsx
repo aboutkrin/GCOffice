@@ -79,6 +79,9 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                     firstName: profile.firstName ?? "",
                     lastName: profile.lastName ?? "",
                     signatureUrl: profile.signatureUrl ?? "",
+                    bankName: profile.bankName ?? "",
+                    bankAccountName: profile.bankAccountName ?? "",
+                    bankAccountNumber: profile.bankAccountNumber ?? "",
                   }
                 : undefined
             }

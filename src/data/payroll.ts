@@ -196,7 +196,16 @@ export async function getPayrollById(id: string) {
     where: { id },
     include: {
       items: { orderBy: { sequence: "asc" } },
-      profile: { select: { id: true, ...profileNameSelect, employeeSalary: true } },
+      profile: {
+        select: {
+          id: true,
+          ...profileNameSelect,
+          employeeSalary: true,
+          bankName: true,
+          bankAccountName: true,
+          bankAccountNumber: true,
+        },
+      },
     },
   });
   return payroll ? serialize(payroll) : null;

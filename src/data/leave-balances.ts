@@ -196,28 +196,3 @@ export async function getTeamLeaveBalances(year: number): Promise<TeamLeaveRow[]
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "th"));
 }
-
-/** Approved-leave balance of one employee for the year, counting leave up to the end of the given month. */
-export async function getLeaveBalancesAsOf(profileId: string, year: number, month: number) {
-  const monthEnd = new Date(Date.UTC(year, month, 0, 23, 59, 59));
-  const [salary, holidays, leaves, isAdmin] = await Promise.all([
-    prisma.employeeSalary.findUnique({
-      where: { profileId },
-      select: { annualLeaveDays: true, startDate: true },
-    }),
-    getCompanyHolidaysForYear(year),
-    leavesInYear(year, [profileId]),
-    isAdminProfile(profileId),
-  ]);
-  const upToMonth = leaves
-    .filter((l) => l.status === "APPROVED" && l.startDate <= monthEnd)
-    .map((l) => ({ ...l, endDate: l.endDate > monthEnd ? monthEnd : l.endDate }));
-  return allocateLeaveYear({
-    year,
-    leaves: upToMonth,
-    holidays,
-    annualLeaveDays: salary?.annualLeaveDays,
-    startDate: salary?.startDate,
-    leaveAlwaysPaid: isAdmin,
-  }).balances;
-}

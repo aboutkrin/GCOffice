@@ -229,6 +229,9 @@ export const profileSchema = z.object({
   firstName: z.string().min(1, "กรุณาระบุชื่อ"),
   lastName: z.string().min(1, "กรุณาระบุนามสกุล"),
   signatureUrl: z.string().optional(),
+  bankName: z.string().optional(),
+  bankAccountName: z.string().optional(),
+  bankAccountNumber: z.string().optional(),
 });
 
 export const expenseCategorySchema = z.object({
