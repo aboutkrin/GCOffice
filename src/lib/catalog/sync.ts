@@ -15,6 +15,7 @@ import {
   mapCatalogVariant,
   type MappedCatalogProduct,
   type MappedCatalogVariant,
+  type WebsiteSpecs,
 } from "./mapper";
 import type { CatalogCategory, CatalogProduct } from "./types";
 
@@ -100,6 +101,7 @@ interface ProductRow {
   websiteProductId: number | null;
   websiteUpdatedAt: Date | null;
   lastSyncedAt: Date | null;
+  websiteSpecs: unknown;
 }
 
 interface VariantRow {
@@ -181,6 +183,7 @@ async function buildContext(
         websiteProductId: true,
         websiteUpdatedAt: true,
         lastSyncedAt: true,
+        websiteSpecs: true,
       },
     }),
     prisma.productColorVariant.findMany({
@@ -614,6 +617,15 @@ async function applyVariantPlan(
 // Per-product upsert
 // ----------------------------------------------------------------------------
 
+/** Key-by-key compare of stored vs freshly mapped `websiteSpecs` (JSON key order may differ). */
+function sameSpecs(stored: unknown, next: WebsiteSpecs): boolean {
+  if (!stored || typeof stored !== "object") return false;
+  const s = stored as Record<string, unknown>;
+  return (Object.keys(next) as (keyof WebsiteSpecs)[]).every(
+    (key) => (s[key] ?? null) === (next[key] ?? null)
+  );
+}
+
 type UpsertOutcome = "created" | "updated" | "unchanged";
 
 /**
@@ -655,6 +667,7 @@ async function upsertCatalogProduct(
         websiteProductId: mapped.websiteProductId,
         websiteUpdatedAt: null,
         lastSyncedAt: null,
+        websiteSpecs: null,
       });
     }
     return "created";
@@ -663,13 +676,16 @@ async function upsertCatalogProduct(
   // Already linked and the website has not touched it since we last wrote it:
   // nothing to do. Every product save on the website bumps `updatedAt` (colour
   // edits go through the same save), so this is safe and makes the nightly run
-  // nearly free.
+  // nearly free. The stored tile facts must also match: products synced before
+  // a spec field existed (or was filled in without bumping `updatedAt`) would
+  // otherwise keep stale specs forever.
   if (
     existing &&
     existing.websiteProductId === mapped.websiteProductId &&
     existing.lastSyncedAt !== null &&
     existing.websiteUpdatedAt !== null &&
-    existing.websiteUpdatedAt.getTime() === mapped.websiteUpdatedAt.getTime()
+    existing.websiteUpdatedAt.getTime() === mapped.websiteUpdatedAt.getTime() &&
+    sameSpecs(existing.websiteSpecs, mapped.websiteSpecs)
   ) {
     ctx.details.unchanged++;
     return "unchanged";
@@ -714,6 +730,7 @@ async function upsertCatalogProduct(
         existing.status = mapped.status;
         existing.websiteUpdatedAt = mapped.websiteUpdatedAt;
         existing.lastSyncedAt = ctx.now;
+        existing.websiteSpecs = mapped.websiteSpecs;
         ctx.productsByWebsiteId.set(mapped.websiteProductId, existing);
         ctx.seenProductIds.add(existing.id);
         return "updated";
@@ -739,6 +756,7 @@ async function upsertCatalogProduct(
         websiteProductId: mapped.websiteProductId,
         websiteUpdatedAt: mapped.websiteUpdatedAt,
         lastSyncedAt: ctx.now,
+        websiteSpecs: mapped.websiteSpecs,
       };
       ctx.productsBySku.set(sku, row);
       ctx.productsByWebsiteId.set(mapped.websiteProductId, row);

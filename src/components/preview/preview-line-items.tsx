@@ -106,7 +106,7 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
                           {item.colorVariantName && (
                             <>
                               สี : {item.colorVariantName}
-                              {item.colorVariantSku && <> (รหัสสี : {item.colorVariantSku})</>}
+                              {item.colorVariantSku && <> (CODE : {item.colorVariantSku})</>}
                             </>
                           )}
                           {item.colorVariantName && sqm && " "}
