@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { DocumentType, DocumentStatus } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
+import { flattenLineItemSpecs, lineItemsWithSpecsInclude } from "@/lib/line-item-specs";
 
 export async function getDocuments(params?: {
   type?: DocumentType;
@@ -163,7 +164,7 @@ export async function getDocumentById(id: string) {
     const data = await prisma.document.findUnique({
       where: { id },
       include: {
-        lineItems: { orderBy: { sequence: "asc" } },
+        lineItems: lineItemsWithSpecsInclude,
         paymentTerms: { orderBy: { sequence: "asc" } },
         depositDeductions: { orderBy: { sequence: "asc" } },
         sourceInvoice: { include: {
@@ -176,7 +177,8 @@ export async function getDocumentById(id: string) {
         createdBy: true,
       },
     });
-    return serialize(data);
+    if (!data) return serialize(data);
+    return serialize({ ...data, lineItems: flattenLineItemSpecs(data.lineItems) });
   } catch {
     return null;
   }
