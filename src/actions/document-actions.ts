@@ -636,7 +636,7 @@ export async function getDocumentForShare(id: string) {
 
   const result = {
     ...document,
-    lineItems: flattenLineItemSpecs(document.lineItems),
+    lineItems: await flattenLineItemSpecs(document.lineItems),
     companySnapshot: document.company
       ? {
           name: document.company.name,
