@@ -7,6 +7,8 @@ export interface DocumentProfitLine {
   id: string;
   productName: string;
   colorVariantName: string | null;
+  productId: string | null;
+  colorVariantId: string | null;
   quantity: number;
   lineTotal: number;
   unitCost: number | null;
@@ -93,6 +95,8 @@ export async function computeDocumentProfits(docs: DocForProfit[]): Promise<Docu
         id: l.id,
         productName: l.productName,
         colorVariantName: l.colorVariantName,
+        productId: l.productId,
+        colorVariantId: l.colorVariantId,
         quantity: l.quantity,
         lineTotal: Number(l.lineTotal),
         unitCost: resolved.unitCost,

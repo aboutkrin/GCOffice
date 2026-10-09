@@ -7,7 +7,7 @@ import { assertAdmin } from "@/lib/auth";
 import { serialize } from "@/lib/utils";
 import { importLotSchema, type ImportLotFormData } from "@/lib/validators";
 import { computeLandedCosts, normalizeCode, normalizeSupplier } from "@/lib/landed-cost";
-import { matchSupplierCodes } from "@/data/import-lots";
+import { matchSupplierCodes, searchLotItemsForCost } from "@/data/import-lots";
 import { lockDocumentLineCosts } from "@/data/document-profit";
 import { extractProformaInvoice, PiExtractConfigError } from "@/lib/pi-extract";
 import type { Prisma } from "@/generated/prisma/client";
@@ -274,5 +274,64 @@ export async function relockDocumentCosts(documentId: string): Promise<ActionRes
     return { success: true };
   } catch (error) {
     return { success: false, error: errorMessage(error, "ไม่สามารถคำนวณต้นทุนใหม่ได้") };
+  }
+}
+
+/** Profit card: lot lines to pick a document line's cost from. */
+export async function searchLotItemsForCostAction(params: {
+  productId: string | null;
+  colorVariantId: string | null;
+  query?: string;
+}) {
+  await assertAdmin();
+  return searchLotItemsForCost({ ...params, query: params.query?.slice(0, 100) });
+}
+
+/**
+ * Profit card: link a lot line that was never matched to the product/colour
+ * of the bill line, and remember the code for that supplier — so the line
+ * counts in this product's average cost from now on.
+ */
+export async function linkLotItemToProduct(
+  itemId: string,
+  productId: string,
+  colorVariantId: string | null
+): Promise<ActionResult> {
+  try {
+    await assertAdmin();
+    const item = await prisma.supplierInvoiceItem.findUnique({
+      where: { id: itemId },
+      select: { productId: true, supplierCode: true, invoice: { select: { supplierName: true, lotId: true } } },
+    });
+    if (!item) return { success: false, error: "ไม่พบรายการในล็อตนำเข้า" };
+    if (item.productId) return { success: false, error: "รายการนี้จับคู่กับสินค้าแล้ว" };
+    if (colorVariantId) {
+      const variant = await prisma.productColorVariant.findFirst({
+        where: { id: colorVariantId, productId },
+        select: { id: true },
+      });
+      if (!variant) colorVariantId = null;
+    }
+
+    const supplierKey = normalizeSupplier(item.invoice.supplierName);
+    const codeKey = normalizeCode(item.supplierCode);
+    await prisma.$transaction(async (tx) => {
+      await tx.supplierInvoiceItem.update({
+        where: { id: itemId },
+        data: { productId, colorVariantId },
+      });
+      if (codeKey) {
+        await tx.supplierCodeAlias.upsert({
+          where: { supplierKey_codeKey: { supplierKey, codeKey } },
+          create: { supplierKey, codeKey, supplierCode: item.supplierCode, productId, colorVariantId },
+          update: { supplierCode: item.supplierCode, productId, colorVariantId },
+        });
+      }
+    });
+
+    revalidateLots(item.invoice.lotId);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: errorMessage(error, "ไม่สามารถจับคู่สินค้าได้") };
   }
 }
