@@ -4,6 +4,7 @@ import { AlertTriangle, Plus, Search, Ship, Truck } from "lucide-react";
 import { getImportLots } from "@/data/import-lots";
 import { formatBaht, formatNumber } from "@/lib/thai-currency";
 import { formatThaiDateShort } from "@/lib/thai-date";
+import { ImportLotRow } from "@/components/import-lots/import-lot-row";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,12 +73,12 @@ export default async function ImportLotsPage({
             </TableHeader>
             <TableBody>
               {lots.map((lot) => (
-                <TableRow key={lot.id} className="relative">
+                <ImportLotRow key={lot.id} href={`/import-lots/${lot.id}`}>
                   <TableCell className="whitespace-nowrap">
                     {formatThaiDateShort(new Date(lot.orderDate))}
                   </TableCell>
                   <TableCell>
-                    <Link href={`/import-lots/${lot.id}`} className="font-medium after:absolute after:inset-0">
+                    <Link href={`/import-lots/${lot.id}`} className="font-medium hover:underline">
                       {lot.name}
                     </Link>
                     <p className="text-muted-foreground text-xs">
@@ -110,7 +111,7 @@ export default async function ImportLotsPage({
                       </Badge>
                     )}
                   </TableCell>
-                </TableRow>
+                </ImportLotRow>
               ))}
             </TableBody>
           </Table>
