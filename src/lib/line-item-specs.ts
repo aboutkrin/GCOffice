@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * Prisma include for document line items that also pulls the product's
- * website tile facts, so previews can print "1 กล่อง สามารถปูได้ … ตร.ม.".
+ * website tile facts, so previews can print "(1 กล่อง / … ตร.ม.)".
  */
 export const lineItemsWithSpecsInclude = {
   orderBy: { sequence: "asc" as const },
