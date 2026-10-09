@@ -14,7 +14,6 @@ export interface PayrollSlipData {
   /** Employee's own bank account (entered on their profile page) */
   bankAccount?: {
     bankName?: string | null;
-    accountName?: string | null;
     accountNumber?: string | null;
   };
   status: string;
@@ -127,7 +126,6 @@ export const PayrollSlipPreview = forwardRef<HTMLDivElement, { data: PayrollSlip
         <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 print:grid-cols-2">
           <div>
             <InfoRow label="ชื่อ-นามสกุล" sub="Employee name" value={<span className="font-semibold">{data.employeeName}</span>} />
-            <InfoRow label="ชื่อบัญชี" sub="Account name" value={data.bankAccount?.accountName || "-"} />
             <InfoRow
               label="เลขที่บัญชี"
               sub="Bank account"
@@ -135,6 +133,7 @@ export const PayrollSlipPreview = forwardRef<HTMLDivElement, { data: PayrollSlip
                 [data.bankAccount?.bankName, data.bankAccount?.accountNumber].filter(Boolean).join(" · ") || "-"
               }
             />
+            <InfoRow label="เงินเดือน" sub="Monthly salary" value={`${formatNumber(data.monthlySalary)} บาท`} />
             <InfoRow
               label="อัตราค่าแรง"
               sub="Wage rate"
@@ -145,7 +144,6 @@ export const PayrollSlipPreview = forwardRef<HTMLDivElement, { data: PayrollSlip
             <InfoRow label="รอบเงินเดือน" sub="Payroll period" value={<span className="font-semibold">{periodLabel}</span>} />
             <InfoRow label="วันที่จ่าย" sub="Payment date" value={paymentDate} />
             <InfoRow label="วันทำงานที่คิดเงิน" sub="Paid days" value={`${data.paidDays} / 30 วัน`} />
-            <InfoRow label="เงินเดือน" sub="Monthly salary" value={`${formatNumber(data.monthlySalary)} บาท`} />
           </div>
         </div>
 

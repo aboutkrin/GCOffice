@@ -30,7 +30,6 @@ export async function PayrollSlipRoute({ payroll, backHref }: { payroll: SavedPa
         items: payroll.items.map((i) => ({ kind: i.kind, name: i.name, amount: Number(i.amount) })),
         bankAccount: {
           bankName: payroll.profile.bankName,
-          accountName: payroll.profile.bankAccountName,
           accountNumber: payroll.profile.bankAccountNumber,
         },
         company: company
