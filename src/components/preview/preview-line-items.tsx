@@ -42,11 +42,10 @@ interface PreviewLineItemsProps {
 }
 
 export function PreviewLineItems({ items }: PreviewLineItemsProps) {
-  // "จำนวน/กล่อง" + "ราคา/กล่อง" when every line shares one unit; otherwise
-  // generic headers and the unit printed after each quantity.
+  // "ราคา/กล่อง" when every line shares one unit; otherwise the generic
+  // header and the unit printed after each quantity.
   const units = new Set(items.map(unitOf));
   const commonUnit = units.size === 1 ? [...units][0] : null;
-  const quantityHeader = commonUnit ? `จำนวน/${commonUnit}` : "จำนวน";
   const priceHeader = commonUnit ? `ราคา/${commonUnit}` : "ราคา/หน่วย";
 
   return (
@@ -61,7 +60,7 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
               รายการ
             </th>
             <th className="border border-gray-700 px-1 sm:px-2 py-1 sm:py-1.5 text-center w-10 sm:w-20">
-              {quantityHeader}
+              จำนวน
             </th>
             <th className="border border-gray-700 px-1 sm:px-2 py-1 sm:py-1.5 text-right w-16 sm:w-28">
               {priceHeader}
