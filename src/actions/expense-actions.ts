@@ -5,6 +5,19 @@ import { expenseSchema, expenseCategorySchema } from "@/lib/validators";
 import { serialize } from "@/lib/utils";
 import { assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+const PAYROLL_LOCKED_MESSAGE =
+  "ค่าใช้จ่ายนี้มาจากสลิปเงินเดือน แก้ไขหรือลบได้ที่หน้าเงินเดือน (ยกเลิกการยืนยันสลิป)";
+
+/** Expenses posted by a confirmed payslip are owned by payroll (src/actions/payroll-actions.ts). */
+async function assertNotPayrollExpense(id: string) {
+  const payroll = await prisma.payroll.findUnique({
+    where: { expenseId: id },
+    select: { id: true },
+  });
+  if (payroll) throw new Error(PAYROLL_LOCKED_MESSAGE);
+}
 
 async function ensureExpenseTables() {
   try {
@@ -111,6 +124,7 @@ export async function createExpense(data: unknown) {
 export async function updateExpense(id: string, data: unknown) {
   try {
     await assertAdmin();
+    await assertNotPayrollExpense(id);
     const validated = expenseSchema.parse(data);
 
     const expense = await prisma.expense.update({
@@ -139,6 +153,7 @@ export async function updateExpense(id: string, data: unknown) {
 export async function deleteExpense(id: string) {
   try {
     await assertAdmin();
+    await assertNotPayrollExpense(id);
     await prisma.expense.delete({
       where: { id },
     });
@@ -148,6 +163,40 @@ export async function deleteExpense(id: string) {
       error instanceof Error
         ? error.message
         : "ไม่สามารถลบค่าใช้จ่ายได้ กรุณาลองใหม่อีกครั้ง"
+    );
+  }
+}
+
+/** Create several expenses at once ("คัดลอกจากเดือนก่อน"). */
+export async function copyExpenses(data: unknown) {
+  try {
+    const user = await assertAdmin();
+    await ensureExpenseTables();
+    const items = z
+      .array(expenseSchema)
+      .min(1, "กรุณาเลือกอย่างน้อย 1 รายการ")
+      .max(200)
+      .parse(data);
+
+    const result = await prisma.expense.createMany({
+      data: items.map((item) => ({
+        name: item.name,
+        amount: item.amount,
+        expenseDate: item.expenseDate,
+        categoryId: item.categoryId,
+        paymentMethod: item.paymentMethod,
+        notes: item.notes,
+        createdById: user.id,
+      })),
+    });
+
+    revalidatePath("/expenses");
+    return { count: result.count };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "ไม่สามารถคัดลอกค่าใช้จ่ายได้ กรุณาลองใหม่อีกครั้ง"
     );
   }
 }

@@ -165,8 +165,8 @@ export async function getExpenses(params?: {
 
     const expenses = await prisma.expense.findMany({
       where,
-      include: { category: true },
-      orderBy: { expenseDate: "desc" },
+      include: { category: true, payroll: { select: { id: true } } },
+      orderBy: [{ expenseDate: "desc" }, { createdAt: "desc" }],
     });
 
     return serialize(expenses);
@@ -180,7 +180,7 @@ export async function getExpenseById(id: string) {
 
   const expense = await prisma.expense.findUnique({
     where: { id },
-    include: { category: true },
+    include: { category: true, payroll: { select: { id: true } } },
   });
   return serialize(expense);
 }
@@ -196,6 +196,49 @@ export async function getExpenseCategories() {
     return serialize(categories);
   } catch {
     return [];
+  }
+}
+
+/**
+ * Recent distinct expense names (latest first) with their last category, payment method and
+ * amount, for the quick-add suggestions, plus how often each category was used recently.
+ */
+export async function getExpenseQuickData() {
+  await ensureExpenseTables();
+
+  try {
+    const recent = await prisma.expense.findMany({
+      where: { payroll: null },
+      select: { name: true, amount: true, categoryId: true, paymentMethod: true },
+      orderBy: [{ expenseDate: "desc" }, { createdAt: "desc" }],
+      take: 300,
+    });
+
+    const seen = new Set<string>();
+    const templates: {
+      name: string;
+      amount: number;
+      categoryId: string;
+      paymentMethod: string;
+    }[] = [];
+    const categoryUsage: Record<string, number> = {};
+
+    for (const e of recent) {
+      categoryUsage[e.categoryId] = (categoryUsage[e.categoryId] ?? 0) + 1;
+      const key = e.name.trim().toLowerCase();
+      if (seen.has(key) || templates.length >= 50) continue;
+      seen.add(key);
+      templates.push({
+        name: e.name,
+        amount: Number(e.amount),
+        categoryId: e.categoryId,
+        paymentMethod: e.paymentMethod,
+      });
+    }
+
+    return { templates, categoryUsage };
+  } catch {
+    return { templates: [], categoryUsage: {} };
   }
 }
 
