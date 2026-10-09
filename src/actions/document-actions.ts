@@ -7,6 +7,7 @@ import { requireUserAction, assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { DocumentStatus, PaymentTermType } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
+import { flattenLineItemSpecs, lineItemsWithSpecsInclude } from "@/lib/line-item-specs";
 import { toUTCNoon } from "@/lib/thai-date";
 import { ZodError } from "zod";
 import { checkAvailabilityForDocument, type StockShortage } from "@/data/stock-availability";
@@ -622,7 +623,7 @@ export async function getDocumentForShare(id: string) {
   const document = await prisma.document.findUnique({
     where: { id },
     include: {
-      lineItems: { orderBy: { sequence: "asc" } },
+      lineItems: lineItemsWithSpecsInclude,
       paymentTerms: { orderBy: { sequence: "asc" } },
       depositDeductions: { orderBy: { sequence: "asc" } },
       company: true,
@@ -635,6 +636,7 @@ export async function getDocumentForShare(id: string) {
 
   const result = {
     ...document,
+    lineItems: flattenLineItemSpecs(document.lineItems),
     companySnapshot: document.company
       ? {
           name: document.company.name,

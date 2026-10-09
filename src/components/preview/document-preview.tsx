@@ -55,6 +55,8 @@ interface LineItem {
   quantity: number;
   unitPrice: number;
   lineTotal: number;
+  sqmPerUnit?: string | null;
+  unitLabel?: string | null;
 }
 
 interface PaymentTerm {
