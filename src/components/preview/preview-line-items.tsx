@@ -30,7 +30,10 @@ function unitOf(item: LineItem) {
 function formatSqm(value?: string | null) {
   const n = value ? Number(value) : NaN;
   if (!Number.isFinite(n) || n <= 0) return null;
-  return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat("th-TH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n);
 }
 
 function formatQuantity(n: number) {
@@ -110,7 +113,7 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
                             </>
                           )}
                           {item.colorVariantName && sqm && " "}
-                          {sqm && <>(1 {unitOf(item)} สามารถปูได้ {sqm} ตร.ม.)</>}
+                          {sqm && <>(1 {unitOf(item)} / {sqm} ตร.ม.)</>}
                         </div>
                       );
                     })()}
