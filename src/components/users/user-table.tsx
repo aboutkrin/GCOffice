@@ -164,7 +164,11 @@ export function UserTable({ users, currentUserId }: UserTableProps) {
     if (!deleteId) return;
     startTransition(async () => {
       try {
-        await deleteUser(deleteId);
+        const result = await deleteUser(deleteId);
+        if (result.error) {
+          toast.error(result.error);
+          return;
+        }
         toast.success("ลบผู้ใช้งานเรียบร้อยแล้ว");
       } catch (error: any) {
         toast.error(error?.message ?? "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");

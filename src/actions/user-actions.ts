@@ -7,6 +7,7 @@ import { assertAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@/generated/prisma/client";
+import { actionErrorMessage } from "@/lib/action-error";
 
 function rethrowUsernameConflict(err: unknown): never {
   if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -104,42 +105,70 @@ export async function updateUser(id: string, data: unknown) {
   return serialize(user);
 }
 
-export async function deleteUser(id: string) {
-  const currentUser = await assertAdmin();
+export async function deleteUser(id: string): Promise<{ error?: string }> {
+  try {
+    const currentUser = await assertAdmin();
 
-  if (currentUser.id === id) {
-    throw new Error("ไม่สามารถลบบัญชีของตัวเองได้");
-  }
-
-  const target = await prisma.profile.findUnique({ where: { id } });
-  if (!target) {
-    throw new Error("ไม่พบผู้ใช้งานนี้");
-  }
-
-  if (target.role === "ADMIN" && target.status === "ACTIVE") {
-    const otherActiveAdmins = await prisma.profile.count({
-      where: { role: "ADMIN", status: "ACTIVE", id: { not: id } },
-    });
-    if (otherActiveAdmins === 0) {
-      throw new Error("ต้องมีผู้ดูแลระบบอย่างน้อย 1 คน");
+    if (currentUser.id === id) {
+      throw new Error("ไม่สามารถลบบัญชีของตัวเองได้");
     }
+
+    const target = await prisma.profile.findUnique({ where: { id } });
+    if (!target) {
+      throw new Error("ไม่พบผู้ใช้งานนี้");
+    }
+
+    if (target.role === "ADMIN" && target.status === "ACTIVE") {
+      const otherActiveAdmins = await prisma.profile.count({
+        where: { role: "ADMIN", status: "ACTIVE", id: { not: id } },
+      });
+      if (otherActiveAdmins === 0) {
+        throw new Error("ต้องมีผู้ดูแลระบบอย่างน้อย 1 คน");
+      }
+    }
+
+    // Records that must keep their (required) creator: block instead of losing who made them.
+    const [documents, payrolls, chinaShipments, stockDocuments, leavesForOthers] = await Promise.all([
+      prisma.document.count({ where: { createdById: id } }),
+      prisma.payroll.count({ where: { OR: [{ profileId: id }, { createdById: id }] } }),
+      prisma.chinaShipment.count({ where: { createdById: id } }),
+      prisma.stockDocument.count({ where: { createdById: id } }),
+      prisma.leaveRequest.count({ where: { createdById: id, profileId: { not: id } } }),
+    ]);
+    if (documents > 0) {
+      throw new Error(`ผู้ใช้นี้มีเอกสาร ${documents} รายการในระบบ กรุณาปิดการใช้งานแทนการลบ`);
+    }
+    if (payrolls > 0) {
+      throw new Error("ผู้ใช้นี้มีประวัติเงินเดือนในระบบ กรุณาปิดการใช้งานแทนการลบ");
+    }
+    if (chinaShipments > 0 || stockDocuments > 0 || leavesForOthers > 0) {
+      throw new Error("ผู้ใช้นี้มีรายการสินค้าจากจีน ใบสต็อก หรือการลาของพนักงานอื่นที่บันทึกไว้ กรุณาปิดการใช้งานแทนการลบ");
+    }
+
+    // Optional "created by" links are cleared; the user's own leave and salary go with them.
+    await prisma.$transaction([
+      prisma.customer.updateMany({ where: { createdById: id }, data: { createdById: null } }),
+      prisma.product.updateMany({ where: { createdById: id }, data: { createdById: null } }),
+      prisma.expense.updateMany({ where: { createdById: id }, data: { createdById: null } }),
+      prisma.vendorCost.updateMany({ where: { createdById: id }, data: { createdById: null } }),
+      prisma.stockMovement.updateMany({ where: { createdById: id }, data: { createdById: null } }),
+      prisma.importLot.updateMany({ where: { createdById: id }, data: { createdById: null } }),
+      prisma.stockDocument.updateMany({ where: { postedById: id }, data: { postedById: null } }),
+      prisma.leaveRequest.updateMany({ where: { reviewedById: id }, data: { reviewedById: null } }),
+      prisma.leaveRequest.deleteMany({ where: { profileId: id } }),
+      prisma.profile.delete({ where: { id } }),
+    ]);
+
+    // The login account is removed last; an earlier failed attempt may already have removed it.
+    const admin = createAdminClient();
+    const { error } = await admin.auth.admin.deleteUser(id);
+    if (error && error.status !== 404) {
+      console.error(error);
+    }
+  } catch (err) {
+    return { error: actionErrorMessage(err) };
   }
-
-  const documentCount = await prisma.document.count({ where: { createdById: id } });
-  if (documentCount > 0) {
-    throw new Error("ผู้ใช้นี้มีเอกสารในระบบ กรุณาปิดการใช้งานแทนการลบ");
-  }
-
-  const payrollCount = await prisma.payroll.count({ where: { profileId: id } });
-  if (payrollCount > 0) {
-    throw new Error("ผู้ใช้นี้มีประวัติเงินเดือนในระบบ กรุณาปิดการใช้งานแทนการลบ");
-  }
-
-  const admin = createAdminClient();
-  const { error } = await admin.auth.admin.deleteUser(id);
-  if (error) throw new Error(error.message);
-
-  await prisma.profile.delete({ where: { id } });
 
   revalidatePath("/users");
+  return {};
 }
