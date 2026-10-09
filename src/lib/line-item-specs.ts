@@ -1,3 +1,5 @@
+import { prisma } from "@/lib/prisma";
+
 /**
  * Prisma include for document line items that also pulls the product's
  * website tile facts, so previews can print "1 กล่อง สามารถปูได้ … ตร.ม.".
@@ -31,12 +33,37 @@ export function sqmPerUnitOf(specs: Specs | null): string | null {
   return Number.isFinite(sqm) && sqm > 0 ? sqm.toFixed(4) : null;
 }
 
-type WithProductSpecs = { product?: { websiteSpecs: unknown } | null };
+type WithProductSpecs = {
+  productSku?: string | null;
+  product?: { websiteSpecs: unknown } | null;
+};
 
-/** Replaces the joined `product` with flat `sqmPerUnit` / `unitLabel` fields. */
-export function flattenLineItemSpecs<T extends WithProductSpecs>(items: T[]) {
+/**
+ * Replaces the joined `product` with flat `sqmPerUnit` / `unitLabel` fields.
+ * Lines saved without a `productId` (older edits dropped it) fall back to the
+ * product with the line's snapshotted `productSku`.
+ */
+export async function flattenLineItemSpecs<T extends WithProductSpecs>(items: T[]) {
+  const missingSkus = [
+    ...new Set(
+      items
+        .filter((i) => !i.product?.websiteSpecs && i.productSku)
+        .map((i) => i.productSku as string)
+    ),
+  ];
+  const bySku = new Map<string, unknown>();
+  if (missingSkus.length > 0) {
+    const products = await prisma.product.findMany({
+      where: { sku: { in: missingSkus } },
+      select: { sku: true, websiteSpecs: true },
+    });
+    for (const p of products) bySku.set(p.sku, p.websiteSpecs);
+  }
+
   return items.map(({ product, ...item }) => {
-    const specs = (product?.websiteSpecs ?? null) as Specs | null;
+    const raw =
+      product?.websiteSpecs ?? (item.productSku ? bySku.get(item.productSku) : null) ?? null;
+    const specs = raw as Specs | null;
     return {
       ...item,
       sqmPerUnit: sqmPerUnitOf(specs),

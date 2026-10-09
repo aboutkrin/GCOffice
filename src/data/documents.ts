@@ -178,7 +178,7 @@ export async function getDocumentById(id: string) {
       },
     });
     if (!data) return serialize(data);
-    return serialize({ ...data, lineItems: flattenLineItemSpecs(data.lineItems) });
+    return serialize({ ...data, lineItems: await flattenLineItemSpecs(data.lineItems) });
   } catch {
     return null;
   }
