@@ -305,13 +305,27 @@ export async function getInventorySummary() {
         const product = productById.get(item.productId);
         if (!product) continue;
 
-        const key = availabilityKey(item.productId, item.colorVariantId);
+        // Older lines carry only the colour name (no colorVariantId); resolve
+        // it to the variant so the row shows that colour's stock and the
+        // "รับเข้า" dialog posts against the variant instead of the product.
+        const colorName = item.colorVariantName?.trim().toLowerCase();
+        const variant = item.colorVariantId
+          ? product.colorVariants.find((v) => v.id === item.colorVariantId)
+          : colorName
+            ? product.colorVariants.find(
+                (v) =>
+                  v.name.trim().toLowerCase() === colorName ||
+                  v.sku?.trim().toLowerCase() === colorName,
+              )
+            : undefined;
+        const colorVariantId = item.colorVariantId ?? variant?.id ?? null;
+
+        const key = availabilityKey(item.productId, colorVariantId);
 
         if (!demandMap.has(key)) {
           let currentStock = product.stockQuantity;
           let colorVariantSku: string | null = null;
-          if (item.colorVariantId) {
-            const variant = product.colorVariants.find((v) => v.id === item.colorVariantId);
+          if (colorVariantId) {
             currentStock = variant?.stockQuantity ?? 0;
             colorVariantSku = variant?.sku ?? null;
           }
@@ -321,7 +335,7 @@ export async function getInventorySummary() {
             productSku: item.productSku ?? product.sku,
             productName: item.productName,
             productImage: item.productImage || product.imageUrl,
-            colorVariantId: item.colorVariantId,
+            colorVariantId,
             colorVariantName: item.colorVariantName,
             colorVariantSku,
             currentStock,
