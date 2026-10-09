@@ -4,6 +4,7 @@ import { Eye, FileText, Pencil } from "lucide-react";
 import { formatBaht } from "@/lib/thai-currency";
 import { formatThaiDate } from "@/lib/thai-date";
 import { Button } from "@/components/ui/button";
+import { ProductThumb } from "@/components/ui/product-thumb";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentStatusBadge } from "./document-status-badge";
 
@@ -13,6 +14,7 @@ interface SummaryLine {
   productName: string;
   colorVariantName: string | null;
   colorVariantSku: string | null;
+  imageUrl?: string | null;
   quantity: number;
   unitPrice: unknown;
   lineTotal: unknown;
@@ -42,9 +44,16 @@ export interface DocumentSummaryData {
 }
 
 /** Read-only summary of a quotation as it was issued (the profit page shows this instead of the edit form). */
-export function DocumentSummaryCard({ doc, basePath }: { doc: DocumentSummaryData; basePath: string }) {
+export function DocumentSummaryCard({
+  doc,
+  basePath,
+}: {
+  doc: DocumentSummaryData;
+  basePath: string;
+}) {
   const c = doc.customer;
-  const customerName = (c.type === "COMPANY" && c.companyName) || c.customerName || "-";
+  const customerName =
+    (c.type === "COMPANY" && c.companyName) || c.customerName || "-";
   const shipping = Number(doc.shippingCost);
   const discount = Number(doc.discountAmount);
 
@@ -59,7 +68,8 @@ export function DocumentSummaryCard({ doc, basePath }: { doc: DocumentSummaryDat
           </CardTitle>
           <p className="text-muted-foreground text-sm">
             {customerName}
-            {c.phone && ` · ${c.phone}`} · {formatThaiDate(new Date(doc.documentDate))}
+            {c.phone && ` · ${c.phone}`} ·{" "}
+            {formatThaiDate(new Date(doc.documentDate))}
           </p>
         </div>
         <div className="flex gap-2">
@@ -78,25 +88,49 @@ export function DocumentSummaryCard({ doc, basePath }: { doc: DocumentSummaryDat
       <CardContent className="space-y-3">
         <div className="divide-y text-sm">
           {doc.lineItems.map((l) => (
-            <div key={l.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 py-2 sm:grid-cols-[minmax(0,1fr)_70px_110px_120px]">
-              <p className="break-words">
-                {l.productSku && <span className="text-muted-foreground mr-1.5 block font-mono text-xs whitespace-nowrap sm:inline">{l.productSku}</span>}
-                {l.productName}
-                {l.colorVariantName && (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · {l.colorVariantName}
-                    {l.colorVariantSku && <span className="font-mono text-xs whitespace-nowrap"> ({l.colorVariantSku})</span>}
-                  </span>
-                )}
-              </p>
+            <div
+              key={l.id}
+              className="grid grid-cols-1 items-center gap-x-4 gap-y-1 py-2 sm:grid-cols-[minmax(0,1fr)_70px_110px_120px]"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <ProductThumb
+                  src={l.imageUrl}
+                  alt={l.productName}
+                  size={48}
+                  fallback="icon"
+                  className="border"
+                />
+                <p className="min-w-0 break-words">
+                  {l.productSku && (
+                    <span className="text-muted-foreground mr-1.5 block font-mono text-xs whitespace-nowrap sm:inline">
+                      {l.productSku}
+                    </span>
+                  )}
+                  {l.productName}
+                  {l.colorVariantName && (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {l.colorVariantName}
+                      {l.colorVariantSku && (
+                        <span className="font-mono text-xs whitespace-nowrap">
+                          {" "}
+                          ({l.colorVariantSku})
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </p>
+              </div>
               <p className="text-muted-foreground hidden text-right tabular-nums sm:block">
                 × {l.quantity.toLocaleString("th-TH")}
               </p>
-              <p className="text-muted-foreground hidden text-right tabular-nums sm:block">{formatBaht(Number(l.unitPrice))}</p>
+              <p className="text-muted-foreground hidden text-right tabular-nums sm:block">
+                {formatBaht(Number(l.unitPrice))}
+              </p>
               <p className="text-right font-medium tabular-nums">
                 <span className="text-muted-foreground mr-2 text-xs font-normal sm:hidden">
-                  {l.quantity.toLocaleString("th-TH")} × {formatBaht(Number(l.unitPrice))}
+                  {l.quantity.toLocaleString("th-TH")} ×{" "}
+                  {formatBaht(Number(l.unitPrice))}
                 </span>
                 {formatBaht(Number(l.lineTotal))}
               </p>
@@ -107,10 +141,17 @@ export function DocumentSummaryCard({ doc, basePath }: { doc: DocumentSummaryDat
           <Row label="รวมเป็นเงิน" value={Number(doc.subtotal)} />
           {shipping > 0 && <Row label="ค่าขนส่ง" value={shipping} />}
           {discount > 0 && <Row label="ส่วนลด" value={-discount} />}
-          {doc.vatEnabled && <Row label={`VAT ${Number(doc.vatRate)}%`} value={Number(doc.vatAmount)} />}
+          {doc.vatEnabled && (
+            <Row
+              label={`VAT ${Number(doc.vatRate)}%`}
+              value={Number(doc.vatAmount)}
+            />
+          )}
           <div className="flex justify-between border-t pt-1 font-semibold">
             <dt>ยอดรวมทั้งสิ้น</dt>
-            <dd className="tabular-nums">{formatBaht(Number(doc.grandTotal))}</dd>
+            <dd className="tabular-nums">
+              {formatBaht(Number(doc.grandTotal))}
+            </dd>
           </div>
         </dl>
       </CardContent>

@@ -22,6 +22,10 @@ export default async function QuotationProfitPage({ params }: { params: Promise<
     ...document,
     // Live customer data, same as the preview/print page
     customer: (document.customer ?? document.customerSnapshot) as DocumentSummaryData["customer"],
+    lineItems: document.lineItems.map((l) => ({
+      ...l,
+      imageUrl: profit.lines.find((p) => p.id === l.id)?.imageUrl ?? l.productImage,
+    })),
   };
 
   return (
