@@ -120,13 +120,13 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
             >
               <div className="min-w-0">
                 <p className="break-words font-medium">
-                  {l.productSku && <span className="text-muted-foreground mr-1.5 font-mono text-xs">{l.productSku}</span>}
+                  {l.productSku && <span className="text-muted-foreground mr-1.5 block font-mono text-xs whitespace-nowrap sm:inline">{l.productSku}</span>}
                   {l.productName}
                   {l.colorVariantName && (
                     <span className="text-muted-foreground">
                       {" "}
                       · {l.colorVariantName}
-                      {l.colorVariantSku && <span className="font-mono text-xs"> ({l.colorVariantSku})</span>}
+                      {l.colorVariantSku && <span className="font-mono text-xs whitespace-nowrap"> ({l.colorVariantSku})</span>}
                     </span>
                   )}
                 </p>

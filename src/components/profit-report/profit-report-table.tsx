@@ -69,7 +69,7 @@ export function ProfitReportTable({ rows }: { rows: ProfitReportRow[] }) {
                 <TableCell className="whitespace-nowrap">{formatThaiDateShort(new Date(r.documentDate))}</TableCell>
                 <TableCell className="max-w-64">
                   <Link
-                    href={`/quotations/${r.documentId}`}
+                    href={`/quotations/${r.documentId}/profit`}
                     className="text-primary font-medium hover:underline"
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -109,13 +109,13 @@ export function ProfitReportTable({ rows }: { rows: ProfitReportRow[] }) {
                           className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 sm:grid-cols-[minmax(0,1fr)_80px_200px_120px_120px]"
                         >
                           <span className="break-words">
-                            {l.productSku && <span className="text-muted-foreground mr-1.5 font-mono text-xs">{l.productSku}</span>}
+                            {l.productSku && <span className="text-muted-foreground mr-1.5 block font-mono text-xs whitespace-nowrap sm:inline">{l.productSku}</span>}
                             {l.productName}
                             {l.colorVariantName && (
                               <span className="text-muted-foreground">
                                 {" "}
                                 · {l.colorVariantName}
-                                {l.colorVariantSku && <span className="font-mono text-xs"> ({l.colorVariantSku})</span>}
+                                {l.colorVariantSku && <span className="font-mono text-xs whitespace-nowrap"> ({l.colorVariantSku})</span>}
                               </span>
                             )}
                           </span>
