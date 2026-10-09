@@ -42,9 +42,12 @@ interface PreviewLineItemsProps {
 }
 
 export function PreviewLineItems({ items }: PreviewLineItemsProps) {
-  // "ราคา/กล่อง" when every line shares one unit, else the generic header.
+  // "จำนวน/กล่อง" + "ราคา/กล่อง" when every line shares one unit; otherwise
+  // generic headers and the unit printed after each quantity.
   const units = new Set(items.map(unitOf));
-  const priceHeader = units.size === 1 ? `ราคา/${[...units][0]}` : "ราคา/หน่วย";
+  const commonUnit = units.size === 1 ? [...units][0] : null;
+  const quantityHeader = commonUnit ? `จำนวน/${commonUnit}` : "จำนวน";
+  const priceHeader = commonUnit ? `ราคา/${commonUnit}` : "ราคา/หน่วย";
 
   return (
     <div className="mb-3">
@@ -58,7 +61,7 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
               รายการ
             </th>
             <th className="border border-gray-700 px-1 sm:px-2 py-1 sm:py-1.5 text-center w-10 sm:w-20">
-              จำนวน
+              {quantityHeader}
             </th>
             <th className="border border-gray-700 px-1 sm:px-2 py-1 sm:py-1.5 text-right w-16 sm:w-28">
               {priceHeader}
@@ -123,8 +126,13 @@ export function PreviewLineItems({ items }: PreviewLineItemsProps) {
 
               {/* Quantity */}
               <td className="border border-gray-200 px-1 sm:px-2 py-1 sm:py-1.5 text-center text-gray-700 sm:whitespace-nowrap">
-                <span className="font-medium text-gray-900">{formatQuantity(item.quantity)}</span>{" "}
-                <span className="text-[9px] text-gray-500">{unitOf(item)}</span>
+                <span className="font-medium text-gray-900">{formatQuantity(item.quantity)}</span>
+                {!commonUnit && (
+                  <>
+                    {" "}
+                    <span className="text-[9px] text-gray-500">{unitOf(item)}</span>
+                  </>
+                )}
               </td>
 
               {/* Unit Price */}
