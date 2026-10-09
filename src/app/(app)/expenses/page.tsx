@@ -1,74 +1,57 @@
-import Link from "next/link";
-import { Plus } from "lucide-react";
-
-import { getExpenses, getExpenseCategories } from "@/data/expenses";
+import {
+  getExpenses,
+  getExpenseCategories,
+  getExpenseQuickData,
+} from "@/data/expenses";
 import { getThaiNow } from "@/lib/thai-date";
-import { Button } from "@/components/ui/button";
-import { ExpenseTable } from "@/components/expenses/expense-table";
+import { ExpenseBoard } from "@/components/expenses/expense-board";
+import type { ExpenseRow } from "@/components/expenses/expense-utils";
 
 export const dynamic = "force-dynamic";
 
 interface ExpensesPageProps {
   searchParams: Promise<{
-    search?: string;
     month?: string;
     year?: string;
-    categoryId?: string;
   }>;
 }
 
 export default async function ExpensesPage({ searchParams }: ExpensesPageProps) {
   const params = await searchParams;
   const thaiNow = getThaiNow();
-  const currentYear = params.year
-    ? parseInt(params.year, 10)
-    : thaiNow.year;
-  const currentMonth = params.month === "all"
-    ? undefined
-    : params.month
-      ? parseInt(params.month, 10)
-      : thaiNow.month;
+  const year = params.year ? parseInt(params.year, 10) || thaiNow.year : thaiNow.year;
+  const parsedMonth = params.month ? parseInt(params.month, 10) : thaiNow.month;
+  const month =
+    params.month === "all" || !(parsedMonth >= 1 && parsedMonth <= 12)
+      ? undefined
+      : parsedMonth;
 
-  const [expenses, categories] = await Promise.all([
-    getExpenses({
-      search: params.search,
-      categoryId: params.categoryId,
-      month: currentMonth,
-      year: currentYear,
-    }),
+  // The period before this one: last month, or last year when viewing a whole year
+  const previous = month
+    ? month === 1
+      ? { month: 12, year: year - 1 }
+      : { month: month - 1, year }
+    : { month: undefined, year: year - 1 };
+
+  const [expenses, previousExpenses, categories, quick] = await Promise.all([
+    getExpenses({ month, year }),
+    getExpenses(previous),
     getExpenseCategories(),
+    getExpenseQuickData(),
   ]);
 
-  const totalAmount = expenses.reduce(
-    (sum: number, e: any) => sum + Number(e.amount),
-    0
-  );
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">ค่าใช้จ่ายรายเดือน</h1>
-          <p className="text-muted-foreground text-sm">
-            จัดการค่าใช้จ่ายรายเดือนทั้งหมด
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/expenses/new">
-            <Plus className="size-4" />
-            เพิ่มค่าใช้จ่าย
-          </Link>
-        </Button>
-      </div>
-
-      <ExpenseTable
-        expenses={expenses}
-        categories={categories}
-        totalAmount={totalAmount}
-        currentMonth={currentMonth}
-        currentYear={currentYear}
-        currentCategoryId={params.categoryId}
-      />
-    </div>
+    <ExpenseBoard
+      // serialize() has turned Decimal/Date into number/string
+      expenses={expenses as unknown as ExpenseRow[]}
+      previousExpenses={previousExpenses as unknown as ExpenseRow[]}
+      categories={categories}
+      templates={quick.templates}
+      categoryUsage={quick.categoryUsage}
+      month={month}
+      year={year}
+      currentYear={thaiNow.year}
+      currentMonth={thaiNow.month}
+    />
   );
 }

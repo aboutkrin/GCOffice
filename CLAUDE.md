@@ -140,6 +140,10 @@ WEBSITE products cannot be deleted in GCOffice (delete on the website instead); 
 - DRAFT payslips are recalculated from the current salary + leave on every save/confirm. `confirmPayroll` creates an `Expense` in category "เงินเดือนพนักงาน" (`PAYROLL_EXPENSE_CATEGORY`, created on demand) dated the last day of the month, so it flows into `/expenses` and the dashboard expense totals; `unconfirmPayroll` deletes that expense. Printable slip at `/payroll/[id]/slip`.
 - Users with payslips cannot be deleted (deactivate instead).
 
+### Monthly Expenses (ค่าใช้จ่ายรายเดือน)
+
+`/expenses` (ADMIN) is one client page, `ExpenseBoard` (`src/components/expenses/expense-board.tsx`): month switcher, total / change vs the previous period / count, a per-category breakdown bar (chips filter the list) and the list grouped by day. Adding and editing happen in `ExpenseSheet` (side sheet, bottom sheet on mobile; amount first, name suggestions from `getExpenseQuickData`, category chips with inline "หมวดใหม่", "บันทึกและเพิ่มต่อ"; key `N` opens it). "คัดลอกจากเดือนก่อน" (`ExpenseCopyDialog` → `copyExpenses`) copies chosen rows of last month to the same day this month. `/expenses/new` and `/expenses/[id]/edit` redirect to `/expenses?add=1` / `?edit=<id>`. Expenses posted by a confirmed payslip are read-only (`updateExpense`/`deleteExpense` refuse them; edit via payroll). Category colours come from list order (`buildCategoryColors`), no DB field.
+
 ### Custom Hooks
 
 - `use-line-items.ts` — Manage document line item state

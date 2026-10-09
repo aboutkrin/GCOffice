@@ -1,10 +1,6 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { notFound, redirect } from "next/navigation";
 
-import { getExpenseById, getExpenseCategories } from "@/data/expenses";
-import { Button } from "@/components/ui/button";
-import { ExpenseForm } from "@/components/expenses/expense-form";
+import { getExpenseById } from "@/data/expenses";
 
 interface EditExpensePageProps {
   params: Promise<{ id: string }>;
@@ -12,32 +8,17 @@ interface EditExpensePageProps {
 
 export const dynamic = "force-dynamic";
 
+// Expenses are edited from the sheet on /expenses; open it on the expense's month.
 export default async function EditExpensePage({ params }: EditExpensePageProps) {
   const { id } = await params;
-  const [expense, categories] = await Promise.all([
-    getExpenseById(id),
-    getExpenseCategories(),
-  ]);
+  const expense = await getExpenseById(id);
 
   if (!expense) {
     notFound();
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href={`/expenses/${id}`}>
-            <ArrowLeft className="size-4" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">แก้ไขค่าใช้จ่าย</h1>
-          <p className="text-muted-foreground text-sm">{expense.name}</p>
-        </div>
-      </div>
-
-      <ExpenseForm initialData={expense} categories={categories} />
-    </div>
+  const date = new Date(expense.expenseDate);
+  redirect(
+    `/expenses?month=${date.getUTCMonth() + 1}&year=${date.getUTCFullYear()}&edit=${id}`
   );
 }

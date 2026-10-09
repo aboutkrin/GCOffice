@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Pencil, Calendar, Tag, CreditCard, FileText } from "lucide-react";
+import { ArrowLeft, Lock, Pencil, Calendar, Tag, CreditCard, FileText } from "lucide-react";
 
 import { getExpenseById } from "@/data/expenses";
 import { formatBaht } from "@/lib/thai-currency";
@@ -42,15 +42,24 @@ export default async function ExpenseDetailPage({ params }: ExpenseDetailPagePro
             <p className="text-muted-foreground text-sm">{expense.name}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        {expense.payroll ? (
           <Button variant="outline" asChild>
-            <Link href={`/expenses/${id}/edit`}>
-              <Pencil className="size-4" />
-              แก้ไข
+            <Link href={`/payroll/${expense.payroll.id}`}>
+              <Lock className="size-4" />
+              จากสลิปเงินเดือน
             </Link>
           </Button>
-          <ExpenseDeleteButton id={id} name={expense.name} />
-        </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" asChild>
+              <Link href={`/expenses/${id}/edit`}>
+                <Pencil className="size-4" />
+                แก้ไข
+              </Link>
+            </Button>
+            <ExpenseDeleteButton id={id} name={expense.name} />
+          </div>
+        )}
       </div>
 
       {/* Detail Card */}

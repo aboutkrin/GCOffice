@@ -34,8 +34,8 @@ export function ExpenseDeleteButton({ id, name }: ExpenseDeleteButtonProps) {
         await deleteExpense(id);
         toast.success("ลบค่าใช้จ่ายเรียบร้อยแล้ว");
         router.push("/expenses");
-      } catch {
-        toast.error("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
       } finally {
         setOpen(false);
       }
