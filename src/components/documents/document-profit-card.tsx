@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DecimalInput } from "@/components/ui/decimal-input";
 
+import { LotCostPicker } from "./lot-cost-picker";
+
 const SOURCE_LABELS: Record<CostSource, string> = {
   manual: "กรอกเอง",
   snapshot: "ล็อกไว้ตอนยืนยันบิล",
@@ -37,6 +39,8 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
   const [costs, setCosts] = useState<Record<string, number | "">>(() =>
     Object.fromEntries(profit.lines.map((l) => [l.id, l.manual && l.unitCost != null ? l.unitCost : ""]))
   );
+  // Lot line picked for a cost (label shown until the card reloads)
+  const [picked, setPicked] = useState<Record<string, string>>({});
 
   const live = useMemo(() => {
     const lines = profit.lines.map((l) => {
@@ -104,7 +108,7 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
           <span className="text-muted-foreground text-xs font-normal">(เห็นเฉพาะแอดมิน)</span>
         </CardTitle>
         <Link href="/import-lots" className="text-primary text-sm underline-offset-4 hover:underline">
-          ต้นทุนมาจากล็อตนำเข้า
+          ไปหน้าล็อตนำเข้า
         </Link>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -112,7 +116,7 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
           {live.lines.map((l) => (
             <div
               key={l.id}
-              className="grid grid-cols-[minmax(0,1fr)_120px] items-center gap-2 border-b pb-2 text-sm last:border-0 sm:grid-cols-[minmax(0,1fr)_70px_140px_110px]"
+              className="grid grid-cols-[minmax(0,1fr)_170px] items-center gap-2 border-b pb-2 text-sm last:border-0 sm:grid-cols-[minmax(0,1fr)_70px_190px_110px] lg:grid-cols-[minmax(0,1fr)_70px_240px_110px]"
             >
               <div className="min-w-0">
                 <p className="truncate font-medium">
@@ -126,17 +130,33 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
                   )}
                 >
                   {l.effective == null && <AlertTriangle className="size-3" />}
-                  {l.isManual ? SOURCE_LABELS.manual : SOURCE_LABELS[l.suggestedSource]}
+                  {l.isManual ? (picked[l.id] ?? SOURCE_LABELS.manual) : SOURCE_LABELS[l.suggestedSource]}
                 </p>
               </div>
               <span className="text-muted-foreground hidden text-right tabular-nums sm:block">
                 × {l.quantity.toLocaleString("th-TH")}
               </span>
-              <DecimalInput
-                value={costs[l.id] ?? ""}
-                placeholder={l.suggestedCost != null ? `${l.suggestedCost} /หน่วย` : "ต้นทุน/หน่วย"}
-                onChange={(v) => setCosts((prev) => ({ ...prev, [l.id]: v || "" }))}
-              />
+              <div className="flex items-center gap-1">
+                <DecimalInput
+                  value={costs[l.id] ?? ""}
+                  placeholder={l.suggestedCost != null ? `${l.suggestedCost} /หน่วย` : "ต้นทุน/หน่วย"}
+                  onChange={(v) => {
+                    setCosts((prev) => ({ ...prev, [l.id]: v || "" }));
+                    setPicked((prev) => {
+                      const next = { ...prev };
+                      delete next[l.id];
+                      return next;
+                    });
+                  }}
+                />
+                <LotCostPicker
+                  line={l}
+                  onPick={(cost, label) => {
+                    setCosts((prev) => ({ ...prev, [l.id]: cost }));
+                    setPicked((prev) => ({ ...prev, [l.id]: `เลือกจาก${label} — กดบันทึกต้นทุน` }));
+                  }}
+                />
+              </div>
               <span className="hidden text-right tabular-nums sm:block">
                 {l.effective != null ? formatBaht(l.effective * l.quantity) : "-"}
               </span>
@@ -164,7 +184,7 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
         </div>
         {live.missing > 0 && (
           <p className="text-xs text-amber-700">
-            มี {live.missing} รายการที่ยังไม่มีต้นทุน กำไรจึงสูงเกินจริง — กรอกต้นทุนเอง หรือเพิ่มล็อตนำเข้าที่มีสินค้านี้
+            มี {live.missing} รายการที่ยังไม่มีต้นทุน กำไรจึงสูงเกินจริง — กดปุ่ม &quot;จากล็อต&quot; เพื่อเลือกรายการในล็อตนำเข้า หรือกรอกต้นทุนเอง
           </p>
         )}
         <p className="text-muted-foreground text-xs">

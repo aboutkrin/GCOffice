@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/utils";
 import { normalizeCode, normalizeSupplier } from "@/lib/landed-cost";
 import type { LandedCostIndex } from "@/lib/line-cost";
+import type { Prisma } from "@/generated/prisma/client";
 
 export { resolveLineCost, type CostSource, type LandedCostIndex } from "@/lib/line-cost";
 
@@ -284,4 +285,110 @@ export async function getLandedCostIndex(productIds: string[]): Promise<LandedCo
   }
 
   return index;
+}
+
+// ------------------------------------------------------------------
+// Profit card: pick the import lot line a sold item came from
+// ------------------------------------------------------------------
+
+export interface LotItemOption {
+  id: string;
+  lotId: string;
+  lotName: string;
+  lotNumber: string | null;
+  orderDate: string;
+  supplierName: string;
+  piNumber: string | null;
+  supplierCode: string;
+  description: string | null;
+  boxes: number;
+  landedPerBox: number;
+  productId: string | null;
+  colorVariantId: string | null;
+  productName: string | null;
+  variantName: string | null;
+  /** "variant" = this exact colour, "product" = same product other colour */
+  match: "variant" | "product" | null;
+}
+
+/**
+ * Lot lines already linked to this product (its colour first), plus — when
+ * `query` is given — any line whose code, description, lot or supplier
+ * contains it, so a line not yet matched can be picked and linked.
+ */
+export async function searchLotItemsForCost(params: {
+  productId: string | null;
+  colorVariantId: string | null;
+  query?: string;
+}): Promise<LotItemOption[]> {
+  const q = params.query?.trim();
+  const or: Prisma.SupplierInvoiceItemWhereInput[] = [];
+  if (params.productId) or.push({ productId: params.productId });
+  if (q) {
+    const contains = { contains: q, mode: "insensitive" as const };
+    or.push(
+      { supplierCode: contains },
+      { description: contains },
+      { invoice: { supplierName: contains } },
+      { invoice: { piNumber: contains } },
+      { invoice: { lot: { name: contains } } },
+      { invoice: { lot: { lotNumber: contains } } },
+      { product: { name: contains } }
+    );
+  }
+  if (or.length === 0) return [];
+
+  const items = await prisma.supplierInvoiceItem.findMany({
+    where: { OR: or },
+    take: 100,
+    orderBy: [{ invoice: { lot: { orderDate: "desc" } } }, { sequence: "asc" }],
+    select: {
+      id: true,
+      supplierCode: true,
+      description: true,
+      boxes: true,
+      landedPerBox: true,
+      productId: true,
+      colorVariantId: true,
+      product: { select: { name: true } },
+      colorVariant: { select: { name: true } },
+      invoice: {
+        select: {
+          supplierName: true,
+          piNumber: true,
+          lot: { select: { id: true, name: true, lotNumber: true, orderDate: true } },
+        },
+      },
+    },
+  });
+
+  const rank = (m: LotItemOption["match"]) => (m === "variant" ? 0 : m === "product" ? 1 : 2);
+  return items
+    .map((it): LotItemOption => {
+      const match =
+        params.productId && it.productId === params.productId
+          ? params.colorVariantId && it.colorVariantId === params.colorVariantId
+            ? "variant"
+            : "product"
+          : null;
+      return {
+        id: it.id,
+        lotId: it.invoice.lot.id,
+        lotName: it.invoice.lot.name,
+        lotNumber: it.invoice.lot.lotNumber,
+        orderDate: it.invoice.lot.orderDate.toISOString(),
+        supplierName: it.invoice.supplierName,
+        piNumber: it.invoice.piNumber,
+        supplierCode: it.supplierCode,
+        description: it.description,
+        boxes: it.boxes,
+        landedPerBox: Number(it.landedPerBox),
+        productId: it.productId,
+        colorVariantId: it.colorVariantId,
+        productName: it.product?.name ?? null,
+        variantName: it.colorVariant?.name ?? null,
+        match,
+      };
+    })
+    .sort((a, b) => rank(a.match) - rank(b.match));
 }
