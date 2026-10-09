@@ -17,9 +17,13 @@ export default async function AdminPayrollSlipPage({
   const payroll = await getPayrollById(id);
   if (!payroll) notFound();
 
-  // Opened from the employee's page under ผู้ใช้งาน → go back there.
+  // Opened from the employee's page under ผู้ใช้งาน / the yearly summary → go back there.
   const backHref =
-    from === "user" ? `/users/${payroll.profileId}?tab=payslips` : `/payroll/${payroll.id}`;
+    from === "user"
+      ? `/users/${payroll.profileId}?tab=payslips`
+      : from === "summary"
+        ? `/payroll/summary?year=${payroll.year}`
+        : `/payroll/${payroll.id}`;
 
   return <PayrollSlipRoute payroll={payroll} backHref={backHref} />;
 }

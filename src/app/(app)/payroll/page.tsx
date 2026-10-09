@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarCheck } from "lucide-react";
+import { CalendarCheck, ReceiptText } from "lucide-react";
 import { getPayrollMonth } from "@/data/payroll";
 import { getThaiNow } from "@/lib/thai-date";
 import { Button } from "@/components/ui/button";
@@ -29,12 +29,20 @@ export default async function PayrollPage({ searchParams }: PayrollPageProps) {
             คำนวณเงินเดือนรายเดือน หักเฉพาะวันลาที่เกินสิทธิ์ และพิมพ์สลิปเงินเดือนให้พนักงาน
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link href={`/payroll/leave?year=${year}`}>
-            <CalendarCheck className="size-4" />
-            สรุปวันลาพนักงาน
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" asChild>
+            <Link href={`/payroll/summary?year=${year}`}>
+              <ReceiptText className="size-4" />
+              สรุปเงินเดือนพนักงาน
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href={`/payroll/leave?year=${year}`}>
+              <CalendarCheck className="size-4" />
+              สรุปวันลาพนักงาน
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <PayrollMonthTable rows={rows} year={year} month={month} currentYear={thaiNow.year} />

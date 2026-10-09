@@ -268,3 +268,111 @@ export async function getMyPayslips(profileId: string, { includeDrafts = false }
     leaveDeduction: Number(p.leaveDeduction),
   }));
 }
+
+export type PayrollYearCell =
+  | { kind: "slip"; id: string; status: string; netPay: number; confirmedAt: string | null }
+  /** Employed that month (and the month has started) but no payslip yet */
+  | { kind: "missing" }
+  /** Not employed yet / already left / month still ahead */
+  | { kind: "none" };
+
+export interface PayrollYearRow {
+  profileId: string;
+  name: string;
+  username: string | null;
+  /** Index 0 = January */
+  months: PayrollYearCell[];
+  confirmedTotal: number;
+  confirmedCount: number;
+  draftCount: number;
+  missingCount: number;
+}
+
+/**
+ * Who was paid which month of the year (สรุปเงินเดือน): one row per employee with a salary
+ * record or a payslip in the year, one cell per month. CONFIRMED = paid (posted as an expense).
+ */
+export async function getPayrollYearSummary(
+  year: number,
+  now: { year: number; month: number }
+): Promise<PayrollYearRow[]> {
+  const [profiles, payrolls] = await Promise.all([
+    prisma.profile.findMany({
+      where: {
+        OR: [
+          { status: "ACTIVE", employeeSalary: { isNot: null } },
+          { payrolls: { some: { year } } },
+        ],
+      },
+      select: { id: true, ...profileNameSelect, employeeSalary: true },
+    }),
+    prisma.payroll.findMany({
+      where: { year },
+      select: {
+        id: true,
+        profileId: true,
+        month: true,
+        status: true,
+        netPay: true,
+        employeeName: true,
+        confirmedAt: true,
+      },
+    }),
+  ]);
+
+  const slips = new Map(payrolls.map((p) => [`${p.profileId}:${p.month}`, p]));
+  // Months up to and including the current one can be due; later months are still ahead.
+  const lastDueMonth = year < now.year ? 12 : year > now.year ? 0 : now.month;
+
+  const rows: PayrollYearRow[] = profiles.map((profile) => {
+    const salary = profile.employeeSalary;
+    let name = employeeDisplayName(profile);
+    let confirmedTotal = 0;
+    let confirmedCount = 0;
+    let draftCount = 0;
+    let missingCount = 0;
+
+    const months: PayrollYearCell[] = Array.from({ length: 12 }, (_, i) => {
+      const month = i + 1;
+      const slip = slips.get(`${profile.id}:${month}`);
+      if (slip) {
+        name = slip.employeeName;
+        const netPay = Number(slip.netPay);
+        if (slip.status === "CONFIRMED") {
+          confirmedTotal += netPay;
+          confirmedCount++;
+        } else {
+          draftCount++;
+        }
+        return {
+          kind: "slip",
+          id: slip.id,
+          status: slip.status,
+          netPay,
+          confirmedAt: slip.confirmedAt?.toISOString() ?? null,
+        };
+      }
+      if (!salary || month > lastDueMonth) return { kind: "none" };
+      const { start, end } = monthBounds(year, month);
+      if (salary.startDate && salary.startDate > end) return { kind: "none" };
+      if (salary.endDate && salary.endDate < start) return { kind: "none" };
+      missingCount++;
+      return { kind: "missing" };
+    });
+
+    return {
+      profileId: profile.id,
+      name,
+      username: profile.username,
+      months,
+      confirmedTotal,
+      confirmedCount,
+      draftCount,
+      missingCount,
+    };
+  });
+
+  return rows
+    .filter((r) => r.months.some((c) => c.kind !== "none"))
+    .sort((a, b) => a.name.localeCompare(b.name, "th"));
+}
