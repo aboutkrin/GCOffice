@@ -8,6 +8,7 @@ import { serialize } from "@/lib/utils";
 import { importLotSchema, type ImportLotFormData } from "@/lib/validators";
 import { computeLandedCosts, normalizeCode, normalizeSupplier } from "@/lib/landed-cost";
 import { matchSupplierCodes } from "@/data/import-lots";
+import { lockDocumentLineCosts } from "@/data/document-profit";
 import { extractProformaInvoice, PiExtractConfigError } from "@/lib/pi-extract";
 import type { Prisma } from "@/generated/prisma/client";
 
@@ -256,8 +257,22 @@ export async function updateDocumentCosts(
     ]);
 
     revalidatePath("/dashboard");
+    revalidatePath("/profit-report");
     return { success: true };
   } catch (error) {
     return { success: false, error: errorMessage(error, "ไม่สามารถบันทึกต้นทุนได้") };
+  }
+}
+
+/** Profit card: re-lock every line's cost at today's average from import lots. */
+export async function relockDocumentCosts(documentId: string): Promise<ActionResult> {
+  try {
+    await assertAdmin();
+    await lockDocumentLineCosts(documentId, { overwrite: true });
+    revalidatePath("/dashboard");
+    revalidatePath("/profit-report");
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: errorMessage(error, "ไม่สามารถคำนวณต้นทุนใหม่ได้") };
   }
 }
