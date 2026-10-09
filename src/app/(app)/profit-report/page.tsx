@@ -82,8 +82,7 @@ export default async function ProfitReportPage({
           {report.legacyCostedBills > 0 && (
             <p className="flex items-center gap-1">
               <AlertTriangle className="size-3" />
-              ไม่รวม {report.legacyCostedBills} บิลที่บันทึกต้นทุนไว้ใน
-              <Link href="/vendor-costs" className="underline">ต้นทุนใบสั่งซื้อ (แบบเก่า)</Link>
+              ไม่รวม {report.legacyCostedBills} บิลที่บันทึกต้นทุนไว้ในระบบต้นทุนแบบเก่า
             </p>
           )}
         </div>
