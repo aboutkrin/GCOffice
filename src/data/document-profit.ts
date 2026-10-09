@@ -5,8 +5,12 @@ import { getLandedCostIndex, resolveLineCost, type CostSource } from "@/data/imp
 
 export interface DocumentProfitLine {
   id: string;
+  productSku: string | null;
   productName: string;
   colorVariantName: string | null;
+  colorVariantSku: string | null;
+  /** Colour photo, else the image saved on the line */
+  imageUrl: string | null;
   productId: string | null;
   colorVariantId: string | null;
   quantity: number;
@@ -46,8 +50,12 @@ type DocForProfit = {
   actualDeliveryCost: unknown;
   lineItems: {
     id: string;
+    productSku: string | null;
     productName: string;
     colorVariantName: string | null;
+    colorVariantSku: string | null;
+    productImage: string | null;
+    colorVariant?: { imageUrl: string | null } | null;
     productId: string | null;
     colorVariantId: string | null;
     quantity: number;
@@ -68,8 +76,12 @@ export const PROFIT_DOC_SELECT = {
     orderBy: { sequence: "asc" as const },
     select: {
       id: true,
+      productSku: true,
       productName: true,
       colorVariantName: true,
+      colorVariantSku: true,
+      productImage: true,
+      colorVariant: { select: { imageUrl: true } },
       productId: true,
       colorVariantId: true,
       quantity: true,
@@ -93,8 +105,11 @@ export async function computeDocumentProfits(docs: DocForProfit[]): Promise<Docu
       const average = resolveLineCost({ ...l, unitCost: null, costSnapshot: null }, index);
       return {
         id: l.id,
+        productSku: l.productSku,
         productName: l.productName,
         colorVariantName: l.colorVariantName,
+        colorVariantSku: l.colorVariantSku,
+        imageUrl: l.colorVariant?.imageUrl || l.productImage || null,
         productId: l.productId,
         colorVariantId: l.colorVariantId,
         quantity: l.quantity,

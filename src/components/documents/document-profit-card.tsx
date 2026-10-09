@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DecimalInput } from "@/components/ui/decimal-input";
+import { ProductThumb } from "@/components/ui/product-thumb";
 
 import { LotCostPicker } from "./lot-cost-picker";
 
@@ -116,27 +117,40 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
           {live.lines.map((l) => (
             <div
               key={l.id}
-              className="grid grid-cols-[minmax(0,1fr)_170px] items-center gap-2 border-b pb-2 text-sm last:border-0 sm:grid-cols-[minmax(0,1fr)_70px_190px_110px] lg:grid-cols-[minmax(0,1fr)_70px_240px_110px]"
+              className="grid grid-cols-1 items-center gap-2 border-b pb-2 text-sm last:border-0 sm:grid-cols-[minmax(0,1fr)_70px_190px_110px] lg:grid-cols-[minmax(0,1fr)_70px_240px_110px]"
             >
-              <div className="min-w-0">
-                <p className="truncate font-medium">
-                  {l.productName}
-                  {l.colorVariantName && <span className="text-muted-foreground"> · {l.colorVariantName}</span>}
-                </p>
-                <p
-                  className={cn(
-                    "text-xs",
-                    l.effective == null ? "flex items-center gap-1 text-amber-700" : "text-muted-foreground"
-                  )}
-                >
-                  {l.effective == null && <AlertTriangle className="size-3" />}
-                  {l.isManual ? (picked[l.id] ?? SOURCE_LABELS.manual) : SOURCE_LABELS[l.suggestedSource]}
-                </p>
+              <div className="flex min-w-0 items-center gap-3">
+                <ProductThumb src={l.imageUrl} alt={l.productName} size={48} fallback="icon" className="border" />
+                <div className="min-w-0">
+                  <p className="break-words font-medium">
+                    {l.productSku && <span className="text-muted-foreground mr-1.5 block font-mono text-xs whitespace-nowrap sm:inline">{l.productSku}</span>}
+                    {l.productName}
+                    {l.colorVariantName && (
+                      <span className="text-muted-foreground">
+                        {" "}
+                        · {l.colorVariantName}
+                        {l.colorVariantSku && <span className="font-mono text-xs whitespace-nowrap"> ({l.colorVariantSku})</span>}
+                      </span>
+                    )}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-xs",
+                      l.effective == null ? "flex items-center gap-1 text-amber-700" : "text-muted-foreground"
+                    )}
+                  >
+                    {l.effective == null && <AlertTriangle className="size-3" />}
+                    {l.isManual ? (picked[l.id] ?? SOURCE_LABELS.manual) : SOURCE_LABELS[l.suggestedSource]}
+                  </p>
+                </div>
               </div>
               <span className="text-muted-foreground hidden text-right tabular-nums sm:block">
                 × {l.quantity.toLocaleString("th-TH")}
               </span>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 pl-[60px] sm:pl-0">
+                <span className="text-muted-foreground w-12 shrink-0 text-xs tabular-nums sm:hidden">
+                  × {l.quantity.toLocaleString("th-TH")}
+                </span>
                 <DecimalInput
                   value={costs[l.id] ?? ""}
                   placeholder={l.suggestedCost != null ? `${l.suggestedCost} /หน่วย` : "ต้นทุน/หน่วย"}
