@@ -37,7 +37,7 @@ GCOffice is a Thai-language business document management app (quotations & invoi
 Schema at `prisma/schema.prisma`. Prisma client is generated to `src/generated/prisma/` and uses `@prisma/adapter-pg` for connection pooling. The client singleton lives in `src/lib/prisma.ts`.
 
 Key models:
-- **Profile** — Synced from Supabase auth.users via DB trigger
+- **Profile** — Synced from Supabase auth.users via DB trigger. `bankName` / `bankAccountName` / `bankAccountNumber` = the employee's own salary account, entered by the employee on `/profile` (โปรไฟล์ tab) and printed on payslips
 - **Company** — Business entities with logo, bank details, VAT config
 - **Customer** — COMPANY or INDIVIDUAL type, with lead source tracking
 - **Product** — SKU-based catalog with categories, images, dimensions, pricing, cost fields and stock. `source` is `MANUAL` (created in GCOffice), `WEBSITE` (mirrored from goodchoiceth.com) or `WOOCOMMERCE` (legacy rows from the retired WooCommerce sync; `woocommerceId` is kept only to match website products by `wpPostId`)

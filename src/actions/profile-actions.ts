@@ -15,6 +15,9 @@ export async function updateProfile(data: unknown) {
       firstName: validated.firstName,
       lastName: validated.lastName,
       signatureUrl: validated.signatureUrl || null,
+      bankName: validated.bankName?.trim() || null,
+      bankAccountName: validated.bankAccountName?.trim() || null,
+      bankAccountNumber: validated.bankAccountNumber?.trim() || null,
     },
   });
 

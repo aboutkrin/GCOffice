@@ -33,6 +33,9 @@ interface ProfileFormProps {
     firstName: string;
     lastName: string;
     signatureUrl: string;
+    bankName: string;
+    bankAccountName: string;
+    bankAccountNumber: string;
   };
 }
 
@@ -46,6 +49,9 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       firstName: initialData?.firstName ?? "",
       lastName: initialData?.lastName ?? "",
       signatureUrl: initialData?.signatureUrl ?? "",
+      bankName: initialData?.bankName ?? "",
+      bankAccountName: initialData?.bankAccountName ?? "",
+      bankAccountNumber: initialData?.bankAccountNumber ?? "",
     },
   });
 
@@ -93,6 +99,56 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                   <FormLabel>นามสกุล</FormLabel>
                   <FormControl>
                     <Input placeholder="นามสกุล" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>บัญชีธนาคารรับเงินเดือน</CardTitle>
+            <CardDescription>
+              บัญชีที่ใช้รับโอนเงินเดือน จะแสดงในสลิปเงินเดือนของคุณ
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-3">
+            <FormField
+              control={form.control}
+              name="bankName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ธนาคาร</FormLabel>
+                  <FormControl>
+                    <Input placeholder="เช่น กสิกรไทย" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bankAccountName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ชื่อบัญชี</FormLabel>
+                  <FormControl>
+                    <Input placeholder="ชื่อบัญชีตามสมุดบัญชี" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="bankAccountNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>เลขที่บัญชี</FormLabel>
+                  <FormControl>
+                    <Input placeholder="เช่น 123-4-56789-0" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

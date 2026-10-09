@@ -14,7 +14,7 @@ export async function PayrollSlipRoute({ payroll, backHref }: { payroll: SavedPa
   return (
     <PayrollSlipPage
       data={{
-        ...(payroll as unknown as Omit<PayrollSlipData, "email" | "company">),
+        ...(payroll as unknown as Omit<PayrollSlipData, "bankAccount" | "company">),
         // serialize() leaves Prisma Decimals as strings (Decimal.toJSON runs first),
         // so "12000" + "0" would concatenate to 120000 — convert them to numbers.
         monthlySalary: Number(payroll.monthlySalary),
@@ -28,7 +28,11 @@ export async function PayrollSlipRoute({ payroll, backHref }: { payroll: SavedPa
         totalDeductions: Number(payroll.totalDeductions),
         netPay: Number(payroll.netPay),
         items: payroll.items.map((i) => ({ kind: i.kind, name: i.name, amount: Number(i.amount) })),
-        email: payroll.profile.email,
+        bankAccount: {
+          bankName: payroll.profile.bankName,
+          accountName: payroll.profile.bankAccountName,
+          accountNumber: payroll.profile.bankAccountNumber,
+        },
         company: company
           ? {
               name: company.name,
