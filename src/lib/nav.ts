@@ -13,7 +13,6 @@ import {
   Calculator,
   Wallet,
   ReceiptText,
-  Truck,
   Ship,
   TrendingUp,
   Printer,
@@ -94,7 +93,6 @@ export const MAIN_NAV: NavEntry[] = [
       { href: "/import-lots", label: "ล็อตนำเข้า (PI จีน)", icon: Ship, adminOnly: true },
       { href: "/profit-report", label: "กำไรต่อบิล", icon: TrendingUp, adminOnly: true },
       { href: "/expenses", label: "ค่าใช้จ่ายรายเดือน", icon: Wallet, adminOnly: true },
-      { href: "/vendor-costs", label: "ต้นทุนใบสั่งซื้อ (แบบเก่า)", icon: Truck, adminOnly: true },
     ],
   },
 ];
