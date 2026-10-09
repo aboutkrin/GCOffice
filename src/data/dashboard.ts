@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { DocumentType, DocumentStatus } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { getThaiNow } from "@/lib/thai-date";
-import { computeDocumentProfits, PROFIT_DOC_SELECT } from "@/data/document-profit";
+import { getFinanceYear } from "@/data/finance";
+import { round2 } from "@/lib/finance";
 
 export interface HolidayItem {
   id: string;
@@ -161,8 +162,8 @@ export interface YearlyStats {
 }
 
 export async function getYearlyStats(year: number): Promise<YearlyStats> {
-  const startOfYear = new Date(year, 0, 1);
-  const endOfYear = new Date(year, 11, 31, 23, 59, 59, 999);
+  const startOfYear = new Date(Date.UTC(year, 0, 1));
+  const endOfYear = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
 
   const yearFilter = {
     documentDate: {
@@ -257,10 +258,22 @@ export const THAI_MONTHS_SHORT = [
 export interface MonthlyRevenueExpenseData {
   month: number;
   monthLabel: string;
+  /** grandTotal − VAT of the sold quotations */
   revenue: number;
   vat: number;
+  cogs: number;
+  deliveryCost: number;
+  legacyVendorCost: number;
+  /** cogs + deliveryCost + legacyVendorCost */
+  productCost: number;
+  /** /expenses rows (payroll included) */
+  operatingExpense: number;
+  /** productCost + operatingExpense */
   expense: number;
+  grossProfit: number;
+  /** Net profit */
   profit: number;
+  marginPercent: number;
 }
 
 export interface MonthlyRevenueExpenseResult {
@@ -268,176 +281,57 @@ export interface MonthlyRevenueExpenseResult {
   yearBE: number;
   totalRevenue: number;
   totalVat: number;
+  totalProductCost: number;
+  totalOperatingExpense: number;
   totalExpense: number;
   totalProfit: number;
   monthlyData: MonthlyRevenueExpenseData[];
   availableYears: number[];
 }
 
+/**
+ * Revenue, product cost, operating expenses and profit per month of a year.
+ * Same numbers as the month page (/dashboard/finance/[year]/[month]); both
+ * come from src/data/finance.ts.
+ */
 export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRevenueExpenseResult> {
-  async function fetchExpenseData() {
-    try {
-      return await prisma.$queryRaw<{ month: number; total: number }[]>`
-        SELECT month, COALESCE(SUM(total), 0)::float8 AS total
-        FROM (
-          SELECT
-            EXTRACT(MONTH FROM expense_date)::int AS month,
-            amount AS total
-          FROM expenses
-          WHERE EXTRACT(YEAR FROM expense_date) = ${year}
-          UNION ALL
-          SELECT
-            EXTRACT(MONTH FROM order_date)::int AS month,
-            total_cost AS total
-          FROM vendor_costs
-          WHERE EXTRACT(YEAR FROM order_date) = ${year}
-        ) combined
-        GROUP BY month
-        ORDER BY month
-      `;
-    } catch {
-      return [] as { month: number; total: number }[];
-    }
-  }
-
   async function fetchAvailableYears() {
-    try {
-      const docYears = await prisma.$queryRaw<{ year: number }[]>`
+    const years = async (q: Promise<{ year: number }[]>) => q.catch(() => [] as { year: number }[]);
+    const [docYears, expYears, vcYears] = await Promise.all([
+      years(prisma.$queryRaw<{ year: number }[]>`
         SELECT DISTINCT EXTRACT(YEAR FROM document_date)::int AS year FROM documents
-      `;
-      let expYears: { year: number }[] = [];
-      try {
-        expYears = await prisma.$queryRaw<{ year: number }[]>`
-          SELECT DISTINCT EXTRACT(YEAR FROM expense_date)::int AS year FROM expenses
-        `;
-      } catch {
-        // expenses table may not exist
-      }
-      let vcYears: { year: number }[] = [];
-      try {
-        vcYears = await prisma.$queryRaw<{ year: number }[]>`
-          SELECT DISTINCT EXTRACT(YEAR FROM order_date)::int AS year FROM vendor_costs
-        `;
-      } catch {
-        // vendor_costs table may not exist
-      }
-      const allYears = [...new Set([
-        ...docYears.map(d => d.year),
-        ...expYears.map(d => d.year),
-        ...vcYears.map(d => d.year),
-      ])];
-      allYears.sort((a, b) => b - a);
-      return allYears.map(y => ({ year: y }));
-    } catch {
-      return [] as { year: number }[];
-    }
+      `),
+      years(prisma.$queryRaw<{ year: number }[]>`
+        SELECT DISTINCT EXTRACT(YEAR FROM expense_date)::int AS year FROM expenses
+      `),
+      years(prisma.$queryRaw<{ year: number }[]>`
+        SELECT DISTINCT EXTRACT(YEAR FROM order_date)::int AS year FROM vendor_costs
+      `),
+    ]);
+    const all = [...new Set([...docYears, ...expYears, ...vcYears].map((d) => d.year))];
+    return all.sort((a, b) => b - a);
   }
 
-  // Revenue from QUOTATION documents with status CONFIRMED, SHIPPED, or BILLED
-  // (matches the "ยอดขายเดือนนี้" logic in getDashboardStats)
-  async function fetchInvoiceRevenueData() {
-    try {
-      return await prisma.$queryRaw<{ month: number; total: number }[]>`
-        SELECT
-          EXTRACT(MONTH FROM document_date)::int AS month,
-          COALESCE(SUM(grand_total - vat_amount), 0)::float8 AS total
-        FROM documents
-        WHERE type = 'QUOTATION'
-          AND status IN ('CONFIRMED', 'SHIPPED', 'BILLED')
-          AND EXTRACT(YEAR FROM document_date) = ${year}
-        GROUP BY month
-        ORDER BY month
-      `;
-    } catch {
-      return [] as { month: number; total: number }[];
-    }
-  }
+  const [months, availableYears] = await Promise.all([getFinanceYear(year), fetchAvailableYears()]);
 
-  // VAT from QUOTATION documents with status CONFIRMED, SHIPPED, or BILLED
-  async function fetchInvoiceVatData() {
-    try {
-      return await prisma.$queryRaw<{ month: number; total: number }[]>`
-        SELECT
-          EXTRACT(MONTH FROM document_date)::int AS month,
-          COALESCE(SUM(vat_amount), 0)::float8 AS total
-        FROM documents
-        WHERE type = 'QUOTATION'
-          AND status IN ('CONFIRMED', 'SHIPPED', 'BILLED')
-          AND EXTRACT(YEAR FROM document_date) = ${year}
-        GROUP BY month
-        ORDER BY month
-      `;
-    } catch {
-      return [] as { month: number; total: number }[];
-    }
-  }
+  const monthlyData: MonthlyRevenueExpenseData[] = months.map((m, i) => ({
+    month: i + 1,
+    monthLabel: THAI_MONTHS_SHORT[i],
+    revenue: m.revenue,
+    vat: m.vat,
+    cogs: m.cogs,
+    deliveryCost: m.deliveryCost,
+    legacyVendorCost: m.legacyVendorCost,
+    productCost: m.productCost,
+    operatingExpense: m.operatingExpense,
+    expense: round2(m.productCost + m.operatingExpense),
+    grossProfit: m.grossProfit,
+    profit: m.netProfit,
+    marginPercent: m.marginPercent,
+  }));
 
-  // Cost of the goods actually sold (landed cost from import lots) + what we
-  // paid to deliver, on the same documents and dates as revenue. Import lots
-  // themselves are stock, not an expense. Documents already covered by a legacy
-  // vendor_costs row (counted above) are skipped so nothing is counted twice.
-  async function fetchCostOfSalesData() {
-    try {
-      const docs = await prisma.document.findMany({
-        where: {
-          type: "QUOTATION",
-          status: { in: ["CONFIRMED", "SHIPPED", "BILLED"] },
-          documentDate: {
-            gte: new Date(Date.UTC(year, 0, 1)),
-            lt: new Date(Date.UTC(year + 1, 0, 1)),
-          },
-          vendorCosts: { none: {} },
-          invoices: { none: { vendorCosts: { some: {} } } },
-        },
-        select: { ...PROFIT_DOC_SELECT, documentDate: true },
-      });
-      const profits = await computeDocumentProfits(docs);
-      const byMonth = new Map<number, number>();
-      docs.forEach((doc, i) => {
-        const month = doc.documentDate.getUTCMonth() + 1;
-        const cost = profits[i].cogs + profits[i].actualDeliveryCost;
-        byMonth.set(month, (byMonth.get(month) ?? 0) + cost);
-      });
-      return [...byMonth].map(([month, total]) => ({ month, total }));
-    } catch {
-      return [] as { month: number; total: number }[];
-    }
-  }
-
-  const [revenueData, vatData, expenseData, costOfSalesData, yearsData] = await Promise.all([
-    fetchInvoiceRevenueData(),
-    fetchInvoiceVatData(),
-    fetchExpenseData(),
-    fetchCostOfSalesData(),
-    fetchAvailableYears(),
-  ]);
-
-  // Build full 12-month array
-  // Revenue = gross revenue minus VAT
-  // Expense = monthly operating expenses + legacy vendor costs + cost of sales
-  const monthlyData: MonthlyRevenueExpenseData[] = Array.from({ length: 12 }, (_, i) => {
-    const monthNum = i + 1;
-    const rev = revenueData.find((d) => d.month === monthNum);
-    const vat = vatData.find((d) => d.month === monthNum);
-    const exp = expenseData.find((d) => d.month === monthNum);
-    const cos = costOfSalesData.find((d) => d.month === monthNum);
-    const revenue = rev?.total ?? 0;
-    const vatAmount = vat?.total ?? 0;
-    const expense = (exp?.total ?? 0) + Math.round((cos?.total ?? 0) * 100) / 100;
-    return {
-      month: monthNum,
-      monthLabel: THAI_MONTHS_SHORT[i],
-      revenue,
-      vat: vatAmount,
-      expense,
-      profit: revenue - expense,
-    };
-  });
-
-  const totalRevenue = monthlyData.reduce((sum, m) => sum + m.revenue, 0);
-  const totalVat = monthlyData.reduce((sum, m) => sum + m.vat, 0);
-  const totalExpense = monthlyData.reduce((sum, m) => sum + m.expense, 0);
-  const availableYears = yearsData.map((d) => d.year);
+  const total = (key: keyof MonthlyRevenueExpenseData) =>
+    round2(monthlyData.reduce((sum, m) => sum + (m[key] as number), 0));
 
   if (!availableYears.includes(year)) {
     availableYears.unshift(year);
@@ -447,10 +341,12 @@ export async function getMonthlyRevenueAndCost(year: number): Promise<MonthlyRev
   return {
     year,
     yearBE: year + 543,
-    totalRevenue,
-    totalVat,
-    totalExpense,
-    totalProfit: totalRevenue - totalExpense,
+    totalRevenue: total("revenue"),
+    totalVat: total("vat"),
+    totalProductCost: total("productCost"),
+    totalOperatingExpense: total("operatingExpense"),
+    totalExpense: total("expense"),
+    totalProfit: total("profit"),
     monthlyData,
     availableYears,
   };
