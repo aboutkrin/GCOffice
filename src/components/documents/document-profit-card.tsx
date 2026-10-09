@@ -119,9 +119,16 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
               className="grid grid-cols-[minmax(0,1fr)_170px] items-center gap-2 border-b pb-2 text-sm last:border-0 sm:grid-cols-[minmax(0,1fr)_70px_190px_110px] lg:grid-cols-[minmax(0,1fr)_70px_240px_110px]"
             >
               <div className="min-w-0">
-                <p className="truncate font-medium">
+                <p className="break-words font-medium">
+                  {l.productSku && <span className="text-muted-foreground mr-1.5 font-mono text-xs">{l.productSku}</span>}
                   {l.productName}
-                  {l.colorVariantName && <span className="text-muted-foreground"> · {l.colorVariantName}</span>}
+                  {l.colorVariantName && (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {l.colorVariantName}
+                      {l.colorVariantSku && <span className="font-mono text-xs"> ({l.colorVariantSku})</span>}
+                    </span>
+                  )}
                 </p>
                 <p
                   className={cn(

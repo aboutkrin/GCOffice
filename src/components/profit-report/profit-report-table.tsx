@@ -108,9 +108,16 @@ export function ProfitReportTable({ rows }: { rows: ProfitReportRow[] }) {
                           key={l.id}
                           className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 sm:grid-cols-[minmax(0,1fr)_80px_200px_120px_120px]"
                         >
-                          <span className="truncate">
+                          <span className="break-words">
+                            {l.productSku && <span className="text-muted-foreground mr-1.5 font-mono text-xs">{l.productSku}</span>}
                             {l.productName}
-                            {l.colorVariantName && <span className="text-muted-foreground"> · {l.colorVariantName}</span>}
+                            {l.colorVariantName && (
+                              <span className="text-muted-foreground">
+                                {" "}
+                                · {l.colorVariantName}
+                                {l.colorVariantSku && <span className="font-mono text-xs"> ({l.colorVariantSku})</span>}
+                              </span>
+                            )}
                           </span>
                           <span className="text-muted-foreground text-right tabular-nums">
                             × {l.quantity.toLocaleString("th-TH")}
