@@ -3,6 +3,9 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/utils";
 import { normalizeCode, normalizeSupplier } from "@/lib/landed-cost";
+import type { LandedCostIndex } from "@/lib/line-cost";
+
+export { resolveLineCost, type CostSource, type LandedCostIndex } from "@/lib/line-cost";
 
 export async function getImportLots(params?: { search?: string; year?: number }) {
   const where: Record<string, unknown> = {};
@@ -238,13 +241,6 @@ export async function matchSupplierCodes(
 // Landed cost per box, averaged over every import lot line
 // ------------------------------------------------------------------
 
-export interface LandedCostIndex {
-  byVariant: Record<string, number>;
-  byProduct: Record<string, number>;
-  /** Old per-product cost fields (ต้นทุนสินค้า page), used when no lot exists */
-  legacy: Record<string, number>;
-}
-
 export async function getLandedCostIndex(productIds: string[]): Promise<LandedCostIndex> {
   const ids = [...new Set(productIds.filter(Boolean))];
   const index: LandedCostIndex = { byVariant: {}, byProduct: {}, legacy: {} };
@@ -288,25 +284,4 @@ export async function getLandedCostIndex(productIds: string[]): Promise<LandedCo
   }
 
   return index;
-}
-
-export type CostSource = "manual" | "variant" | "product" | "legacy" | "none";
-
-export function resolveLineCost(
-  line: { unitCost?: unknown; productId?: string | null; colorVariantId?: string | null },
-  index: LandedCostIndex
-): { unitCost: number | null; source: CostSource } {
-  if (line.unitCost != null && line.unitCost !== "") {
-    return { unitCost: Number(line.unitCost), source: "manual" };
-  }
-  if (line.colorVariantId && index.byVariant[line.colorVariantId] != null) {
-    return { unitCost: index.byVariant[line.colorVariantId], source: "variant" };
-  }
-  if (line.productId && index.byProduct[line.productId] != null) {
-    return { unitCost: index.byProduct[line.productId], source: "product" };
-  }
-  if (line.productId && index.legacy[line.productId] != null) {
-    return { unitCost: index.legacy[line.productId], source: "legacy" };
-  }
-  return { unitCost: null, source: "none" };
 }

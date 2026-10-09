@@ -342,6 +342,9 @@ model DocumentLineItem {
   lineTotal    Decimal  @map("line_total") @db.Decimal(12, 2)
   /// Manually entered landed cost per unit (THB). Null = use the average from import lots.
   unitCost     Decimal? @map("unit_cost") @db.Decimal(12, 2)
+  /// Average landed cost per unit locked when the quotation was confirmed, so a
+  /// later import lot doesn't change the profit of bills already sold.
+  costSnapshot Decimal? @map("cost_snapshot") @db.Decimal(12, 2)
 
   /// Stable identity backing reservation/issue matching. Nullable: legacy rows
   /// backfilled by (sku) / (productId, name); may stay null when unmatched

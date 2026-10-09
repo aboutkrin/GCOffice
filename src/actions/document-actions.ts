@@ -11,7 +11,7 @@ import { flattenLineItemSpecs, lineItemsWithSpecsInclude } from "@/lib/line-item
 import { toUTCNoon } from "@/lib/thai-date";
 import { ZodError } from "zod";
 import { checkAvailabilityForDocument, type StockShortage } from "@/data/stock-availability";
-
+import { clearDocumentLineCosts, lockDocumentLineCosts } from "@/data/document-profit";
 import { applyReceiptPayment, lockInvoice, paidReceipts, syncInvoicePaymentStatus } from "@/lib/receipt-payment-server";
 import { satang } from "@/lib/receipt-payment";
 
@@ -377,12 +377,16 @@ export async function updateDocument(id: string, data: unknown) {
       }
       const netPayable = grandTotal - depositDeduction;
 
-      // Manually entered costs (profit card) survive the delete/recreate below
-      const keptCosts = new Map(
+      // Manually entered and locked costs (profit card) survive the delete/recreate below
+      const keptCosts = new Map<string, { unitCost: unknown; costSnapshot: unknown }>(
         (await tx.documentLineItem.findMany({
-          where: { documentId: id, unitCost: { not: null } },
-          select: { productId: true, colorVariantId: true, productName: true, colorVariantName: true, unitCost: true },
-        })).map((l: Parameters<typeof lineCostKey>[0] & { unitCost: unknown }) => [lineCostKey(l), l.unitCost])
+          where: { documentId: id, OR: [{ unitCost: { not: null } }, { costSnapshot: { not: null } }] },
+          select: {
+            productId: true, colorVariantId: true, productName: true, colorVariantName: true,
+            unitCost: true, costSnapshot: true,
+          },
+        })).map((l: Parameters<typeof lineCostKey>[0] & { unitCost: unknown; costSnapshot: unknown }) =>
+          [lineCostKey(l), { unitCost: l.unitCost, costSnapshot: l.costSnapshot }] as const)
       );
 
       // Delete old items
@@ -460,7 +464,8 @@ export async function updateDocument(id: string, data: unknown) {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             lineTotal: item.quantity * Number(item.unitPrice),
-            unitCost: keptCosts.get(lineCostKey(item)) ?? null,
+            unitCost: keptCosts.get(lineCostKey(item))?.unitCost ?? null,
+            costSnapshot: keptCosts.get(lineCostKey(item))?.costSnapshot ?? null,
           })
         ),
       });
@@ -507,6 +512,11 @@ export async function updateDocument(id: string, data: unknown) {
         include: { lineItems: true, paymentTerms: true, depositDeductions: true },
       });
     });
+
+    // Lines added to an already-sold quotation get their cost locked too
+    if (document.type === "QUOTATION" && (document.status === "CONFIRMED" || document.status === "SHIPPED")) {
+      await lockDocumentLineCosts(id).catch((e) => console.error("lockDocumentLineCosts error:", e));
+    }
 
     revalidatePath("/quotations");
     revalidatePath("/invoices");
@@ -603,6 +613,21 @@ export async function updateDocumentStatus(
     }
     return { document, enteringConfirmed };
   });
+
+  // Profit per bill: lock today's average landed cost once the quotation is
+  // sold, and let it follow the average again if it goes back to a draft.
+  if (document.type === "QUOTATION") {
+    // Best-effort: the status change above is already saved
+    try {
+      if (status === DocumentStatus.CONFIRMED || status === DocumentStatus.SHIPPED) {
+        await lockDocumentLineCosts(id);
+      } else if (status === DocumentStatus.DRAFT || status === DocumentStatus.QUOTED) {
+        await clearDocumentLineCosts(id);
+      }
+    } catch (e) {
+      console.error("line cost lock error:", e);
+    }
+  }
 
   // Advisory-only: report what would be short, never blocking and never writing.
   let shortages: StockShortage[] = [];

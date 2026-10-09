@@ -13,12 +13,18 @@ export interface DocumentProfitLine {
   /** Cost the system would use without a manual entry (shown as placeholder) */
   suggestedCost: number | null;
   suggestedSource: CostSource;
+  /** Today's average from import lots, ignoring the cost locked at confirmation */
+  averageCost: number | null;
+  /** Cost locked when the quotation was confirmed (null = not locked) */
+  costSnapshot: number | null;
   source: CostSource;
   manual: boolean;
 }
 
 export interface DocumentProfit {
   documentId: string;
+  /** Confirmed/shipped quotation: its costs are locked (see lockDocumentLineCosts) */
+  sold: boolean;
   /** grandTotal − VAT (includes the shipping charged to the customer) */
   revenue: number;
   cogs: number;
@@ -31,6 +37,8 @@ export interface DocumentProfit {
 
 type DocForProfit = {
   id: string;
+  type: string;
+  status: string;
   grandTotal: unknown;
   vatAmount: unknown;
   actualDeliveryCost: unknown;
@@ -43,11 +51,14 @@ type DocForProfit = {
     quantity: number;
     lineTotal: unknown;
     unitCost: unknown;
+    costSnapshot: unknown;
   }[];
 };
 
 export const PROFIT_DOC_SELECT = {
   id: true,
+  type: true,
+  status: true,
   grandTotal: true,
   vatAmount: true,
   actualDeliveryCost: true,
@@ -62,6 +73,7 @@ export const PROFIT_DOC_SELECT = {
       quantity: true,
       lineTotal: true,
       unitCost: true,
+      costSnapshot: true,
     },
   },
 };
@@ -76,6 +88,7 @@ export async function computeDocumentProfits(docs: DocForProfit[]): Promise<Docu
     const lines: DocumentProfitLine[] = doc.lineItems.map((l) => {
       const resolved = resolveLineCost(l, index);
       const suggested = resolveLineCost({ ...l, unitCost: null }, index);
+      const average = resolveLineCost({ ...l, unitCost: null, costSnapshot: null }, index);
       return {
         id: l.id,
         productName: l.productName,
@@ -85,6 +98,8 @@ export async function computeDocumentProfits(docs: DocForProfit[]): Promise<Docu
         unitCost: resolved.unitCost,
         suggestedCost: suggested.unitCost,
         suggestedSource: suggested.source,
+        averageCost: average.unitCost,
+        costSnapshot: l.costSnapshot != null ? Number(l.costSnapshot) : null,
         source: resolved.source,
         manual: resolved.source === "manual",
       };
@@ -95,6 +110,7 @@ export async function computeDocumentProfits(docs: DocForProfit[]): Promise<Docu
     const profit = round2(revenue - cogs - actualDeliveryCost);
     return {
       documentId: doc.id,
+      sold: doc.type === "QUOTATION" && (doc.status === "CONFIRMED" || doc.status === "SHIPPED"),
       revenue: round2(revenue),
       cogs,
       actualDeliveryCost,
@@ -111,6 +127,34 @@ export async function getDocumentProfit(documentId: string): Promise<DocumentPro
   if (!doc) return null;
   const [profit] = await computeDocumentProfits([doc]);
   return profit;
+}
+
+/**
+ * Lock today's average landed cost into `costSnapshot` so a later import lot
+ * doesn't change the profit of a bill already sold. Called when a quotation is
+ * confirmed (only lines without a snapshot) and by the profit card's
+ * "recalculate" button (`overwrite`). Lines with no known cost stay null.
+ */
+export async function lockDocumentLineCosts(documentId: string, options?: { overwrite?: boolean }) {
+  const lines = await prisma.documentLineItem.findMany({
+    where: { documentId, ...(options?.overwrite ? {} : { costSnapshot: null }) },
+    select: { id: true, productId: true, colorVariantId: true },
+  });
+  if (lines.length === 0) return;
+  const index = await getLandedCostIndex(lines.map((l) => l.productId).filter((x): x is string => !!x));
+  await prisma.$transaction(
+    lines.map((l) =>
+      prisma.documentLineItem.update({
+        where: { id: l.id },
+        data: { costSnapshot: resolveLineCost({ ...l, unitCost: null, costSnapshot: null }, index).unitCost },
+      })
+    )
+  );
+}
+
+/** Back to draft/quoted: the bill isn't sold any more, so follow the average again. */
+export async function clearDocumentLineCosts(documentId: string) {
+  await prisma.documentLineItem.updateMany({ where: { documentId }, data: { costSnapshot: null } });
 }
 
 function round2(n: number) {

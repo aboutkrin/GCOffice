@@ -4,9 +4,9 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { AlertTriangle, Loader2, TrendingUp } from "lucide-react";
+import { AlertTriangle, Loader2, RefreshCw, TrendingUp } from "lucide-react";
 
-import { updateDocumentCosts } from "@/actions/import-lot-actions";
+import { relockDocumentCosts, updateDocumentCosts } from "@/actions/import-lot-actions";
 import type { DocumentProfit } from "@/data/document-profit";
 import type { CostSource } from "@/data/import-lots";
 import { formatBaht } from "@/lib/thai-currency";
@@ -18,6 +18,7 @@ import { DecimalInput } from "@/components/ui/decimal-input";
 
 const SOURCE_LABELS: Record<CostSource, string> = {
   manual: "กรอกเอง",
+  snapshot: "ล็อกไว้ตอนยืนยันบิล",
   variant: "เฉลี่ยจากล็อต (สีนี้)",
   product: "เฉลี่ยจากล็อต (สินค้า)",
   legacy: "จากหน้าต้นทุนสินค้า",
@@ -57,6 +58,24 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
   const dirty =
     delivery !== profit.actualDeliveryCost ||
     profit.lines.some((l) => (costs[l.id] === "" ? null : costs[l.id]) !== (l.manual ? l.unitCost : null));
+
+  // A locked cost that no longer matches today's lot average (e.g. the bill was
+  // confirmed before its lot was entered)
+  const staleLocks = !profit.sold ? 0 : profit.lines.filter(
+    (l) => !l.manual && l.averageCost != null && l.costSnapshot !== l.averageCost
+  ).length;
+
+  function relock() {
+    startTransition(async () => {
+      const res = await relockDocumentCosts(profit.documentId);
+      if (!res.success) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success("คำนวณต้นทุนใหม่จากล็อตล่าสุดแล้ว");
+      router.refresh();
+    });
+  }
 
   function save() {
     startTransition(async () => {
@@ -148,7 +167,17 @@ export function DocumentProfitCard({ profit }: { profit: DocumentProfit }) {
             มี {live.missing} รายการที่ยังไม่มีต้นทุน กำไรจึงสูงเกินจริง — กรอกต้นทุนเอง หรือเพิ่มล็อตนำเข้าที่มีสินค้านี้
           </p>
         )}
-        <div className="flex justify-end">
+        <p className="text-muted-foreground text-xs">
+          ต้นทุนใช้ค่าเฉลี่ยถ่วงน้ำหนักจากล็อตนำเข้า และถูกล็อกไว้ตอนยืนยันบิล
+          เพื่อไม่ให้กำไรของบิลที่ขายไปแล้วเปลี่ยนเมื่อมีล็อตใหม่เข้ามา
+        </p>
+        <div className="flex flex-wrap justify-end gap-2">
+          {staleLocks > 0 && (
+            <Button type="button" variant="outline" onClick={relock} disabled={isPending}>
+              <RefreshCw className="size-4" />
+              คำนวณต้นทุนใหม่จากล็อตล่าสุด ({staleLocks})
+            </Button>
+          )}
           <Button type="button" onClick={save} disabled={!dirty || isPending}>
             {isPending && <Loader2 className="size-4 animate-spin" />}
             บันทึกต้นทุน
