@@ -149,14 +149,21 @@ export const PayrollSlipPreview = forwardRef<HTMLDivElement, { data: PayrollSlip
 
         {/* Earnings / deductions */}
         <div className="mb-5 overflow-hidden rounded-lg border border-gray-200">
-          <table className="w-full border-collapse text-[11px]">
+          <table className="w-full table-fixed border-collapse text-[11px]">
+            {/* Equal halves: earnings (name + amount) | deductions (name + amount) */}
+            <colgroup>
+              <col className="w-[32%]" />
+              <col className="w-[18%]" />
+              <col className="w-[32%]" />
+              <col className="w-[18%]" />
+            </colgroup>
             <thead>
               <tr className="bg-gray-800 text-white">
                 <th className="px-3 py-2 text-left font-semibold">
                   รายได้
                   <span className="block text-[9px] font-normal uppercase tracking-wide text-gray-300">Earnings</span>
                 </th>
-                <th className="px-3 py-2 text-right font-semibold w-28">
+                <th className="px-3 py-2 text-right font-semibold">
                   จำนวนเงิน
                   <span className="block text-[9px] font-normal uppercase tracking-wide text-gray-300">Amount</span>
                 </th>
@@ -164,7 +171,7 @@ export const PayrollSlipPreview = forwardRef<HTMLDivElement, { data: PayrollSlip
                   รายการหัก
                   <span className="block text-[9px] font-normal uppercase tracking-wide text-gray-300">Deductions</span>
                 </th>
-                <th className="px-3 py-2 text-right font-semibold w-28">
+                <th className="px-3 py-2 text-right font-semibold">
                   จำนวนเงิน
                   <span className="block text-[9px] font-normal uppercase tracking-wide text-gray-300">Amount</span>
                 </th>
