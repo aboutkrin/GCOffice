@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { exportToPdf } from "@/lib/export-pdf";
 import { exportToJpg } from "@/lib/export-jpg";
+import { captureOptions, waitForFonts } from "@/lib/html2canvas-options";
 import { shareFile } from "@/lib/share";
 
 interface SummaryExportToolbarProps {
@@ -163,12 +164,8 @@ export function SummaryExportToolbar({
     setExportLabel("กำลังสร้างไฟล์...");
     try {
       await preloadImages(el);
-      const canvas = await html2canvas(el, {
-        scale: 3,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      });
+      await waitForFonts();
+      const canvas = await html2canvas(el, captureOptions(3));
       const blob = await new Promise<Blob | null>((resolve) => {
         canvas.toBlob((b) => resolve(b), "image/jpeg", 0.92);
       });

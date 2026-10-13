@@ -1,4 +1,5 @@
 import html2canvas from "html2canvas-pro";
+import { captureOptions, waitForFonts } from "@/lib/html2canvas-options";
 
 // Preload all images in element and convert to data URLs for html2canvas compatibility
 async function preloadImages(element: HTMLElement): Promise<void> {
@@ -35,12 +36,7 @@ async function preloadImages(element: HTMLElement): Promise<void> {
 
 // Capture a single element to a JPG canvas
 async function captureElement(element: HTMLElement): Promise<HTMLCanvasElement> {
-  return html2canvas(element, {
-    scale: 3,
-    useCORS: true,
-    logging: false,
-    backgroundColor: "#ffffff",
-  });
+  return html2canvas(element, captureOptions(3));
 }
 
 // Convert canvas to blob
@@ -67,6 +63,7 @@ export async function exportToJpg(
 ): Promise<Blob | null> {
   // Preload images and convert to data URLs
   await preloadImages(element);
+  await waitForFonts();
 
   // Find individual document preview pages within the container
   const pages = element.querySelectorAll<HTMLElement>('[id="document-preview"]');

@@ -1,5 +1,6 @@
 import html2canvas from "html2canvas-pro";
 import jsPDF from "jspdf";
+import { captureOptions, waitForFonts } from "@/lib/html2canvas-options";
 
 // Preload all images in element and convert to data URLs for html2canvas compatibility
 async function preloadImages(element: HTMLElement): Promise<void> {
@@ -41,6 +42,7 @@ export async function exportToPdf(
 ): Promise<void> {
   // Preload images and convert to data URLs
   await preloadImages(element);
+  await waitForFonts();
 
   const pdf = new jsPDF("p", "mm", "a4");
   const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -54,12 +56,7 @@ export async function exportToPdf(
     for (let i = 0; i < pages.length; i++) {
       if (i > 0) pdf.addPage();
 
-      const canvas = await html2canvas(pages[i], {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: "#ffffff",
-      });
+      const canvas = await html2canvas(pages[i], captureOptions(2));
 
       const imgData = canvas.toDataURL("image/jpeg", 0.95);
       const imgWidth = canvas.width;
@@ -79,12 +76,7 @@ export async function exportToPdf(
   } else {
     // Single page: capture the document-preview element (A4 sized) instead of the outer container
     const target = pages.length === 1 ? pages[0] : element;
-    const canvas = await html2canvas(target, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: "#ffffff",
-    });
+    const canvas = await html2canvas(target, captureOptions(2));
 
     const imgData = canvas.toDataURL("image/jpeg", 0.95);
     const imgWidth = canvas.width;
