@@ -379,6 +379,18 @@ export const stockCountLineSchema = z.object({
   note: z.string().optional(),
 });
 
+/** ใบส่งสินค้า details on an ISSUE against a quotation; blank = not printed. */
+export const deliveryInfoSchema = z.object({
+  deliveryAddress: z.string().max(1000, "ที่อยู่ยาวเกินไป").optional(),
+  deliveryContactName: z.string().max(200, "ชื่อยาวเกินไป").optional(),
+  deliveryContactPhone: z.string().max(100, "เบอร์โทรยาวเกินไป").optional(),
+  customerPoNumber: z.string().max(100, "เลข PO ยาวเกินไป").optional(),
+  vehiclePlate: z.string().max(50, "ทะเบียนรถยาวเกินไป").optional(),
+  driverName: z.string().max(200, "ชื่อคนขับยาวเกินไป").optional(),
+  carrierName: z.string().max(200, "ชื่อขนส่งยาวเกินไป").optional(),
+  deliveryRemark: z.string().max(2000, "หมายเหตุยาวเกินไป").optional(),
+});
+
 export const labelPrintSchema = z.object({
   items: z
     .array(
@@ -396,6 +408,7 @@ export type StockScanFormData = z.infer<typeof stockScanSchema>;
 export type StockDocumentLineFormData = z.infer<typeof stockDocumentLineSchema>;
 export type StockCountLineFormData = z.infer<typeof stockCountLineSchema>;
 export type LabelPrintFormData = z.infer<typeof labelPrintSchema>;
+export type DeliveryInfoFormData = z.infer<typeof deliveryInfoSchema>;
 
 const usernameField = z
   .string()

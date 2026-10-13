@@ -1059,6 +1059,15 @@ model StockDocumentCounter {
   @@map("stock_document_counters")
 }
 
+/// Per-month counter for delivery-note (ใบส่งสินค้า) numbers DN-YYMM-NNNN.
+model DeliveryNoteCounter {
+  id        String @id @default(cuid())
+  yearMonth String @unique @map("year_month")
+  counter   Int    @default(0)
+
+  @@map("delivery_note_counters")
+}
+
 model StockDocument {
   id             String              @id @default(cuid())
   type           StockDocumentType
@@ -1073,6 +1082,18 @@ model StockDocument {
   note      String? @db.Text
   reference String? // supplier invoice / PO number / delivery note number
   lotNumber String? @map("lot_number")
+
+  /// ใบส่งสินค้า (delivery note) printed from an ISSUE against a quotation:
+  /// one posted issue = one delivery round. DN-YYMM-NNNN, assigned on post.
+  deliveryNumber       String? @unique @map("delivery_number")
+  deliveryAddress      String? @map("delivery_address") @db.Text
+  deliveryContactName  String? @map("delivery_contact_name")
+  deliveryContactPhone String? @map("delivery_contact_phone")
+  customerPoNumber     String? @map("customer_po_number")
+  vehiclePlate         String? @map("vehicle_plate")
+  driverName           String? @map("driver_name")
+  carrierName          String? @map("carrier_name")
+  deliveryRemark       String? @map("delivery_remark") @db.Text
 
   createdById String  @map("created_by_id") @db.Uuid
   createdBy   Profile @relation("StockDocumentCreatedBy", fields: [createdById], references: [id])

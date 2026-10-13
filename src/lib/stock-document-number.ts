@@ -33,3 +33,21 @@ export async function generateStockDocumentNumber(
   const seq = counter.counter.toString().padStart(4, "0");
   return `${prefix}-${yearMonth}-${seq}`;
 }
+
+type CounterClient = Pick<typeof prisma, "deliveryNoteCounter">;
+
+/** ใบส่งสินค้า number DN-YYMM-NNNN; pass the transaction client when posting. */
+export async function generateDeliveryNoteNumber(client: CounterClient = prisma): Promise<string> {
+  const now = new Date();
+  const buddhistYear = (now.getFullYear() + 543).toString().slice(-2);
+  const month = (now.getMonth() + 1).toString().padStart(2, "0");
+  const yearMonth = `${buddhistYear}${month}`;
+
+  const counter = await client.deliveryNoteCounter.upsert({
+    where: { yearMonth },
+    update: { counter: { increment: 1 } },
+    create: { yearMonth, counter: 1 },
+  });
+
+  return `DN-${yearMonth}-${counter.counter.toString().padStart(4, "0")}`;
+}

@@ -30,6 +30,7 @@ import { ScanInput, type ScanInputHandle } from "./scan-input";
 import { ScanQuantityPrompt } from "./scan-quantity-prompt";
 import { StockDocumentLineRow } from "./stock-document-line-row";
 import { StockCountVarianceSummary } from "./stock-count-variance-summary";
+import { DeliveryInfoCard } from "@/components/delivery-note/delivery-info-card";
 import { StockProductSearch, StockVariantChooser, type PickedStockItem } from "./stock-product-search";
 import { resolveStockCodeAction } from "@/actions/stock-actions";
 import type { StockCodeResolution } from "@/lib/stock-code";
@@ -158,6 +159,10 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
   };
 
   const totalQuantity = document.lines.reduce((sum: number, l: any) => sum + l.quantity, 0);
+  // A delivery round drops lines left at 0 when posted.
+  const postLineCount = isIssueFromDocument
+    ? document.lines.filter((l: any) => l.quantity > 0).length
+    : document.lines.length;
 
   return (
     <div className="space-y-6">
@@ -194,7 +199,7 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
               <X className="size-4" />
               ลบร่าง
             </Button>
-            <Button size="sm" onClick={() => setConfirmPost(true)} disabled={isPending || document.lines.length === 0}>
+            <Button size="sm" onClick={() => setConfirmPost(true)} disabled={isPending || postLineCount === 0}>
               <Check className="size-4" />
               บันทึกและปรับสต็อค
             </Button>
@@ -295,6 +300,8 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
         </CardContent>
       </Card>
 
+      {isIssueFromDocument && <DeliveryInfoCard key={document.updatedAt} document={document} />}
+
       {document.type === "COUNT" && varianceLines && varianceLines.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold mb-3">ผลต่างจากสต็อคระบบ</h2>
@@ -316,7 +323,7 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
             <AlertDialogDescription>
               {document.type === "COUNT"
                 ? `สต็อคของ ${document.lines.length} รายการที่นับจะถูกตั้งเป็นจำนวนที่นับได้ (รายการที่ไม่ได้นับจะไม่เปลี่ยน)`
-                : `สต็อคจะถูก${document.type === "RECEIVE" ? "เพิ่ม" : "ลด"}ตามรายการทั้งหมด ${document.lines.length} รายการ (${totalQuantity} กล่อง)`}
+                : `สต็อคจะถูก${document.type === "RECEIVE" ? "เพิ่ม" : "ลด"}ตามรายการทั้งหมด ${postLineCount} รายการ (${totalQuantity} กล่อง)${isIssueFromDocument ? " และออกเลขใบส่งสินค้า" : ""}`}
               {" "}และไม่สามารถแก้ไขรายการได้อีกหลังจากนี้
             </AlertDialogDescription>
           </AlertDialogHeader>

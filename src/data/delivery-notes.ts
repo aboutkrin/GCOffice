@@ -1,0 +1,204 @@
+import { prisma } from "@/lib/prisma";
+import { serialize } from "@/lib/utils";
+import { flattenLineItemSpecs } from "@/lib/line-item-specs";
+
+export interface DeliveryNoteLine {
+  sequence: number;
+  productSku: string;
+  productName: string;
+  colorVariantName: string | null;
+  colorVariantSku: string | null;
+  /** Ordered on the quotation; null for an extra item not on it. */
+  ordered: number | null;
+  /** Shipped in this round. */
+  quantity: number;
+  /** Still to ship after this round; null for an extra item. */
+  remaining: number | null;
+  unitLabel: string | null;
+  sqmPerUnit: string | null;
+}
+
+export interface DeliveryNoteData {
+  id: string;
+  status: "DRAFT" | "POSTED" | "CANCELLED";
+  issueNumber: string;
+  deliveryNumber: string | null;
+  deliveryDate: string;
+  /** 1-based delivery round within the quotation; null while a draft / cancelled. */
+  round: number | null;
+  quotation: { id: string; documentNumber: string | null; documentDate: string };
+  company: {
+    name: string;
+    address?: string | null;
+    taxId?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    logoUrl?: string | null;
+  };
+  customer: {
+    customerName?: string | null;
+    companyName?: string | null;
+    contactPerson?: string | null;
+    address?: string | null;
+    phone?: string | null;
+    taxId?: string | null;
+  };
+  deliveryAddress: string | null;
+  deliveryContactName: string | null;
+  deliveryContactPhone: string | null;
+  customerPoNumber: string | null;
+  vehiclePlate: string | null;
+  driverName: string | null;
+  carrierName: string | null;
+  deliveryRemark: string | null;
+  lines: DeliveryNoteLine[];
+}
+
+/**
+ * ใบส่งสินค้า for an ISSUE stock document against a quotation. One issue is
+ * one delivery round; "remaining" counts every posted round up to and
+ * including this one (or, for a draft, all posted rounds plus this one).
+ */
+export async function getDeliveryNote(stockDocumentId: string): Promise<DeliveryNoteData | null> {
+  const doc = await prisma.stockDocument.findUnique({
+    where: { id: stockDocumentId },
+    include: {
+      lines: {
+        orderBy: { sequence: "asc" },
+        include: {
+          product: { select: { websiteSpecs: true } },
+          colorVariant: { select: { sku: true } },
+          sourceLineItem: { select: { colorVariantSku: true } },
+        },
+      },
+      sourceDocument: {
+        select: {
+          id: true,
+          documentNumber: true,
+          documentDate: true,
+          companySnapshot: true,
+          customerSnapshot: true,
+          company: {
+            select: { name: true, address: true, taxId: true, phone: true, email: true, logoUrl: true },
+          },
+          customer: {
+            select: {
+              customerName: true,
+              companyName: true,
+              contactPerson: true,
+              address: true,
+              phone: true,
+              taxId: true,
+            },
+          },
+          lineItems: { select: { id: true, quantity: true } },
+        },
+      },
+    },
+  });
+  if (!doc || doc.type !== "ISSUE" || !doc.sourceDocument) return null;
+  const source = doc.sourceDocument;
+
+  // Every posted round of this quotation, oldest first.
+  const rounds = await prisma.stockDocument.findMany({
+    where: { sourceDocumentId: source.id, type: "ISSUE", status: "POSTED" },
+    orderBy: [{ postedAt: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      lines: { select: { sourceLineItemId: true, quantity: true } },
+    },
+  });
+  const roundIndex = rounds.findIndex((r) => r.id === doc.id);
+  // Rounds that count towards "shipped so far" on this note.
+  const counted =
+    doc.status === "POSTED" ? rounds.slice(0, roundIndex + 1) : doc.status === "DRAFT" ? rounds : [];
+  const shipped = new Map<string, number>();
+  for (const round of counted) {
+    for (const line of round.lines) {
+      if (!line.sourceLineItemId) continue;
+      shipped.set(line.sourceLineItemId, (shipped.get(line.sourceLineItemId) ?? 0) + line.quantity);
+    }
+  }
+  if (doc.status !== "POSTED") {
+    for (const line of doc.lines) {
+      if (!line.sourceLineItemId) continue;
+      shipped.set(line.sourceLineItemId, (shipped.get(line.sourceLineItemId) ?? 0) + line.quantity);
+    }
+  }
+  const orderedById = new Map(source.lineItems.map((li) => [li.id, li.quantity]));
+
+  const withSpecs = await flattenLineItemSpecs(
+    doc.lines
+      .filter((line) => line.quantity > 0)
+      .map((line) => ({ ...line, productSku: line.productSku || null })),
+  );
+
+  const lines: DeliveryNoteLine[] = withSpecs.map((line, index) => {
+    const ordered = line.sourceLineItemId ? orderedById.get(line.sourceLineItemId) ?? null : null;
+    return {
+      sequence: index + 1,
+      productSku: line.productSku ?? "",
+      productName: line.productName,
+      colorVariantName: line.colorVariantName,
+      colorVariantSku: line.sourceLineItem?.colorVariantSku ?? line.colorVariant?.sku ?? null,
+      ordered,
+      quantity: line.quantity,
+      remaining:
+        ordered == null ? null : Math.max(0, ordered - (shipped.get(line.sourceLineItemId!) ?? 0)),
+      unitLabel: line.unitLabel,
+      sqmPerUnit: line.sqmPerUnit,
+    };
+  });
+
+  const companySnapshot = (source.companySnapshot ?? {}) as DeliveryNoteData["company"];
+  const customerSnapshot = (source.customerSnapshot ?? {}) as DeliveryNoteData["customer"];
+
+  return serialize({
+    id: doc.id,
+    status: doc.status,
+    issueNumber: doc.documentNumber,
+    deliveryNumber: doc.deliveryNumber,
+    deliveryDate: (doc.postedAt ?? doc.documentDate).toISOString(),
+    round: doc.status === "POSTED" && roundIndex >= 0 ? roundIndex + 1 : null,
+    quotation: {
+      id: source.id,
+      documentNumber: source.documentNumber,
+      documentDate: source.documentDate.toISOString(),
+    },
+    // Live company / customer data, like the quotation preview.
+    company: source.company ?? companySnapshot,
+    customer: source.customer ?? customerSnapshot,
+    deliveryAddress: doc.deliveryAddress,
+    deliveryContactName: doc.deliveryContactName,
+    deliveryContactPhone: doc.deliveryContactPhone,
+    customerPoNumber: doc.customerPoNumber,
+    vehiclePlate: doc.vehiclePlate,
+    driverName: doc.driverName,
+    carrierName: doc.carrierName,
+    deliveryRemark: doc.deliveryRemark,
+    lines,
+  }) as DeliveryNoteData;
+}
+
+/** Delivery rounds of one quotation for its "การส่งสินค้า" card. */
+export async function getDeliveryRounds(documentId: string) {
+  const rounds = await prisma.stockDocument.findMany({
+    where: { sourceDocumentId: documentId, type: "ISSUE", status: { not: "CANCELLED" } },
+    orderBy: [{ postedAt: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      status: true,
+      documentNumber: true,
+      deliveryNumber: true,
+      documentDate: true,
+      postedAt: true,
+      lines: { select: { quantity: true } },
+    },
+  });
+  return serialize(
+    rounds.map(({ lines, ...round }) => ({
+      ...round,
+      totalQuantity: lines.reduce((sum, l) => sum + l.quantity, 0),
+    })),
+  );
+}
