@@ -129,14 +129,14 @@ export function DeliveryNotePreview({ data, copyLabel }: DeliveryNotePreviewProp
         <div className="space-y-0.5">
           <p className="mb-1 text-[10px] font-bold text-gray-800">สถานที่ส่งสินค้า</p>
           <Field label="ที่อยู่หน้างาน">{data.deliveryAddress}</Field>
-          <Field label="ผู้รับหน้างาน">
-            {[data.deliveryContactName, data.deliveryContactPhone].filter(Boolean).join(" · ")}
-          </Field>
+          <Field label="ผู้รับหน้างาน">{data.deliveryContactName}</Field>
+          <Field label="เบอร์ผู้รับ">{data.deliveryContactPhone}</Field>
         </div>
         <div className="space-y-0.5 border-t border-gray-200 pt-2 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-3 print:border-t-0 print:border-l print:pt-0 print:pl-3">
           <p className="mb-1 text-[10px] font-bold text-gray-800">การขนส่ง</p>
           <Field label="ทะเบียนรถ">{data.vehiclePlate}</Field>
           <Field label="คนขับ">{data.driverName}</Field>
+          <Field label="เบอร์คนขับ">{data.driverPhone}</Field>
           <Field label="ขนส่ง">{data.carrierName}</Field>
         </div>
       </div>

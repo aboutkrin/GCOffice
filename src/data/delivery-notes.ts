@@ -51,6 +51,7 @@ export interface DeliveryNoteData {
   customerPoNumber: string | null;
   vehiclePlate: string | null;
   driverName: string | null;
+  driverPhone: string | null;
   carrierName: string | null;
   deliveryRemark: string | null;
   lines: DeliveryNoteLine[];
@@ -175,6 +176,7 @@ export async function getDeliveryNote(stockDocumentId: string): Promise<Delivery
     customerPoNumber: doc.customerPoNumber,
     vehiclePlate: doc.vehiclePlate,
     driverName: doc.driverName,
+    driverPhone: doc.driverPhone,
     carrierName: doc.carrierName,
     deliveryRemark: doc.deliveryRemark,
     lines,

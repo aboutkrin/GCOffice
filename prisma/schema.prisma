@@ -1092,6 +1092,7 @@ model StockDocument {
   customerPoNumber     String? @map("customer_po_number")
   vehiclePlate         String? @map("vehicle_plate")
   driverName           String? @map("driver_name")
+  driverPhone          String? @map("driver_phone")
   carrierName          String? @map("carrier_name")
   deliveryRemark       String? @map("delivery_remark") @db.Text
 
