@@ -11,16 +11,6 @@ function formatQuantity(n: number) {
   return new Intl.NumberFormat("th-TH", { maximumFractionDigits: 2 }).format(n);
 }
 
-function lineSqm(line: DeliveryNoteLine): number | null {
-  const perUnit = line.sqmPerUnit ? Number(line.sqmPerUnit) : NaN;
-  if (!Number.isFinite(perUnit) || perUnit <= 0) return null;
-  return perUnit * line.quantity;
-}
-
-function formatSqm(n: number) {
-  return new Intl.NumberFormat("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
-}
-
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex gap-1.5 text-[10px] leading-snug">
@@ -52,9 +42,7 @@ export function DeliveryNotePreview({ data, copyLabel }: DeliveryNotePreviewProp
   const units = new Set(data.lines.map((l) => l.unitLabel?.trim() || DEFAULT_UNIT));
   const commonUnit = units.size === 1 ? [...units][0] : null;
   const totalQuantity = data.lines.reduce((sum, l) => sum + l.quantity, 0);
-  const sqms = data.lines.map(lineSqm);
-  const hasSqm = sqms.some((s) => s != null);
-  const totalSqm = sqms.reduce<number>((sum, s) => sum + (s ?? 0), 0);
+  const hasImages = data.lines.some((l) => l.imageUrl);
   const showRemaining = data.lines.some((l) => l.remaining != null);
   const watermark = data.status === "DRAFT" ? "ร่าง" : data.status === "CANCELLED" ? "ยกเลิก" : null;
   const customerName = customer.companyName || customer.customerName;
@@ -158,20 +146,31 @@ export function DeliveryNotePreview({ data, copyLabel }: DeliveryNotePreviewProp
         <thead>
           <tr className="bg-gray-800 text-white">
             <th className="w-8 border border-gray-700 px-1 py-1.5 text-center">ลำดับ</th>
+            {hasImages && <th className="w-16 border border-gray-700 px-1 py-1.5 text-center">รูป</th>}
             <th className="border border-gray-700 px-2 py-1.5 text-left">รายการ</th>
             {showRemaining && <th className="w-14 border border-gray-700 px-1 py-1.5 text-center">สั่ง</th>}
             <th className="w-16 border border-gray-700 px-1 py-1.5 text-center">ส่งครั้งนี้</th>
             <th className="w-12 border border-gray-700 px-1 py-1.5 text-center">หน่วย</th>
-            {hasSqm && <th className="w-16 border border-gray-700 px-1 py-1.5 text-right">ตร.ม.</th>}
             {showRemaining && <th className="w-14 border border-gray-700 px-1 py-1.5 text-center">ค้างส่ง</th>}
           </tr>
         </thead>
         <tbody>
           {data.lines.map((line, index) => {
-            const sqm = sqms[index];
             return (
               <tr key={line.sequence} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                 <td className="border border-gray-300 px-1 py-1.5 text-center align-top">{line.sequence}</td>
+                {hasImages && (
+                  <td className="border border-gray-300 p-1 text-center align-top">
+                    {line.imageUrl && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={line.imageUrl}
+                        alt={line.productName}
+                        className="mx-auto h-14 w-14 rounded object-cover"
+                      />
+                    )}
+                  </td>
+                )}
                 <td className="border border-gray-300 px-2 py-1.5 align-top">
                   <p className="font-medium">{line.productName}</p>
                   <p className="text-[9px] text-gray-500">
@@ -191,11 +190,6 @@ export function DeliveryNotePreview({ data, copyLabel }: DeliveryNotePreviewProp
                 <td className="border border-gray-300 px-1 py-1.5 text-center align-top">
                   {line.unitLabel?.trim() || DEFAULT_UNIT}
                 </td>
-                {hasSqm && (
-                  <td className="border border-gray-300 px-1 py-1.5 text-right align-top">
-                    {sqm != null ? formatSqm(sqm) : "-"}
-                  </td>
-                )}
                 {showRemaining && (
                   <td className="border border-gray-300 px-1 py-1.5 text-center align-top">
                     {line.remaining != null ? formatQuantity(line.remaining) : "-"}
@@ -207,12 +201,11 @@ export function DeliveryNotePreview({ data, copyLabel }: DeliveryNotePreviewProp
         </tbody>
         <tfoot>
           <tr className="bg-gray-100 font-bold">
-            <td className="border border-gray-300 px-2 py-1.5 text-right" colSpan={showRemaining ? 3 : 2}>
+            <td className="border border-gray-300 px-2 py-1.5 text-right" colSpan={(hasImages ? 1 : 0) + (showRemaining ? 3 : 2)}>
               รวม {data.lines.length} รายการ
             </td>
             <td className="border border-gray-300 px-1 py-1.5 text-center">{formatQuantity(totalQuantity)}</td>
             <td className="border border-gray-300 px-1 py-1.5 text-center">{commonUnit ?? ""}</td>
-            {hasSqm && <td className="border border-gray-300 px-1 py-1.5 text-right">{formatSqm(totalSqm)}</td>}
             {showRemaining && <td className="border border-gray-300" />}
           </tr>
         </tfoot>

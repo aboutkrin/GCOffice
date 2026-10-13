@@ -16,7 +16,8 @@ export interface DeliveryNoteLine {
   /** Still to ship after this round; null for an extra item. */
   remaining: number | null;
   unitLabel: string | null;
-  sqmPerUnit: string | null;
+  /** Colour variant image, else the product image. */
+  imageUrl: string | null;
 }
 
 export interface DeliveryNoteData {
@@ -67,8 +68,8 @@ export async function getDeliveryNote(stockDocumentId: string): Promise<Delivery
       lines: {
         orderBy: { sequence: "asc" },
         include: {
-          product: { select: { websiteSpecs: true } },
-          colorVariant: { select: { sku: true } },
+          product: { select: { websiteSpecs: true, imageUrl: true } },
+          colorVariant: { select: { sku: true, imageUrl: true } },
           sourceLineItem: { select: { colorVariantSku: true } },
         },
       },
@@ -147,7 +148,7 @@ export async function getDeliveryNote(stockDocumentId: string): Promise<Delivery
       remaining:
         ordered == null ? null : Math.max(0, ordered - (shipped.get(line.sourceLineItemId!) ?? 0)),
       unitLabel: line.unitLabel,
-      sqmPerUnit: line.sqmPerUnit,
+      imageUrl: line.colorVariant?.imageUrl ?? line.product?.imageUrl ?? null,
     };
   });
 
