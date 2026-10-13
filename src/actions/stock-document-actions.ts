@@ -22,6 +22,7 @@ const STOCK_PATHS = [
   "/stock/summary",
   "/stock/history",
   "/quotations",
+  "/delivery-notes",
 ];
 
 function revalidateStockPaths() {

@@ -27,6 +27,7 @@ import {
   Banknote,
   CalendarCheck,
   CircleUser,
+  Truck,
 } from "lucide-react";
 
 export type NavItem = {
@@ -61,6 +62,7 @@ export const MAIN_NAV: NavEntry[] = [
       { href: "/quotations", label: "ใบเสนอราคา", icon: FileText },
       { href: "/invoices", label: "ใบแจ้งหนี้", icon: Receipt },
       { href: "/receipts", label: "ใบเสร็จรับเงิน", icon: ReceiptText },
+      { href: "/delivery-notes", label: "ใบส่งสินค้า", icon: Truck },
     ],
   },
   {

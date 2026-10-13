@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { flattenLineItemSpecs } from "@/lib/line-item-specs";
 
@@ -201,4 +202,98 @@ export async function getDeliveryRounds(documentId: string) {
       totalQuantity: lines.reduce((sum, l) => sum + l.quantity, 0),
     })),
   );
+}
+
+export interface DeliveryNoteListItem {
+  id: string;
+  status: "DRAFT" | "POSTED" | "CANCELLED";
+  issueNumber: string;
+  deliveryNumber: string | null;
+  /** postedAt for a posted note, else the issue's document date. */
+  date: string;
+  quotation: { id: string; documentNumber: string | null };
+  customerName: string;
+  totalQuantity: number;
+  createdBy: string;
+}
+
+/**
+ * ใบส่งสินค้า list for the /delivery-notes menu: every ISSUE stock document
+ * raised against a quotation (one per delivery round), newest first.
+ */
+export async function getDeliveryNotes(params?: { search?: string; page?: number; perPage?: number }) {
+  const page = params?.page ?? 1;
+  const perPage = params?.perPage ?? 20;
+  const search = params?.search?.trim();
+
+  const where: Prisma.StockDocumentWhereInput = {
+    type: "ISSUE",
+    sourceDocumentId: { not: null },
+    ...(search
+      ? {
+          OR: [
+            { deliveryNumber: { contains: search, mode: "insensitive" } },
+            { documentNumber: { contains: search, mode: "insensitive" } },
+            { customerPoNumber: { contains: search, mode: "insensitive" } },
+            { sourceDocument: { documentNumber: { contains: search, mode: "insensitive" } } },
+            { sourceDocument: { customer: { customerName: { contains: search, mode: "insensitive" } } } },
+            { sourceDocument: { customer: { companyName: { contains: search, mode: "insensitive" } } } },
+          ],
+        }
+      : {}),
+  };
+
+  try {
+    const [rows, total] = await Promise.all([
+      prisma.stockDocument.findMany({
+        where,
+        orderBy: [{ postedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
+        skip: (page - 1) * perPage,
+        take: perPage,
+        select: {
+          id: true,
+          status: true,
+          documentNumber: true,
+          deliveryNumber: true,
+          documentDate: true,
+          postedAt: true,
+          createdBy: { select: { fullName: true, username: true } },
+          lines: { select: { quantity: true } },
+          sourceDocument: {
+            select: {
+              id: true,
+              documentNumber: true,
+              customerSnapshot: true,
+              customer: { select: { type: true, customerName: true, companyName: true } },
+            },
+          },
+        },
+      }),
+      prisma.stockDocument.count({ where }),
+    ]);
+
+    const notes: DeliveryNoteListItem[] = rows.map((row) => {
+      const snapshot = (row.sourceDocument?.customerSnapshot ?? {}) as Record<string, string | null | undefined>;
+      const customer = row.sourceDocument?.customer ?? snapshot;
+      const customerName =
+        (customer.type === "COMPANY" && customer.companyName) ||
+        customer.customerName ||
+        customer.companyName ||
+        "-";
+      return {
+        id: row.id,
+        status: row.status,
+        issueNumber: row.documentNumber,
+        deliveryNumber: row.deliveryNumber,
+        date: (row.postedAt ?? row.documentDate).toISOString(),
+        quotation: { id: row.sourceDocument!.id, documentNumber: row.sourceDocument!.documentNumber },
+        customerName,
+        totalQuantity: row.lines.reduce((sum, l) => sum + l.quantity, 0),
+        createdBy: row.createdBy?.fullName || row.createdBy?.username || "-",
+      };
+    });
+    return { notes, total };
+  } catch {
+    return { notes: [] as DeliveryNoteListItem[], total: 0 };
+  }
 }
