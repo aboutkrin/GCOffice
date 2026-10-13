@@ -104,7 +104,7 @@ export function DeliveryNoteTable({
                               <Link href={`/quotations/${s.id}`} className="font-mono font-medium text-primary hover:underline">
                                 {s.documentNumber ?? "ร่าง"}
                               </Link>
-                              {" "}({s.customerName}) ยังไม่มีรอบส่ง — เปิดใบเสนอราคาแล้วกด “เริ่มรอบส่งใหม่” ในการ์ด “การส่งสินค้า”
+                              {" "}({s.customerName}) ยังไม่มีรอบส่ง — เปิดใบเสนอราคาแล้วกด “สร้างรอบส่งใหม่” ในการ์ด “การส่งสินค้า”
                             </p>
                           ))}
                         </div>
@@ -115,7 +115,7 @@ export function DeliveryNoteTable({
                       )}
                     </div>
                   ) : (
-                    <>ยังไม่มีใบส่งสินค้า — เปิดใบเสนอราคาที่ยืนยันแล้ว แล้วกด “เริ่มรอบส่งใหม่” ในการ์ด “การส่งสินค้า”</>
+                    <>ยังไม่มีใบส่งสินค้า — เปิดใบเสนอราคาที่ยืนยันแล้ว แล้วกด “สร้างรอบส่งใหม่” ในการ์ด “การส่งสินค้า”</>
                   )}
                 </TableCell>
               </TableRow>
