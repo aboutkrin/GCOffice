@@ -310,6 +310,9 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
                   key={line.id}
                   line={line}
                   editable={isDraft}
+                  correctable={
+                    document.status === "POSTED" && document.type !== "COUNT" && !document.reversalOfId
+                  }
                   showOrderedProgress={isIssueFromDocument}
                   onChanged={() => router.refresh()}
                 />

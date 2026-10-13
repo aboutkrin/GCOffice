@@ -363,6 +363,91 @@ export async function updateStockDocumentLine(lineId: string, data: unknown) {
   return serialize(updated);
 }
 
+/**
+ * Fix a typo in a POSTED RECEIVE/ISSUE line: applies the difference to stock,
+ * rewrites the line's movement and shifts the running balance of later
+ * movements of the same item so the history stays consistent.
+ */
+export async function correctPostedLineQuantity(lineId: string, quantity: number) {
+  await requireUserAction();
+  const newQty = Math.trunc(Number(quantity));
+  if (!Number.isFinite(newQty) || newQty < 1) throw new Error("จำนวนต้องมากกว่า 0");
+
+  await prisma.$transaction(
+    async (tx) => {
+      const line = await tx.stockDocumentLine.findUniqueOrThrow({
+        where: { id: lineId },
+        include: { stockDocument: true },
+      });
+      const doc = line.stockDocument;
+      if (doc.status !== "POSTED") throw new Error("แก้จำนวนได้เฉพาะเอกสารที่บันทึกแล้ว");
+      if (doc.type === "COUNT") throw new Error("ใบตรวจนับแก้จำนวนไม่ได้ กรุณานับใหม่");
+      if (doc.reversalOfId) throw new Error("เอกสารกลับรายการแก้ไขไม่ได้");
+
+      const delta = newQty - line.quantity;
+      if (delta === 0) return;
+      const effect = doc.type === "RECEIVE" ? delta : -delta;
+
+      const movement = await tx.stockMovement.findFirst({
+        where: { stockDocumentLineId: lineId, reversesMovementId: null },
+      });
+      if (!movement) throw new Error("ไม่พบประวัติสต็อคของรายการนี้");
+
+      let current: number;
+      if (line.colorVariantId) {
+        const v = await tx.productColorVariant.findUniqueOrThrow({
+          where: { id: line.colorVariantId },
+          select: { stockQuantity: true },
+        });
+        current = v.stockQuantity;
+      } else {
+        const p = await tx.product.findUniqueOrThrow({
+          where: { id: line.productId },
+          select: { stockQuantity: true },
+        });
+        current = p.stockQuantity;
+      }
+      if (current + effect < 0) {
+        throw new Error(`สต็อคคงเหลือไม่พอ (มี ${current}) ไม่สามารถเปลี่ยนเป็น ${newQty}`);
+      }
+
+      if (line.colorVariantId) {
+        await tx.productColorVariant.update({
+          where: { id: line.colorVariantId },
+          data: { stockQuantity: current + effect },
+        });
+        await syncProductStockFromVariants(tx, line.productId);
+      } else {
+        await tx.product.update({
+          where: { id: line.productId },
+          data: { stockQuantity: current + effect },
+        });
+      }
+
+      await tx.stockMovement.updateMany({
+        where: {
+          productId: movement.productId,
+          colorVariantId: movement.colorVariantId,
+          createdAt: { gt: movement.createdAt },
+        },
+        data: { balanceAfter: { increment: effect } },
+      });
+      await tx.stockMovement.update({
+        where: { id: movement.id },
+        data: {
+          quantity: newQty,
+          balanceAfter: movement.balanceAfter + effect,
+          reason: `${movement.reason ?? ""} (แก้จำนวน ${line.quantity} → ${newQty})`.trim(),
+        },
+      });
+      await tx.stockDocumentLine.update({ where: { id: lineId }, data: { quantity: newQty } });
+    },
+    { timeout: 30000 },
+  );
+
+  revalidateStockPaths();
+}
+
 export async function removeStockDocumentLine(lineId: string) {
   await requireUserAction();
   const line = await prisma.stockDocumentLine.findUniqueOrThrow({
