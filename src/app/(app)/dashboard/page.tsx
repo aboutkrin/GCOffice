@@ -39,18 +39,21 @@ export default async function DashboardPage() {
     return (
       <div>
         <PageHeader title="แดชบอร์ด" description="ปฏิทินทีมและกำหนดส่งสินค้า" />
-        <DeliverySchedule
-          initialData={deliverySchedule}
-          initialYear={currentYear}
-          initialMonth={currentMonth}
-          initialHolidays={holidays}
-        />
         {user && (
-          <div className="mt-8">
+          <div>
             <h2 className="text-lg font-semibold mb-4">ปฏิทินทีม</h2>
             <TeamCalendarSection user={user} />
           </div>
         )}
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold mb-4">กำหนดส่งสินค้า</h2>
+          <DeliverySchedule
+            initialData={deliverySchedule}
+            initialYear={currentYear}
+            initialMonth={currentMonth}
+            initialHolidays={holidays}
+          />
+        </div>
       </div>
     );
   }
@@ -112,8 +115,27 @@ export default async function DashboardPage() {
         description="ภาพรวมเอกสารและข้อมูลสรุป"
       />
 
+      {/* Team calendar: company holidays, leave, shipments from China */}
+      {user && (
+        <div>
+          <h2 className="text-lg font-semibold mb-4">ปฏิทินทีม</h2>
+          <TeamCalendarSection user={user} />
+        </div>
+      )}
+
+      {/* Delivery Schedule */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold mb-4">กำหนดส่งสินค้า</h2>
+        <DeliverySchedule
+          initialData={deliverySchedule}
+          initialYear={currentYear}
+          initialMonth={currentMonth}
+          initialHolidays={holidays}
+        />
+      </div>
+
       {/* This Month Stats */}
-      <div className="mb-6">
+      <div className="mt-8">
         <h2 className="text-lg font-semibold mb-4">เดือนนี้</h2>
         <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-5">
           {thisMonthCards.map((card, index) => (
@@ -153,25 +175,6 @@ export default async function DashboardPage() {
             currentYear={currentYear}
             currentMonth={currentMonth}
           />
-        </div>
-      )}
-
-      {/* Delivery Schedule */}
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold mb-4">กำหนดส่งสินค้า</h2>
-        <DeliverySchedule
-          initialData={deliverySchedule}
-          initialYear={currentYear}
-          initialMonth={currentMonth}
-          initialHolidays={holidays}
-        />
-      </div>
-
-      {/* Team calendar: company holidays, leave, shipments from China */}
-      {user && (
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold mb-4">ปฏิทินทีม</h2>
-          <TeamCalendarSection user={user} />
         </div>
       )}
 
