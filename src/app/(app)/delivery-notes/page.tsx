@@ -21,7 +21,7 @@ export default async function DeliveryNotesPage({ searchParams }: DeliveryNotesP
     <div>
       <PageHeader
         title="ใบส่งสินค้า"
-        description="ใบส่งสินค้าทุกรอบที่ออกจากใบเสนอราคา — เริ่มรอบส่งใหม่ได้จากการ์ด “การส่งสินค้า” ในใบเสนอราคาที่ยืนยันแล้ว"
+        description="ใบส่งสินค้าทุกรอบที่ออกจากใบเสนอราคา — สร้างรอบส่งใหม่ได้จากการ์ด “การส่งสินค้า” ในใบเสนอราคาที่ยืนยันแล้ว"
       />
 
       <DeliveryNoteTable
