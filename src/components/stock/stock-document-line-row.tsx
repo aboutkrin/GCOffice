@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Check, Minus, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductThumb } from "@/components/ui/product-thumb";
 import {
   updateStockDocumentLine,
   removeStockDocumentLine,
+  correctPostedLineQuantity,
 } from "@/actions/stock-document-actions";
 
 interface StockDocumentLineRowProps {
@@ -16,6 +17,8 @@ interface StockDocumentLineRowProps {
   editable: boolean;
   /** ISSUE-against-document rows show ordered/remaining instead of a free quantity stepper. */
   showOrderedProgress?: boolean;
+  /** POSTED receive/issue lines: allow fixing a typo (adjusts stock by the difference). */
+  correctable?: boolean;
   onChanged: () => void;
 }
 
@@ -23,9 +26,11 @@ export function StockDocumentLineRow({
   line,
   editable,
   showOrderedProgress,
+  correctable,
   onChanged,
 }: StockDocumentLineRowProps) {
   const [isPending, startTransition] = useTransition();
+  const [editingPosted, setEditingPosted] = useState(false);
   const [quantity, setQuantity] = useState(line.quantity);
 
   const commitQuantity = (next: number) => {
@@ -34,6 +39,24 @@ export function StockDocumentLineRow({
     startTransition(async () => {
       try {
         await updateStockDocumentLine(line.id, { quantity: next });
+        onChanged();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+        setQuantity(line.quantity);
+      }
+    });
+  };
+
+  const saveCorrection = () => {
+    if (quantity === line.quantity) {
+      setEditingPosted(false);
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await correctPostedLineQuantity(line.id, quantity);
+        toast.success("แก้จำนวนและปรับสต็อคเรียบร้อยแล้ว");
+        setEditingPosted(false);
         onChanged();
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
@@ -109,8 +132,48 @@ export function StockDocumentLineRow({
             <Trash2 className="size-3.5" />
           </Button>
         </div>
+      ) : correctable && editingPosted ? (
+        <div className="flex items-center gap-1 shrink-0">
+          <Input
+            type="number"
+            min={1}
+            value={quantity}
+            onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+            className="h-8 w-20 text-center"
+            disabled={isPending}
+            autoFocus
+          />
+          <Button type="button" size="icon-xs" disabled={isPending} onClick={saveCorrection}>
+            <Check className="size-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={isPending}
+            onClick={() => {
+              setQuantity(line.quantity);
+              setEditingPosted(false);
+            }}
+          >
+            <X className="size-3.5" />
+          </Button>
+        </div>
       ) : (
-        <span className="font-mono font-medium shrink-0">{line.quantity}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="font-mono font-medium">{line.quantity}</span>
+          {correctable && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              aria-label="แก้จำนวน"
+              onClick={() => setEditingPosted(true)}
+            >
+              <Pencil className="size-3.5" />
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

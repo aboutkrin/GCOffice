@@ -11,7 +11,7 @@ import {
 } from "@tanstack/react-table";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import { formatThaiDateTime } from "@/lib/thai-date";
+import { formatThaiDate } from "@/lib/thai-date";
 import {
   STOCK_DOCUMENT_STATUS_LABELS,
   STOCK_DOCUMENT_STATUS_COLORS,
@@ -95,7 +95,7 @@ export function StockDocumentTable({
     {
       accessorKey: "documentDate",
       header: "วันที่",
-      cell: ({ row }) => formatThaiDateTime(new Date(row.original.documentDate)),
+      cell: ({ row }) => formatThaiDate(new Date(row.original.documentDate)),
     },
     {
       id: "lineCount",
