@@ -60,22 +60,33 @@ export function SummaryExportToolbar({
 
   const withA4Width = useCallback(
     async <T,>(el: HTMLElement, fn: () => Promise<T>): Promise<T> => {
-      const origWidth = el.style.width;
-      const origMaxWidth = el.style.maxWidth;
-      const origMinHeight = el.style.minHeight;
-      const origPadding = el.style.padding;
-      el.style.width = "210mm";
-      el.style.maxWidth = "none";
-      el.style.minHeight = "297mm";
-      el.style.padding = "2rem";
+      // Size each page (e.g. ต้นฉบับ + สำเนา) to A4 — the exporters capture the
+      // individual pages, so sizing only the outer wrapper leaves them at the
+      // screen width and the capture comes out with garbled, overlapping text.
+      const pages = el.querySelectorAll<HTMLElement>('[id="document-preview"]');
+      const targets = pages.length > 0 ? Array.from(pages) : [el];
+      const origStyles = targets.map((t) => ({
+        width: t.style.width,
+        maxWidth: t.style.maxWidth,
+        minHeight: t.style.minHeight,
+        padding: t.style.padding,
+      }));
+      targets.forEach((t) => {
+        t.style.width = "210mm";
+        t.style.maxWidth = "none";
+        t.style.minHeight = "297mm";
+        t.style.padding = "2rem";
+      });
       await new Promise((r) => setTimeout(r, 100));
       try {
         return await fn();
       } finally {
-        el.style.width = origWidth;
-        el.style.maxWidth = origMaxWidth;
-        el.style.minHeight = origMinHeight;
-        el.style.padding = origPadding;
+        targets.forEach((t, i) => {
+          t.style.width = origStyles[i].width;
+          t.style.maxWidth = origStyles[i].maxWidth;
+          t.style.minHeight = origStyles[i].minHeight;
+          t.style.padding = origStyles[i].padding;
+        });
       }
     },
     []
