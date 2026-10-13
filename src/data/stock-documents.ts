@@ -18,6 +18,7 @@ export async function getStockDocuments(params?: {
     where.OR = [
       { documentNumber: { contains: params.search, mode: "insensitive" } },
       { reference: { contains: params.search, mode: "insensitive" } },
+      { deliveryNumber: { contains: params.search, mode: "insensitive" } },
     ];
   }
   if (params?.dateFrom || params?.dateTo) {

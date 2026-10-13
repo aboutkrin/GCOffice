@@ -9,6 +9,9 @@ import { getActiveHolidays } from "@/data/holidays";
 import { getDocumentProfit } from "@/data/document-profit";
 import { getCurrentUser } from "@/lib/auth";
 import { DocumentProfitCard } from "@/components/documents/document-profit-card";
+import { getDocumentIssueProgress } from "@/data/stock-documents";
+import { getDeliveryRounds } from "@/data/delivery-notes";
+import { QuotationDeliveryCard } from "@/components/delivery-note/quotation-delivery-card";
 
 interface QuotationEditPageProps {
   params: Promise<{ id: string }>;
@@ -33,7 +36,12 @@ export default async function QuotationEditPage({
     notFound();
   }
 
-  const user = await getCurrentUser();
+  const [user, issueProgress, deliveryRounds] = await Promise.all([
+    getCurrentUser(),
+    getDocumentIssueProgress(id),
+    getDeliveryRounds(id),
+  ]);
+  const canDeliver = document.status === "CONFIRMED" || document.status === "SHIPPED";
   const profit =
     user?.role === "ADMIN" && !document.isDepositInvoice ? await getDocumentProfit(id) : null;
 
@@ -52,6 +60,15 @@ export default async function QuotationEditPage({
         paymentTermTemplates={paymentTermTemplates}
         holidays={holidays}
       />
+
+      {(canDeliver || deliveryRounds.length > 0) && (
+        <QuotationDeliveryCard
+          documentId={id}
+          progress={issueProgress.filter((line) => line.productId)}
+          rounds={deliveryRounds}
+          canDeliver={canDeliver}
+        />
+      )}
 
       {profit && <DocumentProfitCard key={JSON.stringify(profit)} profit={profit} />}
     </div>

@@ -9,8 +9,9 @@ import {
   createStockDocumentSchema,
   stockDocumentLineSchema,
   stockScanSchema,
+  deliveryInfoSchema,
 } from "@/lib/validators";
-import { generateStockDocumentNumber } from "@/lib/stock-document-number";
+import { generateStockDocumentNumber, generateDeliveryNoteNumber } from "@/lib/stock-document-number";
 import { resolveStockCode } from "@/lib/stock-code";
 
 const STOCK_PATHS = [
@@ -95,6 +96,7 @@ export async function createIssueFromDocument(documentId: string) {
   }
 
   const documentNumber = await generateStockDocumentNumber(StockDocumentType.ISSUE);
+  const deliveryDefaults = await getDeliveryDefaults(documentId);
 
   const document = await prisma.stockDocument.create({
     data: {
@@ -103,6 +105,7 @@ export async function createIssueFromDocument(documentId: string) {
       documentDate: new Date(),
       sourceDocumentId: documentId,
       createdById: user.id,
+      ...deliveryDefaults,
       lines: {
         create: outstanding.map((li: any, index: number) => ({
           sequence: index + 1,
@@ -134,6 +137,94 @@ export async function createIssueFromDocument(documentId: string) {
 
   revalidateStockPaths();
   return serialize(document);
+}
+
+/**
+ * ใบส่งสินค้า prefill for a new delivery round: site address and contact from
+ * the quotation / live customer, PO and transport from the previous round.
+ */
+async function getDeliveryDefaults(documentId: string) {
+  const [source, previous] = await Promise.all([
+    prisma.document.findUnique({
+      where: { id: documentId },
+      select: {
+        shippingLocation: true,
+        freeShippingLocation: true,
+        customerSnapshot: true,
+        customer: { select: { customerName: true, contactPerson: true, phone: true, address: true } },
+      },
+    }),
+    prisma.stockDocument.findFirst({
+      where: { sourceDocumentId: documentId, type: "ISSUE", status: { not: "CANCELLED" } },
+      orderBy: { createdAt: "desc" },
+      select: {
+        deliveryAddress: true,
+        deliveryContactName: true,
+        deliveryContactPhone: true,
+        customerPoNumber: true,
+        vehiclePlate: true,
+        driverName: true,
+        carrierName: true,
+      },
+    }),
+  ]);
+  const snapshot = (source?.customerSnapshot ?? {}) as Record<string, string | null | undefined>;
+  const customer = source?.customer;
+
+  return {
+    deliveryAddress:
+      previous?.deliveryAddress ||
+      source?.shippingLocation?.trim() ||
+      source?.freeShippingLocation?.trim() ||
+      customer?.address ||
+      snapshot.address ||
+      null,
+    deliveryContactName:
+      previous?.deliveryContactName ||
+      customer?.contactPerson ||
+      customer?.customerName ||
+      snapshot.contactPerson ||
+      snapshot.customerName ||
+      null,
+    deliveryContactPhone: previous?.deliveryContactPhone || customer?.phone || snapshot.phone || null,
+    customerPoNumber: previous?.customerPoNumber ?? null,
+    vehiclePlate: previous?.vehiclePlate ?? null,
+    driverName: previous?.driverName ?? null,
+    carrierName: previous?.carrierName ?? null,
+  };
+}
+
+/** ใบส่งสินค้า details; editable after posting since they never touch stock. */
+export async function updateDeliveryInfo(stockDocumentId: string, data: unknown) {
+  await requireUserAction();
+  const parsed = deliveryInfoSchema.parse(data);
+  const doc = await prisma.stockDocument.findUnique({
+    where: { id: stockDocumentId },
+    select: { type: true, sourceDocumentId: true, status: true },
+  });
+  if (!doc || doc.type !== "ISSUE" || !doc.sourceDocumentId) {
+    throw new Error("ใบส่งสินค้าใช้ได้เฉพาะใบเบิกที่อ้างอิงใบเสนอราคา");
+  }
+  if (doc.status === "CANCELLED") throw new Error("เอกสารนี้ถูกยกเลิกแล้ว");
+
+  const clean = (v?: string) => v?.trim() || null;
+  await prisma.stockDocument.update({
+    where: { id: stockDocumentId },
+    data: {
+      deliveryAddress: clean(parsed.deliveryAddress),
+      deliveryContactName: clean(parsed.deliveryContactName),
+      deliveryContactPhone: clean(parsed.deliveryContactPhone),
+      customerPoNumber: clean(parsed.customerPoNumber),
+      vehiclePlate: clean(parsed.vehiclePlate),
+      driverName: clean(parsed.driverName),
+      carrierName: clean(parsed.carrierName),
+      deliveryRemark: clean(parsed.deliveryRemark),
+    },
+  });
+
+  revalidateStockPaths();
+  revalidatePath(`/stock/issue/${stockDocumentId}`);
+  revalidatePath(`/stock/issue/${stockDocumentId}/delivery-note`);
 }
 
 async function assertDraftOwnedByAnyUser(stockDocumentId: string) {
@@ -311,20 +402,41 @@ async function postStockDocumentInTransaction(
   userId: string,
 ) {
   const headerRows = await tx.$queryRaw<
-    { id: string; status: string; type: string; documentNumber: string }[]
+    {
+      id: string;
+      status: string;
+      type: string;
+      documentNumber: string;
+      sourceDocumentId: string | null;
+      deliveryNumber: string | null;
+    }[]
   >(Prisma.sql`
-    SELECT id, status, type, document_number AS "documentNumber"
+    SELECT id, status, type, document_number AS "documentNumber",
+      source_document_id AS "sourceDocumentId", delivery_number AS "deliveryNumber"
     FROM stock_documents WHERE id = ${stockDocumentId} FOR UPDATE
   `);
   const header = headerRows[0];
   if (!header) throw new Error("ไม่พบเอกสาร");
   if (header.status !== "DRAFT") throw new Error("เอกสารนี้ถูกบันทึกแล้ว");
+  const isDeliveryRound = header.type === "ISSUE" && !!header.sourceDocumentId;
+
+  // A delivery round prefills every outstanding line at 0; lines left at 0
+  // are simply not shipped this round, so drop them instead of refusing.
+  if (isDeliveryRound) {
+    await tx.stockDocumentLine.deleteMany({ where: { stockDocumentId, quantity: { lte: 0 } } });
+  }
 
   const lines = await tx.stockDocumentLine.findMany({
     where: { stockDocumentId },
     orderBy: { sequence: "asc" },
   });
-  if (lines.length === 0) throw new Error("กรุณาเพิ่มรายการอย่างน้อย 1 รายการ");
+  if (lines.length === 0) {
+    throw new Error(
+      isDeliveryRound
+        ? "กรุณาใส่จำนวนที่ส่งรอบนี้อย่างน้อย 1 รายการ"
+        : "กรุณาเพิ่มรายการอย่างน้อย 1 รายการ",
+    );
+  }
   for (const line of lines) {
     if (header.type === "COUNT" ? line.quantity < 0 : line.quantity <= 0) {
       throw new Error(`จำนวนไม่ถูกต้อง: ${line.productName}`);
@@ -479,7 +591,14 @@ async function postStockDocumentInTransaction(
 
   await tx.stockDocument.update({
     where: { id: stockDocumentId },
-    data: { status: "POSTED", postedAt: new Date(), postedById: userId },
+    data: {
+      status: "POSTED",
+      postedAt: new Date(),
+      postedById: userId,
+      ...(isDeliveryRound && !header.deliveryNumber
+        ? { deliveryNumber: await generateDeliveryNoteNumber(tx) }
+        : {}),
+    },
   });
 }
 

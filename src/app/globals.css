@@ -105,6 +105,19 @@
     width: 210mm;
     min-height: 297mm;
   }
+  /* ใบส่งสินค้า: two A4 copies, one per printed page */
+  #delivery-note-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+  #delivery-note-print #document-preview {
+    position: relative;
+    break-after: page;
+  }
+  #delivery-note-print #document-preview:last-of-type {
+    break-after: auto;
+  }
   .print\:hidden {
     display: none !important;
   }

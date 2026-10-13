@@ -73,6 +73,25 @@ export function StockDocumentTable({
         </Link>
       ),
     },
+    ...(basePath === "issue"
+      ? [
+          {
+            id: "deliveryNumber",
+            header: "ใบส่งสินค้า",
+            cell: ({ row }: { row: { original: any } }) =>
+              row.original.deliveryNumber ? (
+                <Link
+                  href={`/stock/issue/${row.original.id}/delivery-note`}
+                  className="font-mono text-sm text-primary hover:underline"
+                >
+                  {row.original.deliveryNumber}
+                </Link>
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              ),
+          } satisfies ColumnDef<any>,
+        ]
+      : []),
     {
       accessorKey: "documentDate",
       header: "วันที่",
