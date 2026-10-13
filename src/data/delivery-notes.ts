@@ -159,7 +159,7 @@ export async function getDeliveryNote(stockDocumentId: string): Promise<Delivery
     status: doc.status,
     issueNumber: doc.documentNumber,
     deliveryNumber: doc.deliveryNumber,
-    deliveryDate: (doc.postedAt ?? doc.documentDate).toISOString(),
+    deliveryDate: doc.documentDate.toISOString(),
     round: doc.status === "POSTED" && roundIndex >= 0 ? roundIndex + 1 : null,
     quotation: {
       id: source.id,
@@ -209,7 +209,7 @@ export interface DeliveryNoteListItem {
   status: "DRAFT" | "POSTED" | "CANCELLED";
   issueNumber: string;
   deliveryNumber: string | null;
-  /** postedAt for a posted note, else the issue's document date. */
+  /** The issue's document date (editable on the issue page). */
   date: string;
   quotation: { id: string; documentNumber: string | null };
   customerName: string;
@@ -298,7 +298,7 @@ export async function getDeliveryNotes(params?: { search?: string; page?: number
         status: row.status,
         issueNumber: row.documentNumber,
         deliveryNumber: row.deliveryNumber,
-        date: (row.postedAt ?? row.documentDate).toISOString(),
+        date: row.documentDate.toISOString(),
         quotation: { id: row.sourceDocument!.id, documentNumber: row.sourceDocument!.documentNumber },
         customerName,
         totalQuantity: row.lines.reduce((sum, l) => sum + l.quantity, 0),
