@@ -100,7 +100,7 @@ export function QuotationDeliveryCard({ documentId, progress, rounds, canDeliver
                 </span>
                 <span className="font-mono">{round.deliveryNumber ?? round.documentNumber}</span>
                 <span className="text-muted-foreground">
-                  {formatThaiDate(new Date(round.postedAt ?? round.documentDate))} · {round.totalQuantity} หน่วย
+                  {formatThaiDate(new Date(round.documentDate))} · {round.totalQuantity} หน่วย
                 </span>
                 {round.status === "DRAFT" && <Badge variant="outline">ยังไม่ตัดสต็อก</Badge>}
                 <div className="ml-auto flex gap-1">
