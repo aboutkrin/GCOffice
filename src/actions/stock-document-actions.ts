@@ -228,6 +228,30 @@ export async function updateDeliveryInfo(stockDocumentId: string, data: unknown)
   revalidatePath(`/stock/issue/${stockDocumentId}/delivery-note`);
 }
 
+/** Change the document date (back- or forward-dating). Date only; never touches stock. */
+export async function updateStockDocumentDate(stockDocumentId: string, dateStr: string) {
+  await requireUserAction();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
+  const documentDate = new Date(`${dateStr}T12:00:00.000Z`);
+  if (Number.isNaN(documentDate.getTime())) throw new Error("รูปแบบวันที่ไม่ถูกต้อง");
+
+  const doc = await prisma.stockDocument.findUnique({
+    where: { id: stockDocumentId },
+    select: { status: true },
+  });
+  if (!doc) throw new Error("ไม่พบเอกสาร");
+  if (doc.status === "CANCELLED") throw new Error("เอกสารนี้ถูกยกเลิกแล้ว");
+
+  await prisma.stockDocument.update({
+    where: { id: stockDocumentId },
+    data: { documentDate },
+  });
+
+  revalidateStockPaths();
+  revalidatePath(`/stock/issue/${stockDocumentId}`);
+  revalidatePath(`/stock/issue/${stockDocumentId}/delivery-note`);
+}
+
 async function assertDraftOwnedByAnyUser(stockDocumentId: string) {
   const doc = await prisma.stockDocument.findUnique({
     where: { id: stockDocumentId },

@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { formatThaiDateTime } from "@/lib/thai-date";
+import { formatThaiDate, formatThaiDateTime } from "@/lib/thai-date";
 import {
   STOCK_DOCUMENT_TYPE_LABELS,
   STOCK_DOCUMENT_STATUS_LABELS,
@@ -39,6 +39,7 @@ import {
   postStockDocument,
   cancelStockDocument,
   deleteStockDocumentDraft,
+  updateStockDocumentDate,
 } from "@/actions/stock-document-actions";
 
 interface StockDocumentSessionProps {
@@ -108,6 +109,19 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
   const handleVariantPicked = (item: PickedStockItem) => {
     setPendingScan({ resolution: item, fromCamera: needsVariant?.fromCamera ?? false });
     setNeedsVariant(null);
+  };
+
+  const handleDateChange = (value: string) => {
+    if (!value) return;
+    startTransition(async () => {
+      try {
+        await updateStockDocumentDate(document.id, value);
+        toast.success("เปลี่ยนวันที่เรียบร้อยแล้ว");
+        router.refresh();
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "เกิดข้อผิดพลาด");
+      }
+    });
   };
 
   const handlePost = () => {
@@ -181,7 +195,16 @@ export function StockDocumentSession({ document, backHref, varianceLines }: Stoc
               </Badge>
             </div>
             <p className="text-muted-foreground text-sm">
-              {STOCK_DOCUMENT_TYPE_LABELS[document.type]} · {formatThaiDateTime(new Date(document.documentDate))}
+              {STOCK_DOCUMENT_TYPE_LABELS[document.type]} · วันที่{" "}
+              <input
+                type="date"
+                aria-label="วันที่เอกสาร"
+                className="rounded-md border bg-background px-2 py-0.5 text-sm text-foreground disabled:opacity-50"
+                value={String(document.documentDate).slice(0, 10)}
+                disabled={isPending || document.status === "CANCELLED"}
+                onChange={(e) => handleDateChange(e.target.value)}
+              />
+              <span className="ml-1">({formatThaiDate(new Date(document.documentDate))})</span>
               {document.sourceDocument && (
                 <>
                   {" · อ้างอิง "}
