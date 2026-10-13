@@ -162,6 +162,7 @@ function chipClass(ev: DayEvent): string {
   }
   if (ev.milestone === "eta") return "bg-sky-50 text-sky-800 border-sky-300 border-dashed";
   if (ev.milestone === "received") return "bg-green-100 text-green-800 border-green-200";
+  if (ev.milestone === "arrived") return "bg-violet-100 text-violet-800 border-violet-200";
   return "bg-sky-100 text-sky-800 border-sky-200";
 }
 
