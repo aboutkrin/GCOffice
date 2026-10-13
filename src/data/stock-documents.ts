@@ -110,6 +110,12 @@ export async function getOpenStockDocumentFor(type: StockDocumentType, userId: s
 }
 
 /** CONFIRMED/SHIPPED quotations with at least one line not yet fully issued. */
+/**
+ * CONFIRMED / SHIPPED quotations that still have something to ship, for the
+ * "เบิกตามเอกสาร" / "สร้างใบส่งสินค้า" pickers. Searches by quotation number or
+ * customer name and reports an open DRAFT round so the picker can continue it
+ * instead of opening a second draft.
+ */
 export async function getIssuableDocuments(params?: { search?: string }) {
   try {
     const where: any = {
@@ -119,6 +125,8 @@ export async function getIssuableDocuments(params?: { search?: string }) {
     if (params?.search) {
       where.OR = [
         { documentNumber: { contains: params.search, mode: "insensitive" } },
+        { customer: { customerName: { contains: params.search, mode: "insensitive" } } },
+        { customer: { companyName: { contains: params.search, mode: "insensitive" } } },
       ];
     }
     const documents = await prisma.document.findMany({
@@ -128,7 +136,14 @@ export async function getIssuableDocuments(params?: { search?: string }) {
         documentNumber: true,
         documentDate: true,
         customerSnapshot: true,
+        customer: { select: { type: true, customerName: true, companyName: true } },
         lineItems: { select: { id: true, quantity: true, productName: true } },
+        stockIssues: {
+          where: { type: StockDocumentType.ISSUE, status: StockDocumentStatus.DRAFT },
+          select: { id: true, documentNumber: true },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
       },
       orderBy: { documentDate: "desc" },
       take: 50,
@@ -138,14 +153,16 @@ export async function getIssuableDocuments(params?: { search?: string }) {
     const issuedByLineItem = await getIssuedQuantitiesByLineItem(lineItemIds);
 
     const result = documents
-      .map((d) => {
+      .map(({ customer, stockIssues, ...d }) => {
         const lines = d.lineItems.map((li) => ({
           ...li,
           issued: issuedByLineItem.get(li.id) ?? 0,
           remaining: li.quantity - (issuedByLineItem.get(li.id) ?? 0),
         }));
         const remainingTotal = lines.reduce((sum, l) => sum + Math.max(0, l.remaining), 0);
-        return { ...d, lines, remainingTotal };
+        const c = customer ?? ((d.customerSnapshot ?? {}) as Record<string, string | null | undefined>);
+        const customerName = (c.type === "COMPANY" && c.companyName) || c.customerName || c.companyName || "-";
+        return { ...d, lines, remainingTotal, customerName, draftRound: stockIssues[0] ?? null };
       })
       .filter((d) => d.remainingTotal > 0);
 
