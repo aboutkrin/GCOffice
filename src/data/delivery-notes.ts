@@ -129,10 +129,9 @@ export async function getDeliveryNote(stockDocumentId: string): Promise<Delivery
   }
   const orderedById = new Map(source.lineItems.map((li) => [li.id, li.quantity]));
 
+  const shippedLines = doc.lines.filter((line) => line.quantity > 0);
   const withSpecs = await flattenLineItemSpecs(
-    doc.lines
-      .filter((line) => line.quantity > 0)
-      .map((line) => ({ ...line, productSku: line.productSku || null })),
+    shippedLines.map((line) => ({ ...line, productSku: line.productSku || null })),
   );
 
   const lines: DeliveryNoteLine[] = withSpecs.map((line, index) => {
@@ -148,7 +147,7 @@ export async function getDeliveryNote(stockDocumentId: string): Promise<Delivery
       remaining:
         ordered == null ? null : Math.max(0, ordered - (shipped.get(line.sourceLineItemId!) ?? 0)),
       unitLabel: line.unitLabel,
-      imageUrl: line.colorVariant?.imageUrl ?? line.product?.imageUrl ?? null,
+      imageUrl: line.colorVariant?.imageUrl ?? shippedLines[index].product?.imageUrl ?? null,
     };
   });
 
