@@ -85,6 +85,11 @@ export function QuotationDeliveryCard({ documentId, progress, rounds, canDeliver
         {!canDeliver && rounds.length === 0 && (
           <p className="text-sm text-muted-foreground">เปลี่ยนสถานะใบเสนอราคาเป็น &quot;ยืนยันสั่งซื้อ&quot; ก่อนจึงจะออกใบส่งสินค้าได้</p>
         )}
+        {canDeliver && ordered === 0 && rounds.length === 0 && (
+          <p className="text-sm text-amber-700">
+            ยังสร้างรอบส่งไม่ได้ เพราะไม่มีรายการที่ผูกกับสินค้าในระบบ — แก้ไขใบเสนอราคา กดปุ่ม &quot;เลือกสินค้า&quot; ในแต่ละบรรทัดเพื่อเลือกจากรายการสินค้า แล้วบันทึก
+          </p>
+        )}
 
         {rounds.length > 0 && (
           <div className="divide-y rounded-md border">

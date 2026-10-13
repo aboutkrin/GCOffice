@@ -172,6 +172,56 @@ async function getIssuedQuantitiesByLineItem(lineItemIds: string[]): Promise<Map
   return map;
 }
 
+/**
+ * Lines saved without a product link (older quotations, or rows written before
+ * `productId` existed) are matched by SKU, and the colour by name under that
+ * product; the match is written back so later reads and the issue get it.
+ */
+async function resolveLineItemProducts<
+  T extends {
+    id: string;
+    productId: string | null;
+    colorVariantId: string | null;
+    productSku: string | null;
+    colorVariantName: string | null;
+  },
+>(lineItems: T[]): Promise<T[]> {
+  const unresolved = lineItems.filter((li) => !li.productId && li.productSku?.trim());
+  if (unresolved.length === 0) return lineItems;
+
+  const skus = Array.from(new Set(unresolved.map((li) => li.productSku!.trim())));
+  const products = await prisma.product.findMany({
+    where: { sku: { in: skus } },
+    select: { id: true, sku: true, colorVariants: { select: { id: true, name: true } } },
+  });
+  const bySku = new Map(products.map((p) => [p.sku, p]));
+
+  const updates: { id: string; productId: string; colorVariantId: string | null }[] = [];
+  const resolved = lineItems.map((li) => {
+    if (li.productId || !li.productSku) return li;
+    const product = bySku.get(li.productSku.trim());
+    if (!product) return li;
+    const colorVariantId =
+      li.colorVariantId ??
+      product.colorVariants.find((v) => v.name === li.colorVariantName?.trim())?.id ??
+      null;
+    updates.push({ id: li.id, productId: product.id, colorVariantId });
+    return { ...li, productId: product.id, colorVariantId };
+  });
+
+  if (updates.length > 0) {
+    await Promise.all(
+      updates.map((u) =>
+        prisma.documentLineItem.update({
+          where: { id: u.id },
+          data: { productId: u.productId, colorVariantId: u.colorVariantId },
+        }),
+      ),
+    );
+  }
+  return resolved;
+}
+
 /** Per line: ordered / issued / remaining, for the tick-off UI on a source document. */
 export async function getDocumentIssueProgress(documentId: string) {
   try {
@@ -194,9 +244,10 @@ export async function getDocumentIssueProgress(documentId: string) {
     });
     const lineItemIds = document.lineItems.map((li) => li.id);
     const issuedMap = await getIssuedQuantitiesByLineItem(lineItemIds);
+    const lineItems = await resolveLineItemProducts(document.lineItems);
 
     return serialize(
-      document.lineItems.map((li) => ({
+      lineItems.map((li) => ({
         ...li,
         issued: issuedMap.get(li.id) ?? 0,
         remaining: Math.max(0, li.quantity - (issuedMap.get(li.id) ?? 0)),
