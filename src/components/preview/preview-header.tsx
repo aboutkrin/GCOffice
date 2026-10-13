@@ -1,6 +1,7 @@
 "use client";
 
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
+import { formatCompanyAddress } from "@/lib/company-address";
 import {
   Phone,
   Mail,
@@ -91,10 +92,8 @@ export function PreviewHeader({
         {(company.address || company.taxId) && (
           <div className="flex items-start gap-1.5">
             <MapPin className="h-3 w-3 mt-0.5 shrink-0" />
-            <span>
-              {company.address}
-              {company.address && company.taxId && "  "}
-              {company.taxId && `เลขประจำตัวผู้เสียภาษี: ${company.taxId}`}
+            <span className="whitespace-pre-line">
+              {formatCompanyAddress(company.address, company.taxId)}
             </span>
           </div>
         )}
