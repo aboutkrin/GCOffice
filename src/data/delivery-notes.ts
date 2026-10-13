@@ -217,6 +217,23 @@ export interface DeliveryNoteListItem {
   createdBy: string;
 }
 
+/** A quotation that matched the search but has no delivery round yet. */
+export interface DeliveryNoteSuggestion {
+  id: string;
+  documentNumber: string | null;
+  customerName: string;
+  /** The invoice number that matched, when the search hit an invoice of this quotation. */
+  matchedInvoiceNumber: string | null;
+}
+
+function pickCustomerName(
+  customer: { type?: string | null; customerName?: string | null; companyName?: string | null } | null | undefined,
+  snapshot: unknown,
+) {
+  const c = customer ?? ((snapshot ?? {}) as Record<string, string | null | undefined>);
+  return (c.type === "COMPANY" && c.companyName) || c.customerName || c.companyName || "-";
+}
+
 /**
  * ใบส่งสินค้า list for the /delivery-notes menu: every ISSUE stock document
  * raised against a quotation (one per delivery round), newest first.
@@ -236,6 +253,8 @@ export async function getDeliveryNotes(params?: { search?: string; page?: number
             { documentNumber: { contains: search, mode: "insensitive" } },
             { customerPoNumber: { contains: search, mode: "insensitive" } },
             { sourceDocument: { documentNumber: { contains: search, mode: "insensitive" } } },
+            // Invoices issued from the quotation (ใบส่งสินค้า hang off the quotation, not the invoice).
+            { sourceDocument: { invoices: { some: { documentNumber: { contains: search, mode: "insensitive" } } } } },
             { sourceDocument: { customer: { customerName: { contains: search, mode: "insensitive" } } } },
             { sourceDocument: { customer: { companyName: { contains: search, mode: "insensitive" } } } },
           ],
@@ -273,13 +292,7 @@ export async function getDeliveryNotes(params?: { search?: string; page?: number
     ]);
 
     const notes: DeliveryNoteListItem[] = rows.map((row) => {
-      const snapshot = (row.sourceDocument?.customerSnapshot ?? {}) as Record<string, string | null | undefined>;
-      const customer = row.sourceDocument?.customer ?? snapshot;
-      const customerName =
-        (customer.type === "COMPANY" && customer.companyName) ||
-        customer.customerName ||
-        customer.companyName ||
-        "-";
+      const customerName = pickCustomerName(row.sourceDocument?.customer, row.sourceDocument?.customerSnapshot);
       return {
         id: row.id,
         status: row.status,
@@ -292,8 +305,57 @@ export async function getDeliveryNotes(params?: { search?: string; page?: number
         createdBy: row.createdBy?.fullName || row.createdBy?.username || "-",
       };
     });
-    return { notes, total };
-  } catch {
-    return { notes: [] as DeliveryNoteListItem[], total: 0 };
+    const suggestions = search && total === 0 ? await findQuotationsWithoutRounds(search) : [];
+    return { notes, total, suggestions };
+  } catch (error) {
+    console.error("getDeliveryNotes failed", error);
+    return { notes: [] as DeliveryNoteListItem[], total: 0, suggestions: [] as DeliveryNoteSuggestion[] };
   }
+}
+
+/**
+ * When a search finds no delivery note, look for the quotation (or the
+ * quotation behind an invoice) the user typed so the page can say "this
+ * quotation has no delivery round yet" instead of "no delivery notes".
+ */
+async function findQuotationsWithoutRounds(search: string): Promise<DeliveryNoteSuggestion[]> {
+  const docs = await prisma.document.findMany({
+    where: {
+      status: { not: "CANCELLED" },
+      documentNumber: { contains: search, mode: "insensitive" },
+      type: { in: ["QUOTATION", "INVOICE"] },
+    },
+    orderBy: { documentDate: "desc" },
+    take: 5,
+    select: {
+      id: true,
+      type: true,
+      documentNumber: true,
+      customerSnapshot: true,
+      customer: { select: { type: true, customerName: true, companyName: true } },
+      sourceQuotation: {
+        select: {
+          id: true,
+          documentNumber: true,
+          customerSnapshot: true,
+          customer: { select: { type: true, customerName: true, companyName: true } },
+        },
+      },
+    },
+  });
+
+  const seen = new Set<string>();
+  const suggestions: DeliveryNoteSuggestion[] = [];
+  for (const doc of docs) {
+    const quotation = doc.type === "INVOICE" ? doc.sourceQuotation : doc;
+    if (!quotation || seen.has(quotation.id)) continue;
+    seen.add(quotation.id);
+    suggestions.push({
+      id: quotation.id,
+      documentNumber: quotation.documentNumber,
+      customerName: pickCustomerName(quotation.customer, quotation.customerSnapshot),
+      matchedInvoiceNumber: doc.type === "INVOICE" ? doc.documentNumber : null,
+    });
+  }
+  return suggestions;
 }

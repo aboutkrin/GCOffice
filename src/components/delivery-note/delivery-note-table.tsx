@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
 
 import { formatThaiDate } from "@/lib/thai-date";
 import { STOCK_DOCUMENT_STATUS_COLORS, STOCK_DOCUMENT_STATUS_LABELS } from "@/lib/constants";
-import type { DeliveryNoteListItem } from "@/data/delivery-notes";
+import type { DeliveryNoteListItem, DeliveryNoteSuggestion } from "@/data/delivery-notes";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 interface DeliveryNoteTableProps {
   notes: DeliveryNoteListItem[];
+  /** Quotations matching the search that have no delivery round yet. */
+  suggestions?: DeliveryNoteSuggestion[];
   total: number;
   page: number;
   perPage: number;
@@ -23,7 +25,15 @@ interface DeliveryNoteTableProps {
   search: string;
 }
 
-export function DeliveryNoteTable({ notes, total, page, perPage, totalPages, search }: DeliveryNoteTableProps) {
+export function DeliveryNoteTable({
+  notes,
+  suggestions = [],
+  total,
+  page,
+  perPage,
+  totalPages,
+  search,
+}: DeliveryNoteTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -41,15 +51,25 @@ export function DeliveryNoteTable({ notes, total, page, perPage, totalPages, sea
     [router, pathname, searchParams],
   );
 
+  // Debounce typing so each keystroke doesn't trigger a server round trip.
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+  }, []);
+  const onSearchChange = (value: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => updateParams({ search: value.trim() }), 300);
+  };
+
   const startItem = (page - 1) * perPage + 1;
   const endItem = Math.min(page * perPage, total);
 
   return (
     <div className="space-y-4">
       <Input
-        placeholder="ค้นหาเลขใบส่งสินค้า / ใบเสนอราคา / ลูกค้า / PO..."
+        placeholder="ค้นหาเลขใบส่งสินค้า / ใบเสนอราคา / ใบแจ้งหนี้ / ลูกค้า / PO..."
         defaultValue={search}
-        onChange={(e) => updateParams({ search: e.target.value })}
+        onChange={(e) => onSearchChange(e.target.value)}
         className="max-w-sm"
       />
 
@@ -71,7 +91,32 @@ export function DeliveryNoteTable({ notes, total, page, perPage, totalPages, sea
             {notes.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                  ยังไม่มีใบส่งสินค้า — เปิดใบเสนอราคาที่ยืนยันแล้ว แล้วกด “เริ่มรอบส่งใหม่” ในการ์ด “การส่งสินค้า”
+                  {search ? (
+                    <div className="space-y-2">
+                      <p>ไม่พบใบส่งสินค้าที่ตรงกับ “{search}”</p>
+                      {suggestions.length > 0 ? (
+                        <div className="space-y-1 text-sm">
+                          {suggestions.map((s) => (
+                            <p key={s.id}>
+                              {s.matchedInvoiceNumber
+                                ? `ใบแจ้งหนี้ ${s.matchedInvoiceNumber} ออกจากใบเสนอราคา `
+                                : "ใบเสนอราคา "}
+                              <Link href={`/quotations/${s.id}`} className="font-mono font-medium text-primary hover:underline">
+                                {s.documentNumber ?? "ร่าง"}
+                              </Link>
+                              {" "}({s.customerName}) ยังไม่มีรอบส่ง — เปิดใบเสนอราคาแล้วกด “เริ่มรอบส่งใหม่” ในการ์ด “การส่งสินค้า”
+                            </p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm">
+                          ค้นได้จากเลขใบส่งสินค้า (DN-…) เลขใบเบิก เลขใบเสนอราคา เลขใบแจ้งหนี้ ชื่อลูกค้า หรือเลข PO
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <>ยังไม่มีใบส่งสินค้า — เปิดใบเสนอราคาที่ยืนยันแล้ว แล้วกด “เริ่มรอบส่งใหม่” ในการ์ด “การส่งสินค้า”</>
+                  )}
                 </TableCell>
               </TableRow>
             ) : (

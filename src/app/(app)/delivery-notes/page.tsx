@@ -14,7 +14,7 @@ export default async function DeliveryNotesPage({ searchParams }: DeliveryNotesP
   const params = await searchParams;
   const page = Math.max(1, Number(params.page) || 1);
 
-  const { notes, total } = await getDeliveryNotes({ search: params.search, page, perPage: PER_PAGE });
+  const { notes, total, suggestions } = await getDeliveryNotes({ search: params.search, page, perPage: PER_PAGE });
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
 
   return (
@@ -26,6 +26,7 @@ export default async function DeliveryNotesPage({ searchParams }: DeliveryNotesP
 
       <DeliveryNoteTable
         notes={notes}
+        suggestions={suggestions}
         total={total}
         page={page}
         perPage={PER_PAGE}
