@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { MapPin, Phone, Mail } from "lucide-react";
 import { formatThaiDate } from "@/lib/thai-date";
+import { formatCompanyAddress } from "@/lib/company-address";
 import type { DeliveryNoteData, DeliveryNoteLine } from "@/data/delivery-notes";
 
 const DEFAULT_UNIT = "กล่อง";
@@ -71,9 +72,8 @@ export function DeliveryNotePreview({ data, copyLabel }: DeliveryNotePreviewProp
               {(company.address || company.taxId) && (
                 <p className="flex items-start gap-1">
                   <MapPin className="mt-0.5 h-2.5 w-2.5 shrink-0" />
-                  <span>
-                    {company.address}
-                    {company.taxId && `  เลขประจำตัวผู้เสียภาษี: ${company.taxId}`}
+                  <span className="whitespace-pre-line">
+                    {formatCompanyAddress(company.address, company.taxId)}
                   </span>
                 </p>
               )}
