@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/layout/page-header";
+import { IssueSourcePicker } from "@/components/stock/issue-source-picker";
 import { DeliveryNoteTable } from "@/components/delivery-note/delivery-note-table";
 import { getDeliveryNotes } from "@/data/delivery-notes";
 
@@ -21,8 +22,10 @@ export default async function DeliveryNotesPage({ searchParams }: DeliveryNotesP
     <div>
       <PageHeader
         title="ใบส่งสินค้า"
-        description="ใบส่งสินค้าทุกรอบที่ออกจากใบเสนอราคา — สร้างรอบส่งใหม่ได้จากการ์ด “การส่งสินค้า” ในใบเสนอราคาที่ยืนยันแล้ว"
-      />
+        description="ใบส่งสินค้าทุกรอบที่ออกจากใบเสนอราคา — กด “สร้างใบส่งสินค้า” แล้วเลือกใบเสนอราคาที่ยืนยันแล้ว (หรือจากการ์ด “การส่งสินค้า” ในใบเสนอราคา)"
+      >
+        <IssueSourcePicker mode="delivery" />
+      </PageHeader>
 
       <DeliveryNoteTable
         notes={notes}
