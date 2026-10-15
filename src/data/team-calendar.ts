@@ -273,7 +273,8 @@ export async function getTeamCalendar(
       .catch(() => []),
     prisma.customerAppointment
       .findMany({
-        where: { status: { in: ["PENDING", "CONFIRMED"] }, date: inMonth },
+        // Cancelled appointments stay on the calendar (drawn struck through).
+        where: { status: { in: ["PENDING", "CONFIRMED", "CANCELLED"] }, date: inMonth },
         select: appointmentSelect,
         orderBy: appointmentOrder,
       })
