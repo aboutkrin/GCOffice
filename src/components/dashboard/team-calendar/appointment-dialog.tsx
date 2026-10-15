@@ -76,6 +76,9 @@ function buildDefaults(
       companyName: appointment.companyName,
       customerId: appointment.customerId,
       location: appointment.location ?? "",
+      mapUrl: appointment.mapUrl ?? "",
+      contactName: appointment.contactName ?? "",
+      contactPhone: appointment.contactPhone ?? "",
       date: new Date(appointment.date),
       startTime: appointment.startTime,
       endTime: appointment.endTime ?? "",
@@ -88,6 +91,9 @@ function buildDefaults(
     companyName: "",
     customerId: null,
     location: "",
+    mapUrl: "",
+    contactName: "",
+    contactPhone: "",
     date: defaultDate as Date,
     startTime: "10:00",
     endTime: "",
@@ -158,6 +164,12 @@ export function AppointmentDialog({
     if (!form.getValues("location") && c.address) {
       form.setValue("location", c.address);
     }
+    if (!form.getValues("contactName")) {
+      form.setValue("contactName", c.contactPerson || (c.companyName ? c.customerName : ""));
+    }
+    if (!form.getValues("contactPhone") && c.phone) {
+      form.setValue("contactPhone", c.phone);
+    }
   }
 
   return (
@@ -210,6 +222,61 @@ export function AppointmentDialog({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="mapUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ลิงก์ Google Maps (ไม่บังคับ)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="url"
+                      inputMode="url"
+                      placeholder="วางลิงก์จากปุ่มแชร์ใน Google Maps"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="contactName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ชื่อผู้ติดต่อ</FormLabel>
+                    <FormControl>
+                      <Input placeholder="เช่น คุณชาลี" {...field} value={field.value ?? ""} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="contactPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>เบอร์โทร</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="tel"
+                        inputMode="tel"
+                        placeholder="08x-xxx-xxxx"
+                        {...field}
+                        value={field.value ?? ""}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}

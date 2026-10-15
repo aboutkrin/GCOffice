@@ -15,6 +15,9 @@ function appointmentData(validated: Validated) {
     companyName: validated.companyName.trim(),
     customerId: validated.customerId || null,
     location: validated.location?.trim() || null,
+    mapUrl: validated.mapUrl?.trim() || null,
+    contactName: validated.contactName?.trim() || null,
+    contactPhone: validated.contactPhone?.trim() || null,
     date: toUTCNoon(validated.date),
     startTime: validated.startTime,
     endTime: validated.endTime || null,
@@ -157,6 +160,8 @@ export interface AppointmentCustomerOption {
   customerName: string;
   companyName: string | null;
   address: string | null;
+  contactPerson: string | null;
+  phone: string | null;
 }
 
 /** Customer search for the appointment dialog (fills name / address). */
@@ -171,5 +176,7 @@ export async function searchCustomersForAppointmentAction(
     customerName: c.customerName,
     companyName: c.companyName ?? null,
     address: c.address ?? null,
+    contactPerson: c.contactPerson ?? null,
+    phone: c.phone ?? null,
   }));
 }

@@ -33,6 +33,9 @@ export interface CalendarAppointmentItem {
   companyName: string;
   customerId: string | null;
   location: string | null;
+  mapUrl: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
   /** ISO date (UTC noon) */
   date: string;
   /** "HH:mm" */
@@ -146,6 +149,9 @@ type AppointmentRow = {
   companyName: string;
   customerId: string | null;
   location: string | null;
+  mapUrl: string | null;
+  contactName: string | null;
+  contactPhone: string | null;
   date: Date;
   startTime: string;
   endTime: string | null;
@@ -164,6 +170,9 @@ function toAppointmentItem(a: AppointmentRow): CalendarAppointmentItem {
     companyName: a.companyName,
     customerId: a.customerId,
     location: a.location,
+    mapUrl: a.mapUrl,
+    contactName: a.contactName,
+    contactPhone: a.contactPhone,
     date: a.date.toISOString(),
     startTime: a.startTime,
     endTime: a.endTime,
@@ -182,6 +191,9 @@ const appointmentSelect = {
   companyName: true,
   customerId: true,
   location: true,
+  mapUrl: true,
+  contactName: true,
+  contactPhone: true,
   date: true,
   startTime: true,
   endTime: true,
