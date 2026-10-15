@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { fetchTeamCalendarAction } from "@/actions/dashboard-actions";
-import type { TeamCalendarData, TeamMemberOption } from "@/data/team-calendar";
+import type {
+  AppointmentAttendeeOption,
+  TeamCalendarData,
+  TeamMemberOption,
+} from "@/data/team-calendar";
 import { TeamCalendar } from "./team-calendar";
 import { AppointmentsCard } from "./side-cards";
 
@@ -14,7 +18,8 @@ interface TeamCalendarBoardProps {
   isAdmin: boolean;
   currentUserId: string;
   members: TeamMemberOption[];
-  admins: TeamMemberOption[];
+  /** Active users who can take an appointment (admins, plus staff for showroom visits). */
+  attendees: AppointmentAttendeeOption[];
   /** Side cards that do not depend on the month shown (shipments, leave). */
   beforeAppointments?: ReactNode;
   afterAppointments?: ReactNode;
@@ -32,7 +37,7 @@ export function TeamCalendarBoard({
   isAdmin,
   currentUserId,
   members,
-  admins,
+  attendees,
   beforeAppointments,
   afterAppointments,
 }: TeamCalendarBoardProps) {
@@ -69,8 +74,8 @@ export function TeamCalendarBoard({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <div className="lg:col-span-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="min-w-0 lg:col-span-2">
         <TeamCalendar
           data={data}
           year={year}
@@ -80,10 +85,10 @@ export function TeamCalendarBoard({
           isAdmin={isAdmin}
           currentUserId={currentUserId}
           members={members}
-          admins={admins}
+          attendees={attendees}
         />
       </div>
-      <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-4">
         {beforeAppointments}
         <AppointmentsCard
           appointments={data.appointments}

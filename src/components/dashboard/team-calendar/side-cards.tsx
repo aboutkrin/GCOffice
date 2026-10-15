@@ -195,7 +195,7 @@ export function PendingLeavesCard({
                     {LEAVE_TYPE_LABELS[l.type]} · {LEAVE_PERIOD_LABELS[l.period]} ·{" "}
                     {start === end ? start : `${start} – ${end}`}
                   </div>
-                  {l.reason && <div className="text-sm">{l.reason}</div>}
+                  {l.reason && <div className="break-words text-sm">{l.reason}</div>}
                   <LeaveActionButtons
                     leave={l}
                     isAdmin
@@ -369,7 +369,7 @@ function AppointmentRow({
     <li
       className={cn(
         "space-y-1.5 rounded-md border p-2.5",
-        showroom ? "border-violet-200" : "border-teal-200"
+        showroom ? "border-pink-200" : "border-teal-200"
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -377,7 +377,7 @@ function AppointmentRow({
           <div
             className={cn(
               "flex items-center gap-1 text-[11px]",
-              showroom ? "text-violet-700" : "text-teal-700"
+              showroom ? "text-pink-700" : "text-teal-700"
             )}
           >
             {showroom ? <Store className="h-3 w-3" /> : <Handshake className="h-3 w-3" />}

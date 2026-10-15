@@ -27,33 +27,43 @@ function appointmentData(validated: Validated) {
   };
 }
 
-async function assertAttendeeIsAdmin(attendeeId: string) {
+/**
+ * Going out to a customer is for admins only. A showroom visit can also be
+ * received by any active staff member. Returns whether the attendee is an admin.
+ */
+async function assertAttendee(attendeeId: string, kind: Validated["kind"]): Promise<{ isAdmin: boolean }> {
   const attendee = await prisma.profile.findUnique({
     where: { id: attendeeId },
     select: { role: true, status: true },
   });
-  if (!attendee || attendee.role !== "ADMIN" || attendee.status !== "ACTIVE") {
-    throw new Error("ผู้ไปพบลูกค้าต้องเป็นแอดมินที่ยังใช้งานอยู่");
+  if (!attendee || attendee.status !== "ACTIVE") {
+    throw new Error("ผู้รับนัดต้องเป็นผู้ใช้ที่ยังใช้งานอยู่");
   }
+  const isAdmin = attendee.role === "ADMIN";
+  if (kind !== "SHOWROOM" && !isAdmin) {
+    throw new Error("ผู้ไปพบลูกค้าต้องเป็นแอดมิน (พนักงานรับนัดได้เฉพาะลูกค้ามาชมโชว์รูม)");
+  }
+  return { isAdmin };
 }
 
 /**
- * Anyone may book a customer visit for an admin. If the booker is that admin
- * the appointment is CONFIRMED at once; otherwise it waits (PENDING) until an
- * admin confirms they are free.
+ * Anyone may book an appointment. It is CONFIRMED at once when the booker is
+ * the attendee, or when the attendee is a staff member (showroom visits only:
+ * staff never need an admin to confirm they are free). Booking for another
+ * admin waits (PENDING) until an admin confirms.
  */
 export async function createAppointment(data: unknown): Promise<{ error?: string }> {
   try {
     const user = await requireUserAction();
     const validated = appointmentSchema.parse(data);
-    await assertAttendeeIsAdmin(validated.attendeeId);
-    const selfBooked = validated.attendeeId === user.id;
+    const attendee = await assertAttendee(validated.attendeeId, validated.kind);
+    const autoConfirmed = validated.attendeeId === user.id || !attendee.isAdmin;
 
     await prisma.customerAppointment.create({
       data: {
         ...appointmentData(validated),
         createdById: user.id,
-        ...(selfBooked
+        ...(autoConfirmed
           ? { status: "CONFIRMED", reviewedById: user.id, reviewedAt: new Date() }
           : { status: "PENDING" }),
       },
@@ -68,7 +78,8 @@ export async function createAppointment(data: unknown): Promise<{ error?: string
 /**
  * Creator or any ADMIN may edit. Changing the date, time or attendee of a
  * CONFIRMED appointment sends it back to PENDING unless the editor is the
- * (new) attendee, who is confirming their own availability by saving.
+ * (new) attendee, who is confirming their own availability by saving, or the
+ * (new) attendee is a staff member (no confirmation needed).
  */
 export async function updateAppointment(id: string, data: unknown): Promise<{ error?: string }> {
   try {
@@ -83,7 +94,7 @@ export async function updateAppointment(id: string, data: unknown): Promise<{ er
     if (existing.status === "CANCELLED") {
       throw new Error("นัดนี้ถูกยกเลิกแล้ว");
     }
-    await assertAttendeeIsAdmin(validated.attendeeId);
+    const attendee = await assertAttendee(validated.attendeeId, validated.kind);
 
     const next = appointmentData(validated);
     const scheduleChanged =
@@ -92,10 +103,11 @@ export async function updateAppointment(id: string, data: unknown): Promise<{ er
       next.endTime !== existing.endTime ||
       next.attendeeId !== existing.attendeeId;
 
+    const noConfirmationNeeded = next.attendeeId === user.id || !attendee.isAdmin;
     let statusPatch = {};
-    if (next.attendeeId === user.id && existing.status !== "CONFIRMED") {
+    if (noConfirmationNeeded && existing.status !== "CONFIRMED") {
       statusPatch = { status: "CONFIRMED", reviewedById: user.id, reviewedAt: new Date(), reviewNote: null };
-    } else if (scheduleChanged && existing.status !== "PENDING" && next.attendeeId !== user.id) {
+    } else if (scheduleChanged && existing.status !== "PENDING" && !noConfirmationNeeded) {
       statusPatch = { status: "PENDING", reviewedById: null, reviewedAt: null, reviewNote: null };
     }
 

@@ -1,7 +1,7 @@
 import { getThaiNow } from "@/lib/thai-date";
 import type { SessionUser } from "@/lib/auth";
 import {
-  getAdminMembers,
+  getAppointmentAttendees,
   getMyLeaves,
   getPendingLeaves,
   getTeamCalendar,
@@ -20,14 +20,14 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
   const { year, month } = getThaiNow();
   const isAdmin = user.role === "ADMIN";
 
-  const [calendar, upcoming, pending, myLeaves, members, myBalance, admins] = await Promise.all([
+  const [calendar, upcoming, pending, myLeaves, members, myBalance, attendees] = await Promise.all([
     getTeamCalendar(year, month),
     getUpcomingShipments(),
     isAdmin ? getPendingLeaves() : Promise.resolve([]),
     isAdmin ? Promise.resolve([]) : getMyLeaves(user.id),
     isAdmin ? getTeamMembers() : Promise.resolve([]),
     isAdmin ? Promise.resolve(null) : getMyLeaveSummary(user.id, year).then((r) => r.summary),
-    getAdminMembers(),
+    getAppointmentAttendees(),
   ]);
 
   return (
@@ -38,7 +38,7 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
       isAdmin={isAdmin}
       currentUserId={user.id}
       members={members}
-      admins={admins}
+      attendees={attendees}
       beforeAppointments={<UpcomingShipmentsCard shipments={upcoming} />}
       afterAppointments={
         isAdmin ? (
