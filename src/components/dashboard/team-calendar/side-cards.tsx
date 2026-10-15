@@ -115,42 +115,44 @@ export function UpcomingShipmentsCard({ shipments }: { shipments: CalendarShipme
             ไม่มีของที่อยู่ระหว่างขนส่ง
           </p>
         ) : (
-          <div className="relative">
-            <ul
-              ref={listRef}
-              className={cn("space-y-3", overflow && "overflow-y-auto overscroll-contain pr-1")}
-            >
-              {shipments.map((s) => {
-                const eta = etaText(s);
-                return (
-                  <li key={s.id} className="space-y-1.5 rounded-md border p-2.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{s.title}</div>
-                        <div className="text-xs text-muted-foreground">
-                          จีนส่ง {formatThaiDate(new Date(s.shippedDate), "short")}
-                          {s.etaDate && ` · ETA ${formatThaiDate(new Date(s.etaDate), "short")}`}
-                          {s.containerNo && ` · ล็อต ${s.containerNo}`}
+          <div>
+            <div className="relative">
+              <ul
+                ref={listRef}
+                className={cn("space-y-3", overflow && "overflow-y-auto overscroll-contain pr-1")}
+              >
+                {shipments.map((s) => {
+                  const eta = etaText(s);
+                  return (
+                    <li key={s.id} className="space-y-1.5 rounded-md border p-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="truncate font-medium">{s.title}</div>
+                          <div className="text-xs text-muted-foreground">
+                            จีนส่ง {formatThaiDate(new Date(s.shippedDate), "short")}
+                            {s.etaDate && ` · ETA ${formatThaiDate(new Date(s.etaDate), "short")}`}
+                            {s.containerNo && ` · ล็อต ${s.containerNo}`}
+                          </div>
+                          <div className={cn("text-xs", eta.className)}>{eta.text}</div>
                         </div>
-                        <div className={cn("text-xs", eta.className)}>{eta.text}</div>
+                        <Badge className={cn("shrink-0", CHINA_SHIPMENT_STATUS_COLORS[s.status])}>
+                          {CHINA_SHIPMENT_STATUS_LABELS[s.status]}
+                        </Badge>
                       </div>
-                      <Badge className={cn("shrink-0", CHINA_SHIPMENT_STATUS_COLORS[s.status])}>
-                        {CHINA_SHIPMENT_STATUS_LABELS[s.status]}
-                      </Badge>
-                    </div>
-                    <ShipmentImageThumbs urls={s.imageUrls} size="sm" />
-                    <ShipmentStatusButtons shipment={s} onChanged={() => router.refresh()} />
-                  </li>
-                );
-              })}
-            </ul>
-            {overflow && (
-              <>
+                      <ShipmentImageThumbs urls={s.imageUrls} size="sm" />
+                      <ShipmentStatusButtons shipment={s} onChanged={() => router.refresh()} />
+                    </li>
+                  );
+                })}
+              </ul>
+              {overflow && (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent" />
-                <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
-                  เลื่อนลงเพื่อดูอีก {shipments.length - SHIPMENT_ROWS_VISIBLE} รายการ
-                </p>
-              </>
+              )}
+            </div>
+            {overflow && (
+              <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+                เลื่อนลงเพื่อดูอีก {shipments.length - SHIPMENT_ROWS_VISIBLE} รายการ
+              </p>
             )}
           </div>
         )}
