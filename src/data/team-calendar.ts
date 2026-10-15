@@ -234,7 +234,8 @@ const leaveSelect = {
  * Everything shown on the dashboard team calendar for one month:
  * company holidays, approved + pending leave (pending is rendered faded so
  * the team can plan around it), China shipment milestones and customer
- * appointments (confirmed + pending).
+ * appointments (confirmed + pending + cancelled (struck through on the grid),
+ * plus declined ones for the side card — the grid skips those).
  */
 export async function getTeamCalendar(
   year: number,
@@ -273,8 +274,12 @@ export async function getTeamCalendar(
       .catch(() => []),
     prisma.customerAppointment
       .findMany({
-        // Cancelled appointments stay on the calendar (drawn struck through).
-        where: { status: { in: ["PENDING", "CONFIRMED", "CANCELLED"] }, date: inMonth },
+        // Cancelled appointments stay on the calendar (drawn struck through);
+        // declined ones are for the side card only (the grid skips them).
+        where: {
+          status: { in: ["PENDING", "CONFIRMED", "CANCELLED", "DECLINED"] },
+          date: inMonth,
+        },
         select: appointmentSelect,
         orderBy: appointmentOrder,
       })
@@ -289,13 +294,12 @@ export async function getTeamCalendar(
   };
 }
 
-/** Shipments still on the way (not yet received into the warehouse), soonest ETA first. */
+/** Every shipment still on the way (not yet received into the warehouse), newest lot first. */
 export async function getUpcomingShipments(): Promise<CalendarShipmentItem[]> {
   try {
     const rows = await prisma.chinaShipment.findMany({
       where: { status: { in: ["SHIPPED", "ARRIVED_TH"] } },
-      orderBy: [{ etaDate: { sort: "asc", nulls: "last" } }, { shippedDate: "asc" }],
-      take: 20,
+      orderBy: [{ createdAt: "desc" }, { shippedDate: "desc" }],
     });
     return rows.map(toShipmentItem);
   } catch {
@@ -311,70 +315,6 @@ export async function getPendingLeaves(): Promise<CalendarLeaveItem[]> {
       orderBy: { startDate: "asc" },
     });
     return rows.map(toLeaveItem);
-  } catch {
-    return [];
-  }
-}
-
-/** Today in Bangkok as UTC midnight, for date-only comparisons. */
-function thaiTodayUTC(): Date {
-  const key = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Bangkok",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-  return new Date(`${key}T00:00:00Z`);
-}
-
-/** Appointments waiting for an admin to confirm they are free (today onward). */
-export async function getPendingAppointments(): Promise<CalendarAppointmentItem[]> {
-  try {
-    const rows = await prisma.customerAppointment.findMany({
-      where: { status: "PENDING", date: { gte: thaiTodayUTC() } },
-      select: appointmentSelect,
-      orderBy: appointmentOrder,
-    });
-    return rows.map(toAppointmentItem);
-  } catch {
-    return [];
-  }
-}
-
-/** Confirmed appointments of the whole team, today onward (the "upcoming" list on the dashboard). */
-export async function getUpcomingAppointments(): Promise<CalendarAppointmentItem[]> {
-  try {
-    const rows = await prisma.customerAppointment.findMany({
-      where: { status: "CONFIRMED", date: { gte: thaiTodayUTC() } },
-      select: appointmentSelect,
-      orderBy: appointmentOrder,
-      take: 20,
-    });
-    return rows.map(toAppointmentItem);
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Appointments the viewer created or attends that are not confirmed (pending or
- * declined), from a week ago onward. Confirmed ones are in `getUpcomingAppointments`.
- */
-export async function getMyAppointments(profileId: string): Promise<CalendarAppointmentItem[]> {
-  const since = thaiTodayUTC();
-  since.setUTCDate(since.getUTCDate() - 7);
-  try {
-    const rows = await prisma.customerAppointment.findMany({
-      where: {
-        OR: [{ createdById: profileId }, { attendeeId: profileId }],
-        status: { in: ["PENDING", "DECLINED"] },
-        date: { gte: since },
-      },
-      select: appointmentSelect,
-      orderBy: appointmentOrder,
-      take: 10,
-    });
-    return rows.map(toAppointmentItem);
   } catch {
     return [];
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -42,7 +42,6 @@ import {
   LEAVE_STATUS_LABELS,
   LEAVE_TYPE_LABELS,
 } from "@/lib/constants";
-import { fetchTeamCalendarAction } from "@/actions/dashboard-actions";
 import { deleteChinaShipment } from "@/actions/china-shipment-actions";
 import type { HolidayItem } from "@/data/dashboard";
 import type {
@@ -153,7 +152,11 @@ function buildEventMap(data: TeamCalendarData, year: number, month: number) {
     }
   }
 
-  for (const a of data.appointments) push(dateKey(a.date), { kind: "appointment", item: a });
+  // Declined appointments are fetched for the side card only; they never go on the grid.
+  for (const a of data.appointments) {
+    if (a.status === "DECLINED") continue;
+    push(dateKey(a.date), { kind: "appointment", item: a });
+  }
   return map;
 }
 
@@ -339,9 +342,13 @@ function formatRange(startIso: string, endIso: string) {
 }
 
 interface TeamCalendarProps {
-  initialData: TeamCalendarData;
-  initialYear: number;
-  initialMonth: number;
+  /** The month being shown; owned by `TeamCalendarBoard` so the side cards can follow it. */
+  data: TeamCalendarData;
+  year: number;
+  month: number;
+  /** True while another month is being fetched. */
+  isPending: boolean;
+  onLoad: (year: number, month: number) => void;
   isAdmin: boolean;
   currentUserId: string;
   members: TeamMemberOption[];
@@ -350,19 +357,17 @@ interface TeamCalendarProps {
 }
 
 export function TeamCalendar({
-  initialData,
-  initialYear,
-  initialMonth,
+  data,
+  year,
+  month,
+  isPending,
+  onLoad: load,
   isAdmin,
   currentUserId,
   members,
   attendees,
 }: TeamCalendarProps) {
   const router = useRouter();
-  const [data, setData] = useState(initialData);
-  const [year, setYear] = useState(initialYear);
-  const [month, setMonth] = useState(initialMonth);
-  const [isPending, startTransition] = useTransition();
   const [filters, setFilters] = useState<Record<Filter, boolean>>({
     holiday: true,
     publicHoliday: true,
@@ -388,27 +393,6 @@ export function TeamCalendar({
     appointment?: CalendarAppointmentItem | null;
     date?: Date;
   }>({ open: false });
-
-  // Keep the displayed month in sync after router.refresh() (any mutation on
-  // the dashboard re-renders the server page and hands us new initialData).
-  const viewRef = useRef({ year, month });
-  viewRef.current = { year, month };
-  useEffect(() => {
-    const { year: y, month: m } = viewRef.current;
-    if (y === initialYear && m === initialMonth) {
-      setData(initialData);
-    } else {
-      startTransition(async () => setData(await fetchTeamCalendarAction(y, m)));
-    }
-  }, [initialData, initialYear, initialMonth]);
-
-  function load(newYear: number, newMonth: number) {
-    setYear(newYear);
-    setMonth(newMonth);
-    startTransition(async () => {
-      setData(await fetchTeamCalendarAction(newYear, newMonth));
-    });
-  }
 
   function navigate(direction: -1 | 1) {
     let m = month + direction;
