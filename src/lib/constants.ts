@@ -252,7 +252,7 @@ export const APPOINTMENT_KIND_LABELS: Record<string, string> = {
 
 export const APPOINTMENT_KIND_COLORS: Record<string, string> = {
   VISIT_CUSTOMER: "bg-teal-100 text-teal-800",
-  SHOWROOM: "bg-violet-100 text-violet-800",
+  SHOWROOM: "bg-pink-100 text-pink-800",
 };
 
 export const PAYROLL_STATUS_LABELS: Record<string, string> = {

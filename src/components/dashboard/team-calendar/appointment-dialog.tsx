@@ -232,7 +232,7 @@ export function AppointmentDialog({
                               "flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
                               active
                                 ? value === "SHOWROOM"
-                                  ? "border-violet-300 bg-violet-50 font-medium text-violet-800"
+                                  ? "border-pink-300 bg-pink-50 font-medium text-pink-800"
                                   : "border-teal-300 bg-teal-50 font-medium text-teal-800"
                                 : "text-muted-foreground hover:bg-muted"
                             )}
@@ -404,7 +404,6 @@ export function AppointmentDialog({
                       {attendeeOptions.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
                           {a.name}
-                          {a.role === "ADMIN" ? " · แอดมิน" : " · พนักงาน"}
                           {a.id === currentUserId ? " (ฉัน)" : ""}
                         </SelectItem>
                       ))}
