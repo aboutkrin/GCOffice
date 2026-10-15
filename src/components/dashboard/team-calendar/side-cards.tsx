@@ -4,12 +4,24 @@ import Link from "next/link";
 import { formatLeaveHours, LEAVE_MAIN_TYPES } from "@/lib/leave-policy";
 import type { LeaveBalanceSummary } from "@/data/leave-balances";
 import { useRouter } from "next/navigation";
-import { Handshake, Navigation, Phone, Ship, User, UserCheck, UserMinus } from "lucide-react";
+import {
+  CalendarCheck,
+  Clock,
+  Handshake,
+  Navigation,
+  Phone,
+  Ship,
+  Store,
+  User,
+  UserCheck,
+  UserMinus,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatThaiDate } from "@/lib/thai-date";
 import {
+  APPOINTMENT_KIND_LABELS,
   APPOINTMENT_STATUS_COLORS,
   APPOINTMENT_STATUS_LABELS,
   CHINA_SHIPMENT_STATUS_COLORS,
@@ -276,31 +288,67 @@ export function AppointmentContactLinks({
   );
 }
 
+function appointmentWhen(a: CalendarAppointmentItem): { text: string; className: string } {
+  const days = daysUntil(a.date);
+  if (days === 0) return { text: "วันนี้", className: "text-amber-700 font-medium" };
+  if (days === 1) return { text: "พรุ่งนี้", className: "text-sky-700" };
+  if (days > 1) return { text: `อีก ${days} วัน`, className: "text-sky-700" };
+  return { text: `ผ่านมาแล้ว ${-days} วัน`, className: "text-muted-foreground" };
+}
+
 function AppointmentRow({
   appointment: a,
   isAdmin,
   currentUserId,
   showStatus,
+  showCountdown = false,
 }: {
   appointment: CalendarAppointmentItem;
   isAdmin: boolean;
   currentUserId: string;
   showStatus: boolean;
+  /** Show "วันนี้ / อีก N วัน" like the shipments card. */
+  showCountdown?: boolean;
 }) {
   const router = useRouter();
   const forMe = a.attendeeId === currentUserId;
+  const showroom = a.kind === "SHOWROOM";
+  const when = showCountdown ? appointmentWhen(a) : null;
   return (
-    <li className="space-y-1.5 rounded-md border p-2.5">
+    <li
+      className={cn(
+        "space-y-1.5 rounded-md border p-2.5",
+        showroom ? "border-violet-200" : "border-teal-200"
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
+          <div
+            className={cn(
+              "flex items-center gap-1 text-[11px]",
+              showroom ? "text-violet-700" : "text-teal-700"
+            )}
+          >
+            {showroom ? <Store className="h-3 w-3" /> : <Handshake className="h-3 w-3" />}
+            {APPOINTMENT_KIND_LABELS[a.kind] ?? "นัดพบลูกค้า"}
+          </div>
           <div className="truncate font-medium">{a.companyName}</div>
           <div className="text-xs text-muted-foreground">
             {formatThaiDate(new Date(a.date), "short")} · {appointmentTimeText(a)} น.
+            {when && (
+              <>
+                {" · "}
+                <span className={when.className}>{when.text}</span>
+              </>
+            )}
           </div>
-          {a.location && <div className="truncate text-xs text-muted-foreground">{a.location}</div>}
+          {!showroom && a.location && (
+            <div className="truncate text-xs text-muted-foreground">{a.location}</div>
+          )}
           <AppointmentContactLinks appointment={a} className="text-xs" />
           <div className="text-xs">
-            ผู้ไปพบ: <span className={cn(forMe && "font-medium text-teal-700")}>{a.attendeeName}</span>
+            {showroom ? "ผู้รับนัด" : "ผู้ไปพบ"}:{" "}
+            <span className={cn(forMe && "font-medium text-teal-700")}>{a.attendeeName}</span>
             {forMe && " (คุณ)"}
             {a.createdById !== a.attendeeId && (
               <span className="text-muted-foreground"> · ลงโดย {a.createdByName}</span>
@@ -327,79 +375,87 @@ function AppointmentRow({
   );
 }
 
-/** ADMIN: appointments booked for an admin by someone else, waiting for a "ว่าง" confirmation. */
-export function PendingAppointmentsCard({
-  appointments,
+/**
+ * One card for customer appointments, laid out like the shipments card:
+ * first the ones waiting for a "ว่าง" confirmation (ADMIN: everyone's PENDING;
+ * STAFF: their own pending / declined ones with the admin's answer), then the
+ * team's confirmed appointments that are still to come.
+ */
+export function AppointmentsCard({
+  pending,
+  upcoming,
+  isAdmin,
   currentUserId,
 }: {
-  appointments: CalendarAppointmentItem[];
+  pending: CalendarAppointmentItem[];
+  upcoming: CalendarAppointmentItem[];
+  isAdmin: boolean;
   currentUserId: string;
 }) {
+  const pendingCount = pending.filter((a) => a.status === "PENDING").length;
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base font-semibold">
           <Handshake className="h-5 w-5" />
-          นัดพบลูกค้ารอยืนยัน
-          {appointments.length > 0 && (
-            <Badge className="bg-amber-100 text-amber-800">{appointments.length}</Badge>
+          นัดพบลูกค้า
+          {pendingCount > 0 && (
+            <Badge className="bg-amber-100 text-amber-800">รอยืนยัน {pendingCount}</Badge>
           )}
+          {upcoming.length > 0 && <Badge variant="secondary">{upcoming.length}</Badge>}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        {appointments.length === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">ไม่มีนัดที่รอยืนยัน</p>
-        ) : (
-          <ul className="space-y-3">
-            {appointments.map((a) => (
-              <AppointmentRow
-                key={a.id}
-                appointment={a}
-                isAdmin
-                currentUserId={currentUserId}
-                showStatus={false}
-              />
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-/** STAFF: appointments the viewer booked, with the admin's answer. */
-export function MyAppointmentsCard({
-  appointments,
-  currentUserId,
-}: {
-  appointments: CalendarAppointmentItem[];
-  currentUserId: string;
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold">
-          <Handshake className="h-5 w-5" />
-          นัดพบลูกค้าของฉัน
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {appointments.length === 0 ? (
+      <CardContent className="space-y-4">
+        {pending.length === 0 && upcoming.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
-            ยังไม่มีนัด กด &quot;นัดลูกค้า&quot; ในปฏิทินเพื่อลงนัดให้แอดมิน
+            {isAdmin
+              ? "ยังไม่มีนัดลูกค้า กด \"นัดลูกค้า\" ในปฏิทินเพื่อเพิ่ม"
+              : "ยังไม่มีนัด กด \"นัดลูกค้า\" ในปฏิทินเพื่อลงนัดให้แอดมิน"}
           </p>
         ) : (
-          <ul className="space-y-3">
-            {appointments.map((a) => (
-              <AppointmentRow
-                key={a.id}
-                appointment={a}
-                isAdmin={false}
-                currentUserId={currentUserId}
-                showStatus
-              />
-            ))}
-          </ul>
+          <>
+            {pending.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700">
+                  <Clock className="h-3.5 w-3.5" />
+                  {isAdmin ? "รอยืนยันว่าว่าง" : "นัดที่ฉันลงไว้ (รอแอดมิน)"}
+                </div>
+                <ul className="space-y-3">
+                  {pending.map((a) => (
+                    <AppointmentRow
+                      key={a.id}
+                      appointment={a}
+                      isAdmin={isAdmin}
+                      currentUserId={currentUserId}
+                      showStatus={!isAdmin}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <CalendarCheck className="h-3.5 w-3.5" />
+                นัดที่กำลังจะถึง
+              </div>
+              {upcoming.length === 0 ? (
+                <p className="py-2 text-center text-xs text-muted-foreground">ยังไม่มีนัดที่ยืนยันแล้ว</p>
+              ) : (
+                <ul className="space-y-3">
+                  {upcoming.map((a) => (
+                    <AppointmentRow
+                      key={a.id}
+                      appointment={a}
+                      isAdmin={isAdmin}
+                      currentUserId={currentUserId}
+                      showStatus={false}
+                      showCountdown
+                    />
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

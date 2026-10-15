@@ -30,6 +30,8 @@ export interface CalendarShipmentItem {
 
 export interface CalendarAppointmentItem {
   id: string;
+  /** VISIT_CUSTOMER (we go to them) | SHOWROOM (they come to us) */
+  kind: string;
   companyName: string;
   customerId: string | null;
   location: string | null;
@@ -146,6 +148,7 @@ function toShipmentItem(s: ShipmentRow): CalendarShipmentItem {
 
 type AppointmentRow = {
   id: string;
+  kind: string;
   companyName: string;
   customerId: string | null;
   location: string | null;
@@ -167,6 +170,7 @@ type AppointmentRow = {
 function toAppointmentItem(a: AppointmentRow): CalendarAppointmentItem {
   return {
     id: a.id,
+    kind: a.kind,
     companyName: a.companyName,
     customerId: a.customerId,
     location: a.location,
@@ -188,6 +192,7 @@ function toAppointmentItem(a: AppointmentRow): CalendarAppointmentItem {
 
 const appointmentSelect = {
   id: true,
+  kind: true,
   companyName: true,
   customerId: true,
   location: true,
@@ -331,7 +336,25 @@ export async function getPendingAppointments(): Promise<CalendarAppointmentItem[
   }
 }
 
-/** Appointments the viewer created or attends, from a week ago onward (rejected ones included). */
+/** Confirmed appointments of the whole team, today onward (the "upcoming" list on the dashboard). */
+export async function getUpcomingAppointments(): Promise<CalendarAppointmentItem[]> {
+  try {
+    const rows = await prisma.customerAppointment.findMany({
+      where: { status: "CONFIRMED", date: { gte: thaiTodayUTC() } },
+      select: appointmentSelect,
+      orderBy: appointmentOrder,
+      take: 20,
+    });
+    return rows.map(toAppointmentItem);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Appointments the viewer created or attends that are not confirmed (pending or
+ * declined), from a week ago onward. Confirmed ones are in `getUpcomingAppointments`.
+ */
 export async function getMyAppointments(profileId: string): Promise<CalendarAppointmentItem[]> {
   const since = thaiTodayUTC();
   since.setUTCDate(since.getUTCDate() - 7);
@@ -339,7 +362,7 @@ export async function getMyAppointments(profileId: string): Promise<CalendarAppo
     const rows = await prisma.customerAppointment.findMany({
       where: {
         OR: [{ createdById: profileId }, { attendeeId: profileId }],
-        status: { not: "CANCELLED" },
+        status: { in: ["PENDING", "DECLINED"] },
         date: { gte: since },
       },
       select: appointmentSelect,

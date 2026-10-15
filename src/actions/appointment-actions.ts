@@ -12,6 +12,7 @@ type Validated = ReturnType<typeof appointmentSchema.parse>;
 
 function appointmentData(validated: Validated) {
   return {
+    kind: validated.kind,
     companyName: validated.companyName.trim(),
     customerId: validated.customerId || null,
     location: validated.location?.trim() || null,

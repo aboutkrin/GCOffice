@@ -14,6 +14,7 @@ import {
   CalendarOff,
   Handshake,
   MapPin,
+  Store,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -31,6 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 import { THAI_MONTHS, THAI_DAY_LABELS, formatThaiDate } from "@/lib/thai-date";
 import {
+  APPOINTMENT_KIND_LABELS,
   APPOINTMENT_STATUS_COLORS,
   APPOINTMENT_STATUS_LABELS,
   CHINA_SHIPMENT_STATUS_COLORS,
@@ -156,7 +158,8 @@ function chipLabel(ev: DayEvent): string {
     return `${ev.item.profileName} (${LEAVE_TYPE_LABELS[ev.item.type]}${period})`;
   }
   if (ev.kind === "appointment") {
-    return `${ev.item.startTime} ${ev.item.companyName} (${ev.item.attendeeName})`;
+    const prefix = ev.item.kind === "SHOWROOM" ? "โชว์รูม " : "";
+    return `${ev.item.startTime} ${prefix}${ev.item.companyName} (${ev.item.attendeeName})`;
   }
   return `${MILESTONE_LABELS[ev.milestone]}: ${ev.item.title}`;
 }
@@ -174,6 +177,11 @@ function chipClass(ev: DayEvent): string {
       : "bg-orange-100 text-orange-800 border-orange-200";
   }
   if (ev.kind === "appointment") {
+    if (ev.item.kind === "SHOWROOM") {
+      return ev.item.status === "PENDING"
+        ? "bg-violet-50 text-violet-800 border-violet-300 border-dashed"
+        : "bg-violet-100 text-violet-800 border-violet-200";
+    }
     return ev.item.status === "PENDING"
       ? "bg-teal-50 text-teal-800 border-teal-300 border-dashed"
       : "bg-teal-100 text-teal-800 border-teal-200";
@@ -188,7 +196,10 @@ function chipClass(ev: DayEvent): string {
 function shortLabel(ev: DayEvent): string {
   if (ev.kind === "holiday") return ev.item.name;
   if (ev.kind === "leave") return ev.item.profileName;
-  if (ev.kind === "appointment") return `${ev.item.startTime} ${ev.item.companyName}`;
+  if (ev.kind === "appointment") {
+    const prefix = ev.item.kind === "SHOWROOM" ? "โชว์รูม " : "";
+    return `${ev.item.startTime} ${prefix}${ev.item.companyName}`;
+  }
   return ev.item.title;
 }
 
@@ -650,7 +661,7 @@ export function TeamCalendar({
           </div>
 
           <p className="mt-2 text-xs text-muted-foreground">
-            สีเทา = วันหยุดทั่วไป (ออฟฟิศทำงาน) · แดงเส้นประ = วันหยุดจีน (ออฟฟิศทำงาน แต่จีนไม่ส่งของ) · กรอบเส้นประ = วันลารออนุมัติ / วันที่คาดว่าของจะถึง / นัดพบลูกค้ารอแอดมินยืนยัน · กดที่วันเพื่อดูรายละเอียดหรือเพิ่มรายการ
+            สีเทา = วันหยุดทั่วไป (ออฟฟิศทำงาน) · แดงเส้นประ = วันหยุดจีน (ออฟฟิศทำงาน แต่จีนไม่ส่งของ) · กรอบเส้นประ = วันลารออนุมัติ / วันที่คาดว่าของจะถึง / นัดพบลูกค้ารอแอดมินยืนยัน · ม่วง = ลูกค้ามาชมโชว์รูม · กดที่วันเพื่อดูรายละเอียดหรือเพิ่มรายการ
           </p>
         </CardContent>
       </Card>
@@ -748,13 +759,25 @@ export function TeamCalendar({
               if (ev.kind === "appointment") {
                 const a = ev.item;
                 const canEdit = isAdmin || a.createdById === currentUserId;
+                const showroom = a.kind === "SHOWROOM";
                 return (
-                  <div key={i} className="space-y-2 rounded-md border border-teal-200 p-3">
+                  <div
+                    key={i}
+                    className={cn(
+                      "space-y-2 rounded-md border p-3",
+                      showroom ? "border-violet-200" : "border-teal-200"
+                    )}
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-xs text-teal-700">
-                          <Handshake className="h-3.5 w-3.5" />
-                          นัดพบลูกค้า · {appointmentTimeText(a)} น.
+                        <div
+                          className={cn(
+                            "flex items-center gap-2 text-xs",
+                            showroom ? "text-violet-700" : "text-teal-700"
+                          )}
+                        >
+                          {showroom ? <Store className="h-3.5 w-3.5" /> : <Handshake className="h-3.5 w-3.5" />}
+                          {APPOINTMENT_KIND_LABELS[a.kind] ?? "นัดพบลูกค้า"} · {appointmentTimeText(a)} น.
                         </div>
                         <div className="font-medium">{a.companyName}</div>
                         {a.location && (
@@ -765,7 +788,7 @@ export function TeamCalendar({
                         )}
                         <AppointmentContactLinks appointment={a} />
                         <div className="text-sm text-muted-foreground">
-                          ผู้ไปพบ: {a.attendeeName}
+                          {showroom ? "ผู้รับนัด" : "ผู้ไปพบ"}: {a.attendeeName}
                           {a.attendeeId === currentUserId && " (คุณ)"}
                           {a.createdById !== a.attendeeId && ` · ลงโดย ${a.createdByName}`}
                         </div>

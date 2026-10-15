@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Check, Loader2, Search } from "lucide-react";
+import { Check, Loader2, Search, Store, Navigation } from "lucide-react";
 
 import { appointmentSchema, type AppointmentFormData } from "@/lib/validators";
 import {
@@ -15,6 +15,7 @@ import {
 } from "@/actions/appointment-actions";
 import type { CalendarAppointmentItem, TeamMemberOption } from "@/data/team-calendar";
 import { cn } from "@/lib/utils";
+import { APPOINTMENT_KIND_LABELS } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +74,7 @@ function buildDefaults(
 ): AppointmentFormData {
   if (appointment) {
     return {
+      kind: appointment.kind === "SHOWROOM" ? "SHOWROOM" : "VISIT_CUSTOMER",
       companyName: appointment.companyName,
       customerId: appointment.customerId,
       location: appointment.location ?? "",
@@ -88,6 +90,7 @@ function buildDefaults(
   }
   const isAdminSelf = admins.some((a) => a.id === currentUserId);
   return {
+    kind: "VISIT_CUSTOMER",
     companyName: "",
     customerId: null,
     location: "",
@@ -123,6 +126,8 @@ export function AppointmentDialog({
   }, [open, appointment, defaultDate, currentUserId, admins, form]);
 
   const attendeeId = form.watch("attendeeId");
+  const kind = form.watch("kind");
+  const isShowroom = kind === "SHOWROOM";
   const selfBooked = attendeeId === currentUserId;
   const attendeeName = admins.find((a) => a.id === attendeeId)?.name;
 
@@ -187,10 +192,52 @@ export function AppointmentDialog({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
+              name="kind"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>ประเภทนัด</FormLabel>
+                  <FormControl>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          { value: "VISIT_CUSTOMER", icon: Navigation },
+                          { value: "SHOWROOM", icon: Store },
+                        ] as const
+                      ).map(({ value, icon: Icon }) => {
+                        const active = field.value === value;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => field.onChange(value)}
+                            aria-pressed={active}
+                            className={cn(
+                              "flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
+                              active
+                                ? value === "SHOWROOM"
+                                  ? "border-violet-300 bg-violet-50 font-medium text-violet-800"
+                                  : "border-teal-300 bg-teal-50 font-medium text-teal-800"
+                                : "text-muted-foreground hover:bg-muted"
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+                            {APPOINTMENT_KIND_LABELS[value]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="companyName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>บริษัท / ลูกค้าที่พบ</FormLabel>
+                  <FormLabel>{isShowroom ? "บริษัท / ลูกค้าที่มาชม" : "บริษัท / ลูกค้าที่พบ"}</FormLabel>
                   <div className="flex gap-2">
                     <FormControl>
                       <Input
@@ -209,6 +256,7 @@ export function AppointmentDialog({
               )}
             />
 
+            {!isShowroom && (
             <FormField
               control={form.control}
               name="location"
@@ -222,7 +270,9 @@ export function AppointmentDialog({
                 </FormItem>
               )}
             />
+            )}
 
+            {!isShowroom && (
             <FormField
               control={form.control}
               name="mapUrl"
@@ -242,6 +292,7 @@ export function AppointmentDialog({
                 </FormItem>
               )}
             />
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <FormField
@@ -324,7 +375,7 @@ export function AppointmentDialog({
               name="attendeeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>แอดมินที่ไปพบ</FormLabel>
+                  <FormLabel>{isShowroom ? "แอดมินที่รับนัด" : "แอดมินที่ไปพบ"}</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="w-full">
