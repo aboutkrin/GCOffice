@@ -481,6 +481,30 @@ export const leaveReviewSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** นัดพบลูกค้า: the attendee must be an ADMIN (checked server-side). */
+export const appointmentSchema = z.object({
+  companyName: z.string().trim().min(1, "กรุณาระบุชื่อบริษัท/ลูกค้า").max(200, "ชื่อยาวเกินไป"),
+  customerId: z.string().nullable().optional(),
+  location: z.string().max(500, "สถานที่ยาวเกินไป").optional(),
+  date: z.coerce.date({ error: "กรุณาเลือกวันนัด" }),
+  startTime: z.string().regex(TIME_RE, "กรุณาระบุเวลาเริ่ม"),
+  endTime: z.string().regex(TIME_RE, "เวลาสิ้นสุดไม่ถูกต้อง").optional().or(z.literal("")),
+  note: z.string().max(500, "หมายเหตุยาวเกินไป").optional(),
+  attendeeId: z.string().min(1, "กรุณาเลือกแอดมินที่ไปพบ"),
+}).refine(
+  (data) => !data.endTime || data.endTime > data.startTime,
+  { message: "เวลาสิ้นสุดต้องหลังเวลาเริ่ม", path: ["endTime"] }
+);
+
+export const appointmentReviewSchema = z.object({
+  approve: z.boolean(),
+  note: z.string().max(500, "หมายเหตุยาวเกินไป").optional(),
+});
+
+export type AppointmentFormData = z.infer<typeof appointmentSchema>;
+
 export const CHINA_SHIPMENT_MAX_IMAGES = 12;
 
 export const chinaShipmentSchema = z.object({

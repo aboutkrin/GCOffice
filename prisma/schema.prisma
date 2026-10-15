@@ -41,6 +41,9 @@ model Profile {
   leavesReviewed        LeaveRequest[]  @relation("LeaveReviewer")
   leavesCreated         LeaveRequest[]  @relation("LeaveCreatedBy")
   chinaShipmentsCreated ChinaShipment[] @relation("ChinaShipmentCreatedBy")
+  appointmentsAttending CustomerAppointment[] @relation("AppointmentAttendee")
+  appointmentsReviewed  CustomerAppointment[] @relation("AppointmentReviewer")
+  appointmentsCreated   CustomerAppointment[] @relation("AppointmentCreatedBy")
   importLotsCreated     ImportLot[]     @relation("ImportLotCreatedBy")
   employeeSalary        EmployeeSalary?
   payrolls              Payroll[]       @relation("PayrollEmployee")
@@ -208,7 +211,8 @@ model Customer {
   createdById String?  @map("created_by_id") @db.Uuid
   createdBy   Profile? @relation("CustomerCreatedBy", fields: [createdById], references: [id])
 
-  documents Document[]
+  documents    Document[]
+  appointments CustomerAppointment[] @relation("AppointmentCustomer")
 
   @@map("customers")
 }
@@ -500,6 +504,41 @@ model LeaveRequest {
   @@index([startDate, endDate])
   @@index([profileId, status])
   @@map("leave_requests")
+}
+
+/// A customer visit ("นัดพบลูกค้า") on the team calendar. The attendee is an
+/// ADMIN. Created by the attendee → CONFIRMED at once; created by anyone else
+/// → PENDING until an admin confirms they are free (or declines).
+model CustomerAppointment {
+  id          String    @id @default(cuid())
+  companyName String    @map("company_name")
+  customerId  String?   @map("customer_id")
+  customer    Customer? @relation("AppointmentCustomer", fields: [customerId], references: [id], onDelete: SetNull)
+  location    String?   @db.Text
+  date        DateTime  @db.Date
+  /// "HH:mm" (Thai local time); endTime optional
+  startTime   String    @map("start_time")
+  endTime     String?   @map("end_time")
+  note        String?   @db.Text
+
+  attendeeId String  @map("attendee_id") @db.Uuid
+  attendee   Profile @relation("AppointmentAttendee", fields: [attendeeId], references: [id])
+  status     AppointmentStatus @default(PENDING)
+
+  reviewedById String?   @map("reviewed_by_id") @db.Uuid
+  reviewedBy   Profile?  @relation("AppointmentReviewer", fields: [reviewedById], references: [id])
+  reviewedAt   DateTime? @map("reviewed_at")
+  reviewNote   String?   @map("review_note")
+
+  createdById String  @map("created_by_id") @db.Uuid
+  createdBy   Profile @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([attendeeId, status])
+  @@map("customer_appointments")
 }
 
 model ChinaShipment {
@@ -868,6 +907,13 @@ enum PayrollStatus {
 enum PayrollItemKind {
   EARNING
   DEDUCTION
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
 }
 
 enum ChinaShipmentStatus {

@@ -4,12 +4,14 @@ import Link from "next/link";
 import { formatLeaveHours, LEAVE_MAIN_TYPES } from "@/lib/leave-policy";
 import type { LeaveBalanceSummary } from "@/data/leave-balances";
 import { useRouter } from "next/navigation";
-import { Ship, UserCheck, UserMinus } from "lucide-react";
+import { Handshake, Ship, UserCheck, UserMinus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatThaiDate } from "@/lib/thai-date";
 import {
+  APPOINTMENT_STATUS_COLORS,
+  APPOINTMENT_STATUS_LABELS,
   CHINA_SHIPMENT_STATUS_COLORS,
   CHINA_SHIPMENT_STATUS_LABELS,
   LEAVE_PERIOD_LABELS,
@@ -17,8 +19,12 @@ import {
   LEAVE_STATUS_LABELS,
   LEAVE_TYPE_LABELS,
 } from "@/lib/constants";
-import type { CalendarLeaveItem, CalendarShipmentItem } from "@/data/team-calendar";
-import { LeaveActionButtons, ShipmentStatusButtons } from "./item-actions";
+import type {
+  CalendarAppointmentItem,
+  CalendarLeaveItem,
+  CalendarShipmentItem,
+} from "@/data/team-calendar";
+import { AppointmentActionButtons, LeaveActionButtons, ShipmentStatusButtons } from "./item-actions";
 import { ShipmentImageThumbs } from "./shipment-images";
 
 function daysUntil(iso: string): number {
@@ -215,6 +221,139 @@ export function MyLeavesCard({
                 </li>
               );
             })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function appointmentTimeText(a: CalendarAppointmentItem) {
+  return a.endTime ? `${a.startTime}–${a.endTime}` : a.startTime;
+}
+
+function AppointmentRow({
+  appointment: a,
+  isAdmin,
+  currentUserId,
+  showStatus,
+}: {
+  appointment: CalendarAppointmentItem;
+  isAdmin: boolean;
+  currentUserId: string;
+  showStatus: boolean;
+}) {
+  const router = useRouter();
+  const forMe = a.attendeeId === currentUserId;
+  return (
+    <li className="space-y-1.5 rounded-md border p-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate font-medium">{a.companyName}</div>
+          <div className="text-xs text-muted-foreground">
+            {formatThaiDate(new Date(a.date), "short")} · {appointmentTimeText(a)} น.
+          </div>
+          {a.location && <div className="truncate text-xs text-muted-foreground">{a.location}</div>}
+          <div className="text-xs">
+            ผู้ไปพบ: <span className={cn(forMe && "font-medium text-teal-700")}>{a.attendeeName}</span>
+            {forMe && " (คุณ)"}
+            {a.createdById !== a.attendeeId && (
+              <span className="text-muted-foreground"> · ลงโดย {a.createdByName}</span>
+            )}
+          </div>
+        </div>
+        {showStatus && (
+          <Badge className={cn("shrink-0", APPOINTMENT_STATUS_COLORS[a.status])}>
+            {APPOINTMENT_STATUS_LABELS[a.status]}
+          </Badge>
+        )}
+      </div>
+      {a.note && <div className="text-sm">{a.note}</div>}
+      {a.reviewNote && (
+        <div className="text-xs text-muted-foreground">หมายเหตุแอดมิน: {a.reviewNote}</div>
+      )}
+      <AppointmentActionButtons
+        appointment={a}
+        isAdmin={isAdmin}
+        currentUserId={currentUserId}
+        onChanged={() => router.refresh()}
+      />
+    </li>
+  );
+}
+
+/** ADMIN: appointments booked for an admin by someone else, waiting for a "ว่าง" confirmation. */
+export function PendingAppointmentsCard({
+  appointments,
+  currentUserId,
+}: {
+  appointments: CalendarAppointmentItem[];
+  currentUserId: string;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          <Handshake className="h-5 w-5" />
+          นัดพบลูกค้ารอยืนยัน
+          {appointments.length > 0 && (
+            <Badge className="bg-amber-100 text-amber-800">{appointments.length}</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {appointments.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">ไม่มีนัดที่รอยืนยัน</p>
+        ) : (
+          <ul className="space-y-3">
+            {appointments.map((a) => (
+              <AppointmentRow
+                key={a.id}
+                appointment={a}
+                isAdmin
+                currentUserId={currentUserId}
+                showStatus={false}
+              />
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** STAFF: appointments the viewer booked, with the admin's answer. */
+export function MyAppointmentsCard({
+  appointments,
+  currentUserId,
+}: {
+  appointments: CalendarAppointmentItem[];
+  currentUserId: string;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base font-semibold">
+          <Handshake className="h-5 w-5" />
+          นัดพบลูกค้าของฉัน
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {appointments.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            ยังไม่มีนัด กด &quot;นัดลูกค้า&quot; ในปฏิทินเพื่อลงนัดให้แอดมิน
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {appointments.map((a) => (
+              <AppointmentRow
+                key={a.id}
+                appointment={a}
+                isAdmin={false}
+                currentUserId={currentUserId}
+                showStatus
+              />
+            ))}
           </ul>
         )}
       </CardContent>
