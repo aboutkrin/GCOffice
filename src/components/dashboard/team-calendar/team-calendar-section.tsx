@@ -1,7 +1,7 @@
 import { getThaiNow } from "@/lib/thai-date";
 import type { SessionUser } from "@/lib/auth";
 import {
-  getAdminMembers,
+  getAppointmentAttendees,
   getMyAppointments,
   getMyLeaves,
   getPendingAppointments,
@@ -35,7 +35,7 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
     myLeaves,
     members,
     myBalance,
-    admins,
+    attendees,
     pendingAppointments,
     myAppointments,
     upcomingAppointments,
@@ -47,7 +47,7 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
       isAdmin ? Promise.resolve([]) : getMyLeaves(user.id),
       isAdmin ? getTeamMembers() : Promise.resolve([]),
       isAdmin ? Promise.resolve(null) : getMyLeaveSummary(user.id, year).then((r) => r.summary),
-      getAdminMembers(),
+      getAppointmentAttendees(),
       isAdmin ? getPendingAppointments() : Promise.resolve([]),
       isAdmin ? Promise.resolve([]) : getMyAppointments(user.id),
       getUpcomingAppointments(),
@@ -63,7 +63,7 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
           isAdmin={isAdmin}
           currentUserId={user.id}
           members={members}
-          admins={admins}
+          attendees={attendees}
         />
       </div>
       <div className="flex flex-col gap-4">
