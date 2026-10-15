@@ -28,10 +28,30 @@ export interface CalendarShipmentItem {
   imageUrls: string[];
 }
 
+export interface CalendarAppointmentItem {
+  id: string;
+  companyName: string;
+  customerId: string | null;
+  location: string | null;
+  /** ISO date (UTC noon) */
+  date: string;
+  /** "HH:mm" */
+  startTime: string;
+  endTime: string | null;
+  note: string | null;
+  attendeeId: string;
+  attendeeName: string;
+  createdById: string;
+  createdByName: string;
+  status: string;
+  reviewNote: string | null;
+}
+
 export interface TeamCalendarData {
   holidays: HolidayItem[];
   leaves: CalendarLeaveItem[];
   shipments: CalendarShipmentItem[];
+  appointments: CalendarAppointmentItem[];
 }
 
 export interface TeamMemberOption {
@@ -121,6 +141,61 @@ function toShipmentItem(s: ShipmentRow): CalendarShipmentItem {
   };
 }
 
+type AppointmentRow = {
+  id: string;
+  companyName: string;
+  customerId: string | null;
+  location: string | null;
+  date: Date;
+  startTime: string;
+  endTime: string | null;
+  note: string | null;
+  attendeeId: string;
+  createdById: string;
+  status: string;
+  reviewNote: string | null;
+  attendee: ProfileName;
+  createdBy: ProfileName;
+};
+
+function toAppointmentItem(a: AppointmentRow): CalendarAppointmentItem {
+  return {
+    id: a.id,
+    companyName: a.companyName,
+    customerId: a.customerId,
+    location: a.location,
+    date: a.date.toISOString(),
+    startTime: a.startTime,
+    endTime: a.endTime,
+    note: a.note,
+    attendeeId: a.attendeeId,
+    attendeeName: profileDisplayName(a.attendee),
+    createdById: a.createdById,
+    createdByName: profileDisplayName(a.createdBy),
+    status: a.status,
+    reviewNote: a.reviewNote,
+  };
+}
+
+const appointmentSelect = {
+  id: true,
+  companyName: true,
+  customerId: true,
+  location: true,
+  date: true,
+  startTime: true,
+  endTime: true,
+  note: true,
+  attendeeId: true,
+  createdById: true,
+  status: true,
+  reviewNote: true,
+  attendee: { select: profileNameSelect },
+  createdBy: { select: profileNameSelect },
+} as const;
+
+const appointmentOrder = [{ date: "asc" as const }, { startTime: "asc" as const }];
+
 const leaveSelect = {
   id: true,
   profileId: true,
@@ -137,7 +212,8 @@ const leaveSelect = {
 /**
  * Everything shown on the dashboard team calendar for one month:
  * company holidays, approved + pending leave (pending is rendered faded so
- * the team can plan around it) and China shipment milestones.
+ * the team can plan around it), China shipment milestones and customer
+ * appointments (confirmed + pending).
  */
 export async function getTeamCalendar(
   year: number,
@@ -147,7 +223,7 @@ export async function getTeamCalendar(
   const endOfMonth = new Date(Date.UTC(year, month, 0, 23, 59, 59, 999));
   const inMonth = { gte: startOfMonth, lte: endOfMonth };
 
-  const [holidays, leaves, shipments] = await Promise.all([
+  const [holidays, leaves, shipments, appointments] = await Promise.all([
     getHolidaysForMonth(year, month),
     prisma.leaveRequest
       .findMany({
@@ -174,12 +250,20 @@ export async function getTeamCalendar(
         orderBy: { shippedDate: "asc" },
       })
       .catch(() => []),
+    prisma.customerAppointment
+      .findMany({
+        where: { status: { in: ["PENDING", "CONFIRMED"] }, date: inMonth },
+        select: appointmentSelect,
+        orderBy: appointmentOrder,
+      })
+      .catch(() => []),
   ]);
 
   return {
     holidays,
     leaves: leaves.map(toLeaveItem),
     shipments: shipments.map(toShipmentItem),
+    appointments: appointments.map(toAppointmentItem),
   };
 }
 
@@ -205,6 +289,66 @@ export async function getPendingLeaves(): Promise<CalendarLeaveItem[]> {
       orderBy: { startDate: "asc" },
     });
     return rows.map(toLeaveItem);
+  } catch {
+    return [];
+  }
+}
+
+/** Today in Bangkok as UTC midnight, for date-only comparisons. */
+function thaiTodayUTC(): Date {
+  const key = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return new Date(`${key}T00:00:00Z`);
+}
+
+/** Appointments waiting for an admin to confirm they are free (today onward). */
+export async function getPendingAppointments(): Promise<CalendarAppointmentItem[]> {
+  try {
+    const rows = await prisma.customerAppointment.findMany({
+      where: { status: "PENDING", date: { gte: thaiTodayUTC() } },
+      select: appointmentSelect,
+      orderBy: appointmentOrder,
+    });
+    return rows.map(toAppointmentItem);
+  } catch {
+    return [];
+  }
+}
+
+/** Appointments the viewer created or attends, from a week ago onward (rejected ones included). */
+export async function getMyAppointments(profileId: string): Promise<CalendarAppointmentItem[]> {
+  const since = thaiTodayUTC();
+  since.setUTCDate(since.getUTCDate() - 7);
+  try {
+    const rows = await prisma.customerAppointment.findMany({
+      where: {
+        OR: [{ createdById: profileId }, { attendeeId: profileId }],
+        status: { not: "CANCELLED" },
+        date: { gte: since },
+      },
+      select: appointmentSelect,
+      orderBy: appointmentOrder,
+      take: 10,
+    });
+    return rows.map(toAppointmentItem);
+  } catch {
+    return [];
+  }
+}
+
+/** Active admins who can be sent to meet a customer. */
+export async function getAdminMembers(): Promise<TeamMemberOption[]> {
+  try {
+    const rows = await prisma.profile.findMany({
+      where: { status: "ACTIVE", role: "ADMIN" },
+      select: { id: true, ...profileNameSelect },
+      orderBy: { createdAt: "asc" },
+    });
+    return rows.map((p) => ({ id: p.id, name: profileDisplayName(p) }));
   } catch {
     return [];
   }

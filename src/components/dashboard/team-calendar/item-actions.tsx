@@ -6,7 +6,12 @@ import { Check, X, Ship, PackageCheck, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { reviewLeaveRequest, cancelLeaveRequest } from "@/actions/leave-actions";
 import { setChinaShipmentStatus } from "@/actions/china-shipment-actions";
-import type { CalendarLeaveItem, CalendarShipmentItem } from "@/data/team-calendar";
+import { cancelAppointment, reviewAppointment } from "@/actions/appointment-actions";
+import type {
+  CalendarAppointmentItem,
+  CalendarLeaveItem,
+  CalendarShipmentItem,
+} from "@/data/team-calendar";
 
 function useRun(onChanged: () => void) {
   const [isPending, startTransition] = useTransition();
@@ -141,6 +146,72 @@ export function ShipmentStatusButtons({
         >
           <Undo2 className="mr-1 h-3.5 w-3.5" />
           ย้อนสถานะ
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/** Confirm (ว่าง) / decline (ไม่ว่าง) for admins on a pending appointment; cancel for creator, attendee or admin. */
+export function AppointmentActionButtons({
+  appointment,
+  isAdmin,
+  currentUserId,
+  onChanged,
+}: {
+  appointment: CalendarAppointmentItem;
+  isAdmin: boolean;
+  currentUserId: string;
+  onChanged: () => void;
+}) {
+  const { isPending, run } = useRun(onChanged);
+  const canCancel =
+    (isAdmin ||
+      appointment.createdById === currentUserId ||
+      appointment.attendeeId === currentUserId) &&
+    (appointment.status === "PENDING" || appointment.status === "CONFIRMED");
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {isAdmin && appointment.status === "PENDING" && (
+        <>
+          <Button
+            size="sm"
+            className="h-7 bg-teal-600 hover:bg-teal-700"
+            disabled={isPending}
+            onClick={() =>
+              run(() => reviewAppointment(appointment.id, { approve: true }), "ยืนยันนัดแล้ว")
+            }
+          >
+            <Check className="mr-1 h-3.5 w-3.5" />
+            ยืนยัน (ว่าง)
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-red-600"
+            disabled={isPending}
+            onClick={() =>
+              run(() => reviewAppointment(appointment.id, { approve: false }), "แจ้งว่าไม่ว่างแล้ว")
+            }
+          >
+            <X className="mr-1 h-3.5 w-3.5" />
+            ไม่ว่าง
+          </Button>
+        </>
+      )}
+      {canCancel && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 text-muted-foreground"
+          disabled={isPending}
+          onClick={() => {
+            if (!confirm("ยืนยันยกเลิกนัดพบลูกค้านี้?")) return;
+            run(() => cancelAppointment(appointment.id), "ยกเลิกนัดแล้ว");
+          }}
+        >
+          ยกเลิกนัด
         </Button>
       )}
     </div>

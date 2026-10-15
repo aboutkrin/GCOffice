@@ -231,6 +231,20 @@ export const LEAVE_STATUS_COLORS: Record<string, string> = {
   CANCELLED: "bg-gray-100 text-gray-600",
 };
 
+export const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
+  PENDING: "รอยืนยัน",
+  CONFIRMED: "ยืนยันแล้ว",
+  DECLINED: "ไม่ว่าง",
+  CANCELLED: "ยกเลิก",
+};
+
+export const APPOINTMENT_STATUS_COLORS: Record<string, string> = {
+  PENDING: "bg-amber-100 text-amber-800",
+  CONFIRMED: "bg-teal-100 text-teal-800",
+  DECLINED: "bg-red-100 text-red-800",
+  CANCELLED: "bg-gray-100 text-gray-600",
+};
+
 export const PAYROLL_STATUS_LABELS: Record<string, string> = {
   DRAFT: "ฉบับร่าง",
   CONFIRMED: "ยืนยันแล้ว",

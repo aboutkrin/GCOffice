@@ -12,6 +12,8 @@ import {
   Ship,
   UserMinus,
   CalendarOff,
+  Handshake,
+  MapPin,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -29,6 +31,8 @@ import {
 import { cn } from "@/lib/utils";
 import { THAI_MONTHS, THAI_DAY_LABELS, formatThaiDate } from "@/lib/thai-date";
 import {
+  APPOINTMENT_STATUS_COLORS,
+  APPOINTMENT_STATUS_LABELS,
   CHINA_SHIPMENT_STATUS_COLORS,
   CHINA_SHIPMENT_STATUS_LABELS,
   LEAVE_PERIOD_LABELS,
@@ -40,6 +44,7 @@ import { fetchTeamCalendarAction } from "@/actions/dashboard-actions";
 import { deleteChinaShipment } from "@/actions/china-shipment-actions";
 import type { HolidayItem } from "@/data/dashboard";
 import type {
+  CalendarAppointmentItem,
   CalendarLeaveItem,
   CalendarShipmentItem,
   TeamCalendarData,
@@ -48,7 +53,9 @@ import type {
 
 import { LeaveRequestDialog } from "./leave-request-dialog";
 import { ChinaShipmentDialog } from "./china-shipment-dialog";
-import { LeaveActionButtons, ShipmentStatusButtons } from "./item-actions";
+import { AppointmentDialog } from "./appointment-dialog";
+import { AppointmentActionButtons, LeaveActionButtons, ShipmentStatusButtons } from "./item-actions";
+import { appointmentTimeText } from "./side-cards";
 import { ShipmentImageThumbs } from "./shipment-images";
 
 type ShipmentMilestone = "shipped" | "eta" | "arrived" | "received";
@@ -56,9 +63,10 @@ type ShipmentMilestone = "shipped" | "eta" | "arrived" | "received";
 type DayEvent =
   | { kind: "holiday"; item: HolidayItem }
   | { kind: "leave"; item: CalendarLeaveItem }
-  | { kind: "shipment"; milestone: ShipmentMilestone; item: CalendarShipmentItem };
+  | { kind: "shipment"; milestone: ShipmentMilestone; item: CalendarShipmentItem }
+  | { kind: "appointment"; item: CalendarAppointmentItem };
 
-type Filter = "holiday" | "publicHoliday" | "chinaHoliday" | "leave" | "shipment";
+type Filter = "holiday" | "publicHoliday" | "chinaHoliday" | "leave" | "shipment" | "appointment";
 
 /**
  * COMPANY = the office is closed; PUBLIC = a general holiday the office still works;
@@ -86,7 +94,7 @@ const MILESTONE_LABELS: Record<ShipmentMilestone, string> = {
 const MOBILE_LANES = 3;
 const DESKTOP_LANES = 4;
 
-const KIND_ORDER: Record<DayEvent["kind"], number> = { holiday: 0, leave: 1, shipment: 2 };
+const KIND_ORDER: Record<DayEvent["kind"], number> = { holiday: 0, leave: 1, shipment: 2, appointment: 3 };
 
 const dateKey = (iso: string) => iso.slice(0, 10);
 
@@ -136,6 +144,8 @@ function buildEventMap(data: TeamCalendarData, year: number, month: number) {
       push(dateKey(s.receivedDate), { kind: "shipment", milestone: "received", item: s });
     }
   }
+
+  for (const a of data.appointments) push(dateKey(a.date), { kind: "appointment", item: a });
   return map;
 }
 
@@ -144,6 +154,9 @@ function chipLabel(ev: DayEvent): string {
   if (ev.kind === "leave") {
     const period = ev.item.period !== "FULL_DAY" ? ` ${LEAVE_PERIOD_LABELS[ev.item.period]}` : "";
     return `${ev.item.profileName} (${LEAVE_TYPE_LABELS[ev.item.type]}${period})`;
+  }
+  if (ev.kind === "appointment") {
+    return `${ev.item.startTime} ${ev.item.companyName} (${ev.item.attendeeName})`;
   }
   return `${MILESTONE_LABELS[ev.milestone]}: ${ev.item.title}`;
 }
@@ -160,6 +173,11 @@ function chipClass(ev: DayEvent): string {
       ? "bg-orange-50 text-orange-800 border-orange-300 border-dashed"
       : "bg-orange-100 text-orange-800 border-orange-200";
   }
+  if (ev.kind === "appointment") {
+    return ev.item.status === "PENDING"
+      ? "bg-teal-50 text-teal-800 border-teal-300 border-dashed"
+      : "bg-teal-100 text-teal-800 border-teal-200";
+  }
   if (ev.milestone === "eta") return "bg-sky-50 text-sky-800 border-sky-300 border-dashed";
   if (ev.milestone === "received") return "bg-green-100 text-green-800 border-green-200";
   if (ev.milestone === "arrived") return "bg-violet-100 text-violet-800 border-violet-200";
@@ -170,6 +188,7 @@ function chipClass(ev: DayEvent): string {
 function shortLabel(ev: DayEvent): string {
   if (ev.kind === "holiday") return ev.item.name;
   if (ev.kind === "leave") return ev.item.profileName;
+  if (ev.kind === "appointment") return `${ev.item.startTime} ${ev.item.companyName}`;
   return ev.item.title;
 }
 
@@ -262,7 +281,7 @@ function buildWeekRows(
     days.forEach((d, col) => {
       if (d === null) return;
       for (const ev of eventMap.get(keyFor(year, month, d)) ?? []) {
-        if (ev.kind !== "shipment" || !visible(ev)) continue;
+        if ((ev.kind !== "shipment" && ev.kind !== "appointment") || !visible(ev)) continue;
         raw.push({ ev, start: col, end: col, continuesBefore: false, continuesAfter: false });
       }
     });
@@ -306,6 +325,8 @@ interface TeamCalendarProps {
   isAdmin: boolean;
   currentUserId: string;
   members: TeamMemberOption[];
+  /** Active admins who can be sent to meet a customer. */
+  admins: TeamMemberOption[];
 }
 
 export function TeamCalendar({
@@ -315,6 +336,7 @@ export function TeamCalendar({
   isAdmin,
   currentUserId,
   members,
+  admins,
 }: TeamCalendarProps) {
   const router = useRouter();
   const [data, setData] = useState(initialData);
@@ -327,6 +349,7 @@ export function TeamCalendar({
     chinaHoliday: true,
     leave: true,
     shipment: true,
+    appointment: true,
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -338,6 +361,11 @@ export function TeamCalendar({
   const [shipmentDialog, setShipmentDialog] = useState<{
     open: boolean;
     shipment?: CalendarShipmentItem | null;
+    date?: Date;
+  }>({ open: false });
+  const [appointmentDialog, setAppointmentDialog] = useState<{
+    open: boolean;
+    appointment?: CalendarAppointmentItem | null;
     date?: Date;
   }>({ open: false });
 
@@ -417,6 +445,15 @@ export function TeamCalendar({
     });
   }
 
+  function openAppointment(date?: Date, appointment?: CalendarAppointmentItem) {
+    setSelectedDay(null);
+    setAppointmentDialog({
+      open: true,
+      appointment: appointment ?? null,
+      date: date ?? new Date(`${todayKey}T12:00:00Z`),
+    });
+  }
+
   async function handleDeleteShipment(id: string) {
     if (!confirm("ยืนยันลบรายการของจากจีนนี้?")) return;
     try {
@@ -435,6 +472,7 @@ export function TeamCalendar({
     { key: "chinaHoliday", label: "วันหยุดจีน", dot: "border border-dashed border-red-500 bg-red-100" },
     { key: "leave", label: "วันลา", dot: "bg-orange-400" },
     { key: "shipment", label: "ของจากจีน", dot: "bg-sky-400" },
+    { key: "appointment", label: "นัดพบลูกค้า", dot: "bg-teal-400" },
   ];
 
   return (
@@ -445,12 +483,7 @@ export function TeamCalendar({
             <CalendarDays className="h-5 w-5" />
             ปฏิทินทีม
           </CardTitle>
-          <div
-            className={cn(
-              "grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center",
-              isAdmin ? "grid-cols-3" : "grid-cols-2"
-            )}
-          >
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <Button size="sm" variant="outline" className="px-2 text-xs sm:px-3 sm:text-sm" onClick={() => openLeave()}>
               <UserMinus className="h-4 w-4 sm:mr-1" />
               {isAdmin ? "วันลา" : "ขอลา"}
@@ -458,6 +491,10 @@ export function TeamCalendar({
             <Button size="sm" variant="outline" className="px-2 text-xs sm:px-3 sm:text-sm" onClick={() => openShipment()}>
               <Ship className="h-4 w-4 sm:mr-1" />
               ของจากจีน
+            </Button>
+            <Button size="sm" variant="outline" className="px-2 text-xs sm:px-3 sm:text-sm" onClick={() => openAppointment()}>
+              <Handshake className="h-4 w-4 sm:mr-1" />
+              นัดลูกค้า
             </Button>
             {isAdmin && (
               <Button size="sm" variant="outline" className="px-2 text-xs sm:px-3 sm:text-sm" asChild>
@@ -613,7 +650,7 @@ export function TeamCalendar({
           </div>
 
           <p className="mt-2 text-xs text-muted-foreground">
-            สีเทา = วันหยุดทั่วไป (ออฟฟิศทำงาน) · แดงเส้นประ = วันหยุดจีน (ออฟฟิศทำงาน แต่จีนไม่ส่งของ) · กรอบเส้นประ = วันลารออนุมัติ / วันที่คาดว่าของจะถึง · กดที่วันเพื่อดูรายละเอียดหรือเพิ่มรายการ
+            สีเทา = วันหยุดทั่วไป (ออฟฟิศทำงาน) · แดงเส้นประ = วันหยุดจีน (ออฟฟิศทำงาน แต่จีนไม่ส่งของ) · กรอบเส้นประ = วันลารออนุมัติ / วันที่คาดว่าของจะถึง / นัดพบลูกค้ารอแอดมินยืนยัน · กดที่วันเพื่อดูรายละเอียดหรือเพิ่มรายการ
           </p>
         </CardContent>
       </Card>
@@ -708,6 +745,62 @@ export function TeamCalendar({
                   </div>
                 );
               }
+              if (ev.kind === "appointment") {
+                const a = ev.item;
+                const canEdit = isAdmin || a.createdById === currentUserId;
+                return (
+                  <div key={i} className="space-y-2 rounded-md border border-teal-200 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-xs text-teal-700">
+                          <Handshake className="h-3.5 w-3.5" />
+                          นัดพบลูกค้า · {appointmentTimeText(a)} น.
+                        </div>
+                        <div className="font-medium">{a.companyName}</div>
+                        {a.location && (
+                          <div className="flex items-start gap-1 text-sm text-muted-foreground">
+                            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            <span className="whitespace-pre-line">{a.location}</span>
+                          </div>
+                        )}
+                        <div className="text-sm text-muted-foreground">
+                          ผู้ไปพบ: {a.attendeeName}
+                          {a.attendeeId === currentUserId && " (คุณ)"}
+                          {a.createdById !== a.attendeeId && ` · ลงโดย ${a.createdByName}`}
+                        </div>
+                        {a.note && <div className="mt-1 text-sm">{a.note}</div>}
+                        {a.reviewNote && (
+                          <div className="text-xs text-muted-foreground">หมายเหตุแอดมิน: {a.reviewNote}</div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge className={cn("shrink-0", APPOINTMENT_STATUS_COLORS[a.status])}>
+                          {APPOINTMENT_STATUS_LABELS[a.status]}
+                        </Badge>
+                        {canEdit && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={() => openAppointment(undefined, a)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <AppointmentActionButtons
+                      appointment={a}
+                      isAdmin={isAdmin}
+                      currentUserId={currentUserId}
+                      onChanged={() => {
+                        setSelectedDay(null);
+                        onChanged();
+                      }}
+                    />
+                  </div>
+                );
+              }
               const s = ev.item;
               return (
                 <div key={i} className="space-y-2 rounded-md border p-3">
@@ -780,6 +873,10 @@ export function TeamCalendar({
               <Plus className="mr-1 h-4 w-4" />
               จีนส่งของวันนี้
             </Button>
+            <Button size="sm" variant="outline" onClick={() => openAppointment(selectedDate)}>
+              <Plus className="mr-1 h-4 w-4" />
+              นัดพบลูกค้าวันนี้
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -799,6 +896,15 @@ export function TeamCalendar({
         onOpenChange={(open) => setShipmentDialog((prev) => ({ ...prev, open }))}
         shipment={shipmentDialog.shipment}
         defaultDate={shipmentDialog.date}
+        onSaved={onChanged}
+      />
+      <AppointmentDialog
+        open={appointmentDialog.open}
+        onOpenChange={(open) => setAppointmentDialog((prev) => ({ ...prev, open }))}
+        currentUserId={currentUserId}
+        admins={admins}
+        appointment={appointmentDialog.appointment}
+        defaultDate={appointmentDialog.date}
         onSaved={onChanged}
       />
     </>
