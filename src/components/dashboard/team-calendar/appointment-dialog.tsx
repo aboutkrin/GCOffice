@@ -13,7 +13,7 @@ import {
   updateAppointment,
   type AppointmentCustomerOption,
 } from "@/actions/appointment-actions";
-import type { CalendarAppointmentItem, TeamMemberOption } from "@/data/team-calendar";
+import type { AppointmentAttendeeOption, CalendarAppointmentItem } from "@/data/team-calendar";
 import { cn } from "@/lib/utils";
 import { APPOINTMENT_KIND_LABELS } from "@/lib/constants";
 
@@ -53,13 +53,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { DatePickerButton } from "./date-picker-button";
+import { TimePickerButton } from "./time-picker-button";
 
 interface AppointmentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentUserId: string;
-  /** Active admins who can be sent to the customer. */
-  admins: TeamMemberOption[];
+  /** Active users: admins can take any appointment, staff only showroom visits. */
+  attendees: AppointmentAttendeeOption[];
   /** Existing appointment to edit; otherwise a new one on defaultDate. */
   appointment?: CalendarAppointmentItem | null;
   defaultDate?: Date;
@@ -70,7 +71,7 @@ function buildDefaults(
   appointment: CalendarAppointmentItem | null | undefined,
   defaultDate: Date | undefined,
   currentUserId: string,
-  admins: TeamMemberOption[]
+  attendees: AppointmentAttendeeOption[]
 ): AppointmentFormData {
   if (appointment) {
     return {
@@ -88,6 +89,7 @@ function buildDefaults(
       attendeeId: appointment.attendeeId,
     };
   }
+  const admins = attendees.filter((a) => a.role === "ADMIN");
   const isAdminSelf = admins.some((a) => a.id === currentUserId);
   return {
     kind: "VISIT_CUSTOMER",
@@ -109,7 +111,7 @@ export function AppointmentDialog({
   open,
   onOpenChange,
   currentUserId,
-  admins,
+  attendees,
   appointment,
   defaultDate,
   onSaved,
@@ -118,18 +120,32 @@ export function AppointmentDialog({
   const form = useForm<AppointmentFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(appointmentSchema) as any,
-    defaultValues: buildDefaults(appointment, defaultDate, currentUserId, admins),
+    defaultValues: buildDefaults(appointment, defaultDate, currentUserId, attendees),
   });
 
   useEffect(() => {
-    if (open) form.reset(buildDefaults(appointment, defaultDate, currentUserId, admins));
-  }, [open, appointment, defaultDate, currentUserId, admins, form]);
+    if (open) form.reset(buildDefaults(appointment, defaultDate, currentUserId, attendees));
+  }, [open, appointment, defaultDate, currentUserId, attendees, form]);
 
   const attendeeId = form.watch("attendeeId");
   const kind = form.watch("kind");
   const isShowroom = kind === "SHOWROOM";
+  const admins = attendees.filter((a) => a.role === "ADMIN");
+  // Staff can only receive customers at the showroom; going out is admin-only.
+  const attendeeOptions = isShowroom ? attendees : admins;
+  const attendee = attendees.find((a) => a.id === attendeeId);
   const selfBooked = attendeeId === currentUserId;
-  const attendeeName = admins.find((a) => a.id === attendeeId)?.name;
+  // Self-booked or booked for a staff member: confirmed at once, no admin approval.
+  const needsConfirmation = !selfBooked && attendee?.role === "ADMIN";
+  const attendeeName = attendee?.name;
+
+  // Switching back to "ไปพบลูกค้า" with a staff attendee picked: fall back to an admin.
+  useEffect(() => {
+    if (isShowroom || !attendeeId) return;
+    if (admins.some((a) => a.id === attendeeId)) return;
+    const self = admins.find((a) => a.id === currentUserId);
+    form.setValue("attendeeId", self?.id ?? admins[0]?.id ?? "", { shouldValidate: true });
+  }, [isShowroom, attendeeId, admins, currentUserId, form]);
 
   function onSubmit(values: AppointmentFormData) {
     startTransition(async () => {
@@ -148,9 +164,9 @@ export function AppointmentDialog({
             return;
           }
           toast.success(
-            selfBooked
-              ? "บันทึกนัดพบลูกค้าเรียบร้อยแล้ว"
-              : `ส่งนัดให้ ${attendeeName ?? "แอดมิน"} แล้ว รอยืนยันว่าว่าง`
+            needsConfirmation
+              ? `ส่งนัดให้ ${attendeeName ?? "แอดมิน"} แล้ว รอยืนยันว่าว่าง`
+              : "บันทึกนัดพบลูกค้าเรียบร้อยแล้ว"
           );
         }
         onOpenChange(false);
@@ -183,8 +199,9 @@ export function AppointmentDialog({
         <DialogHeader>
           <DialogTitle>{appointment ? "แก้ไขนัดพบลูกค้า" : "นัดพบลูกค้า"}</DialogTitle>
           <DialogDescription>
-            ถ้าคุณเป็นผู้ไปพบเอง นัดจะยืนยันทันที · ถ้าลงให้แอดมินคนอื่น จะแสดงเป็น
-            &quot;รอยืนยัน&quot; จนกว่าแอดมินจะยืนยันว่าว่าง
+            {isShowroom
+              ? "ลงให้พนักงานรับนัดหรือรับเอง นัดจะยืนยันทันที · ถ้าลงให้แอดมินคนอื่น จะแสดงเป็น \"รอยืนยัน\" จนกว่าแอดมินจะยืนยันว่าว่าง"
+              : "ถ้าคุณเป็นผู้ไปพบเอง นัดจะยืนยันทันที · ถ้าลงให้แอดมินคนอื่น จะแสดงเป็น \"รอยืนยัน\" จนกว่าแอดมินจะยืนยันว่าว่าง"}
           </DialogDescription>
         </DialogHeader>
 
@@ -348,9 +365,7 @@ export function AppointmentDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>เวลาเริ่ม</FormLabel>
-                    <FormControl>
-                      <Input type="time" step={300} {...field} />
-                    </FormControl>
+                    <TimePickerButton value={field.value} onChange={field.onChange} />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -361,9 +376,12 @@ export function AppointmentDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>ถึงเวลา (ไม่บังคับ)</FormLabel>
-                    <FormControl>
-                      <Input type="time" step={300} {...field} value={field.value ?? ""} />
-                    </FormControl>
+                    <TimePickerButton
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      placeholder="ไม่ระบุ"
+                      clearable
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -375,22 +393,32 @@ export function AppointmentDialog({
               name="attendeeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{isShowroom ? "แอดมินที่รับนัด" : "แอดมินที่ไปพบ"}</FormLabel>
+                  <FormLabel>{isShowroom ? "ผู้รับนัด" : "แอดมินที่ไปพบ"}</FormLabel>
                   <Select value={field.value} onValueChange={field.onChange}>
                     <FormControl>
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="เลือกแอดมิน" />
+                        <SelectValue placeholder={isShowroom ? "เลือกผู้รับนัด" : "เลือกแอดมิน"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {admins.map((a) => (
+                      {attendeeOptions.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
                           {a.name}
+                          {a.role === "ADMIN" ? " · แอดมิน" : " · พนักงาน"}
                           {a.id === currentUserId ? " (ฉัน)" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {isShowroom && (
+                    <p className="text-xs text-muted-foreground">
+                      {needsConfirmation
+                        ? "ลงให้แอดมินคนอื่น ต้องรอแอดมินยืนยันว่าว่าง"
+                        : attendee?.role === "STAFF"
+                          ? "พนักงานรับนัดได้เลย ไม่ต้องรอแอดมินยืนยัน"
+                          : null}
+                    </p>
+                  )}
                   {admins.length === 0 && (
                     <p className="text-xs text-red-600">ยังไม่มีแอดมินที่ใช้งานอยู่</p>
                   )}
@@ -419,7 +447,7 @@ export function AppointmentDialog({
               </Button>
               <Button type="submit" disabled={isPending || admins.length === 0}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {appointment ? "บันทึก" : selfBooked ? "บันทึกนัด" : "ส่งให้แอดมินยืนยัน"}
+                {appointment ? "บันทึก" : needsConfirmation ? "ส่งให้แอดมินยืนยัน" : "บันทึกนัด"}
               </Button>
             </DialogFooter>
           </form>

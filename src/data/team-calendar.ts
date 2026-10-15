@@ -64,6 +64,10 @@ export interface TeamMemberOption {
   name: string;
 }
 
+export interface AppointmentAttendeeOption extends TeamMemberOption {
+  role: "ADMIN" | "STAFF";
+}
+
 type ProfileName = {
   firstName: string | null;
   lastName: string | null;
@@ -384,6 +388,28 @@ export async function getAdminMembers(): Promise<TeamMemberOption[]> {
       orderBy: { createdAt: "asc" },
     });
     return rows.map((p) => ({ id: p.id, name: profileDisplayName(p) }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Active users who can take a customer appointment: admins go out to meet
+ * customers; for showroom visits any active staff member can receive the
+ * customer too (no admin confirmation needed in that case).
+ */
+export async function getAppointmentAttendees(): Promise<AppointmentAttendeeOption[]> {
+  try {
+    const rows = await prisma.profile.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, role: true, ...profileNameSelect },
+      orderBy: [{ role: "asc" }, { createdAt: "asc" }],
+    });
+    return rows.map((p) => ({
+      id: p.id,
+      name: profileDisplayName(p),
+      role: p.role === "ADMIN" ? "ADMIN" : "STAFF",
+    }));
   } catch {
     return [];
   }

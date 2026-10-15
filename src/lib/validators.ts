@@ -501,7 +501,7 @@ export const appointmentSchema = z.object({
   startTime: z.string().regex(TIME_RE, "กรุณาระบุเวลาเริ่ม"),
   endTime: z.string().regex(TIME_RE, "เวลาสิ้นสุดไม่ถูกต้อง").optional().or(z.literal("")),
   note: z.string().max(500, "หมายเหตุยาวเกินไป").optional(),
-  attendeeId: z.string().min(1, "กรุณาเลือกแอดมินที่ไปพบ"),
+  attendeeId: z.string().min(1, "กรุณาเลือกผู้รับนัด"),
 }).refine(
   (data) => !data.endTime || data.endTime > data.startTime,
   { message: "เวลาสิ้นสุดต้องหลังเวลาเริ่ม", path: ["endTime"] }

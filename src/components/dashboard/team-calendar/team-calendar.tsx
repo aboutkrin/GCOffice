@@ -51,6 +51,7 @@ import type {
   CalendarShipmentItem,
   TeamCalendarData,
   TeamMemberOption,
+  AppointmentAttendeeOption,
 } from "@/data/team-calendar";
 
 import { LeaveRequestDialog } from "./leave-request-dialog";
@@ -336,8 +337,8 @@ interface TeamCalendarProps {
   isAdmin: boolean;
   currentUserId: string;
   members: TeamMemberOption[];
-  /** Active admins who can be sent to meet a customer. */
-  admins: TeamMemberOption[];
+  /** Active users who can take an appointment (admins, plus staff for showroom visits). */
+  attendees: AppointmentAttendeeOption[];
 }
 
 export function TeamCalendar({
@@ -347,7 +348,7 @@ export function TeamCalendar({
   isAdmin,
   currentUserId,
   members,
-  admins,
+  attendees,
 }: TeamCalendarProps) {
   const router = useRouter();
   const [data, setData] = useState(initialData);
@@ -926,7 +927,7 @@ export function TeamCalendar({
         open={appointmentDialog.open}
         onOpenChange={(open) => setAppointmentDialog((prev) => ({ ...prev, open }))}
         currentUserId={currentUserId}
-        admins={admins}
+        attendees={attendees}
         appointment={appointmentDialog.appointment}
         defaultDate={appointmentDialog.date}
         onSaved={onChanged}
