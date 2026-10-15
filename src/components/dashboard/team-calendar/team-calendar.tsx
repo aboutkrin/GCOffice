@@ -180,8 +180,8 @@ function chipClass(ev: DayEvent): string {
   if (ev.kind === "appointment") {
     if (ev.item.kind === "SHOWROOM") {
       return ev.item.status === "PENDING"
-        ? "bg-violet-50 text-violet-800 border-violet-300 border-dashed"
-        : "bg-violet-100 text-violet-800 border-violet-200";
+        ? "bg-pink-50 text-pink-800 border-pink-300 border-dashed"
+        : "bg-pink-100 text-pink-800 border-pink-200";
     }
     return ev.item.status === "PENDING"
       ? "bg-teal-50 text-teal-800 border-teal-300 border-dashed"
@@ -662,7 +662,7 @@ export function TeamCalendar({
           </div>
 
           <p className="mt-2 text-xs text-muted-foreground">
-            สีเทา = วันหยุดทั่วไป (ออฟฟิศทำงาน) · แดงเส้นประ = วันหยุดจีน (ออฟฟิศทำงาน แต่จีนไม่ส่งของ) · กรอบเส้นประ = วันลารออนุมัติ / วันที่คาดว่าของจะถึง / นัดพบลูกค้ารอแอดมินยืนยัน · ม่วง = ลูกค้ามาชมโชว์รูม · กดที่วันเพื่อดูรายละเอียดหรือเพิ่มรายการ
+            สีเทา = วันหยุดทั่วไป (ออฟฟิศทำงาน) · แดงเส้นประ = วันหยุดจีน (ออฟฟิศทำงาน แต่จีนไม่ส่งของ) · กรอบเส้นประ = วันลารออนุมัติ / วันที่คาดว่าของจะถึง / นัดพบลูกค้ารอแอดมินยืนยัน · ชมพู = ลูกค้ามาชมโชว์รูม · กดที่วันเพื่อดูรายละเอียดหรือเพิ่มรายการ
           </p>
         </CardContent>
       </Card>
@@ -766,7 +766,7 @@ export function TeamCalendar({
                     key={i}
                     className={cn(
                       "space-y-2 rounded-md border p-3",
-                      showroom ? "border-violet-200" : "border-teal-200"
+                      showroom ? "border-pink-200" : "border-teal-200"
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -774,7 +774,7 @@ export function TeamCalendar({
                         <div
                           className={cn(
                             "flex items-center gap-2 text-xs",
-                            showroom ? "text-violet-700" : "text-teal-700"
+                            showroom ? "text-pink-700" : "text-teal-700"
                           )}
                         >
                           {showroom ? <Store className="h-3.5 w-3.5" /> : <Handshake className="h-3.5 w-3.5" />}
