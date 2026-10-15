@@ -251,7 +251,7 @@ export function AppointmentDialog({
                   <FormItem>
                     <FormLabel>ชื่อผู้ติดต่อ</FormLabel>
                     <FormControl>
-                      <Input placeholder="เช่น คุณชาลี" {...field} value={field.value ?? ""} />
+                      <Input placeholder="ชื่อลูกค้า" {...field} value={field.value ?? ""} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
