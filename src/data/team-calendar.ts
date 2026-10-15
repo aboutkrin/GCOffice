@@ -234,8 +234,8 @@ const leaveSelect = {
  * Everything shown on the dashboard team calendar for one month:
  * company holidays, approved + pending leave (pending is rendered faded so
  * the team can plan around it), China shipment milestones and customer
- * appointments (confirmed + pending, plus declined ones for the side card —
- * the grid skips those).
+ * appointments (confirmed + pending + cancelled (struck through on the grid),
+ * plus declined ones for the side card — the grid skips those).
  */
 export async function getTeamCalendar(
   year: number,
@@ -274,7 +274,12 @@ export async function getTeamCalendar(
       .catch(() => []),
     prisma.customerAppointment
       .findMany({
-        where: { status: { in: ["PENDING", "CONFIRMED", "DECLINED"] }, date: inMonth },
+        // Cancelled appointments stay on the calendar (drawn struck through);
+        // declined ones are for the side card only (the grid skips them).
+        where: {
+          status: { in: ["PENDING", "CONFIRMED", "CANCELLED", "DECLINED"] },
+          date: inMonth,
+        },
         select: appointmentSelect,
         orderBy: appointmentOrder,
       })

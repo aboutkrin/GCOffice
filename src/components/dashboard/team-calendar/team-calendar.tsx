@@ -56,7 +56,12 @@ import type {
 import { LeaveRequestDialog } from "./leave-request-dialog";
 import { ChinaShipmentDialog } from "./china-shipment-dialog";
 import { AppointmentDialog } from "./appointment-dialog";
-import { AppointmentActionButtons, LeaveActionButtons, ShipmentStatusButtons } from "./item-actions";
+import {
+  AppointmentActionButtons,
+  AppointmentCancelButton,
+  LeaveActionButtons,
+  ShipmentStatusButtons,
+} from "./item-actions";
 import { AppointmentContactLinks, appointmentTimeText } from "./side-cards";
 import { ShipmentImageThumbs } from "./shipment-images";
 
@@ -181,6 +186,9 @@ function chipClass(ev: DayEvent): string {
       : "bg-orange-100 text-orange-800 border-orange-200";
   }
   if (ev.kind === "appointment") {
+    if (ev.item.status === "CANCELLED") {
+      return "bg-gray-50 text-gray-500 border-gray-300 line-through decoration-gray-500";
+    }
     if (ev.item.kind === "SHOWROOM") {
       return ev.item.status === "PENDING"
         ? "bg-pink-50 text-pink-800 border-pink-300 border-dashed"
@@ -743,18 +751,28 @@ export function TeamCalendar({
               }
               if (ev.kind === "appointment") {
                 const a = ev.item;
-                const canEdit = isAdmin || a.createdById === currentUserId;
+                const cancelled = a.status === "CANCELLED";
+                const canEdit = !cancelled && (isAdmin || a.createdById === currentUserId);
                 const showroom = a.kind === "SHOWROOM";
                 return (
                   <div
                     key={i}
                     className={cn(
                       "space-y-2 rounded-md border p-3",
-                      showroom ? "border-pink-200" : "border-teal-200"
+                      cancelled
+                        ? "border-gray-200 bg-gray-50/60"
+                        : showroom
+                          ? "border-pink-200"
+                          : "border-teal-200"
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
+                      <div
+                        className={cn(
+                          "min-w-0",
+                          cancelled && "text-muted-foreground line-through decoration-gray-400"
+                        )}
+                      >
                         <div
                           className={cn(
                             "flex items-center gap-2 text-xs",
@@ -782,10 +800,21 @@ export function TeamCalendar({
                           <div className="text-xs text-muted-foreground">หมายเหตุแอดมิน: {a.reviewNote}</div>
                         )}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Badge className={cn("shrink-0", APPOINTMENT_STATUS_COLORS[a.status])}>
-                          {APPOINTMENT_STATUS_LABELS[a.status]}
-                        </Badge>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        {!cancelled && (
+                          <Badge className={cn("shrink-0", APPOINTMENT_STATUS_COLORS[a.status])}>
+                            {APPOINTMENT_STATUS_LABELS[a.status]}
+                          </Badge>
+                        )}
+                        <AppointmentCancelButton
+                          appointment={a}
+                          isAdmin={isAdmin}
+                          currentUserId={currentUserId}
+                          onChanged={() => {
+                            setSelectedDay(null);
+                            onChanged();
+                          }}
+                        />
                         {canEdit && (
                           <Button
                             size="icon"
@@ -801,7 +830,6 @@ export function TeamCalendar({
                     <AppointmentActionButtons
                       appointment={a}
                       isAdmin={isAdmin}
-                      currentUserId={currentUserId}
                       onChanged={() => {
                         setSelectedDay(null);
                         onChanged();

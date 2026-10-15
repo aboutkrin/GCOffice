@@ -37,7 +37,12 @@ import type {
   CalendarLeaveItem,
   CalendarShipmentItem,
 } from "@/data/team-calendar";
-import { AppointmentActionButtons, LeaveActionButtons, ShipmentStatusButtons } from "./item-actions";
+import {
+  AppointmentActionButtons,
+  AppointmentCancelButton,
+  LeaveActionButtons,
+  ShipmentStatusButtons,
+} from "./item-actions";
 import { ShipmentImageThumbs } from "./shipment-images";
 
 function daysUntil(iso: string): number {
@@ -364,16 +369,17 @@ function AppointmentRow({
   const router = useRouter();
   const forMe = a.attendeeId === currentUserId;
   const showroom = a.kind === "SHOWROOM";
-  const when = showCountdown ? appointmentWhen(a) : null;
+  const cancelled = a.status === "CANCELLED";
+  const when = showCountdown && !cancelled ? appointmentWhen(a) : null;
   return (
     <li
       className={cn(
         "space-y-1.5 rounded-md border p-2.5",
-        showroom ? "border-pink-200" : "border-teal-200"
+        cancelled ? "border-gray-200 bg-gray-50/60" : showroom ? "border-pink-200" : "border-teal-200"
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className={cn("min-w-0", cancelled && "text-muted-foreground line-through decoration-gray-400")}>
           <div
             className={cn(
               "flex items-center gap-1 text-[11px]",
@@ -406,22 +412,25 @@ function AppointmentRow({
             )}
           </div>
         </div>
-        {showStatus && (
-          <Badge className={cn("shrink-0", APPOINTMENT_STATUS_COLORS[a.status])}>
-            {APPOINTMENT_STATUS_LABELS[a.status]}
-          </Badge>
-        )}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {showStatus && !cancelled && (
+            <Badge className={cn("shrink-0", APPOINTMENT_STATUS_COLORS[a.status])}>
+              {APPOINTMENT_STATUS_LABELS[a.status]}
+            </Badge>
+          )}
+          <AppointmentCancelButton
+            appointment={a}
+            isAdmin={isAdmin}
+            currentUserId={currentUserId}
+            onChanged={() => router.refresh()}
+          />
+        </div>
       </div>
-      {a.note && <div className="text-sm">{a.note}</div>}
+      {a.note && <div className={cn("text-sm", cancelled && "text-muted-foreground line-through")}>{a.note}</div>}
       {a.reviewNote && (
         <div className="text-xs text-muted-foreground">หมายเหตุแอดมิน: {a.reviewNote}</div>
       )}
-      <AppointmentActionButtons
-        appointment={a}
-        isAdmin={isAdmin}
-        currentUserId={currentUserId}
-        onChanged={() => router.refresh()}
-      />
+      <AppointmentActionButtons appointment={a} isAdmin={isAdmin} onChanged={() => router.refresh()} />
     </li>
   );
 }
@@ -441,7 +450,7 @@ export function AppointmentsCard({
   isAdmin,
   currentUserId,
 }: {
-  /** Every appointment of the month (PENDING, CONFIRMED and DECLINED). */
+  /** Every appointment of the month (PENDING, CONFIRMED, DECLINED and CANCELLED; cancelled ones are not listed here). */
   appointments: CalendarAppointmentItem[];
   year: number;
   month: number;
