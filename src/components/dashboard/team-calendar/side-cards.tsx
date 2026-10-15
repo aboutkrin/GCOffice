@@ -144,7 +144,7 @@ export function PendingLeavesCard({
                     {LEAVE_TYPE_LABELS[l.type]} · {LEAVE_PERIOD_LABELS[l.period]} ·{" "}
                     {start === end ? start : `${start} – ${end}`}
                   </div>
-                  {l.reason && <div className="text-sm">{l.reason}</div>}
+                  {l.reason && <div className="break-words text-sm">{l.reason}</div>}
                   <LeaveActionButtons
                     leave={l}
                     isAdmin
