@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatLeaveHours, LEAVE_MAIN_TYPES } from "@/lib/leave-policy";
 import type { LeaveBalanceSummary } from "@/data/leave-balances";
 import { useRouter } from "next/navigation";
-import { Handshake, Ship, UserCheck, UserMinus } from "lucide-react";
+import { Handshake, Navigation, Phone, Ship, User, UserCheck, UserMinus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -232,6 +232,50 @@ export function appointmentTimeText(a: CalendarAppointmentItem) {
   return a.endTime ? `${a.startTime}–${a.endTime}` : a.startTime;
 }
 
+/** Tappable "เปิดแผนที่" (Google Maps app on phones) and "โทร" (tel:) links plus the contact name. */
+export function AppointmentContactLinks({
+  appointment: a,
+  className,
+}: {
+  appointment: CalendarAppointmentItem;
+  className?: string;
+}) {
+  if (!a.mapUrl && !a.contactName && !a.contactPhone) return null;
+  const phoneHref = a.contactPhone ? `tel:${a.contactPhone.replace(/[^+\d]/g, "")}` : null;
+  return (
+    <div className={cn("mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm", className)}>
+      {a.mapUrl && (
+        <a
+          href={a.mapUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 font-medium text-teal-700 underline-offset-2 hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Navigation className="h-3.5 w-3.5" />
+          เปิดแผนที่
+        </a>
+      )}
+      {a.contactName && (
+        <span className="inline-flex items-center gap-1 text-muted-foreground">
+          <User className="h-3.5 w-3.5" />
+          {a.contactName}
+        </span>
+      )}
+      {phoneHref && (
+        <a
+          href={phoneHref}
+          className="inline-flex items-center gap-1 font-medium text-teal-700 underline-offset-2 hover:underline"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Phone className="h-3.5 w-3.5" />
+          {a.contactPhone}
+        </a>
+      )}
+    </div>
+  );
+}
+
 function AppointmentRow({
   appointment: a,
   isAdmin,
@@ -254,6 +298,7 @@ function AppointmentRow({
             {formatThaiDate(new Date(a.date), "short")} · {appointmentTimeText(a)} น.
           </div>
           {a.location && <div className="truncate text-xs text-muted-foreground">{a.location}</div>}
+          <AppointmentContactLinks appointment={a} className="text-xs" />
           <div className="text-xs">
             ผู้ไปพบ: <span className={cn(forMe && "font-medium text-teal-700")}>{a.attendeeName}</span>
             {forMe && " (คุณ)"}

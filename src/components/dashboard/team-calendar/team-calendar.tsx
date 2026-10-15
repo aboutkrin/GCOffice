@@ -55,7 +55,7 @@ import { LeaveRequestDialog } from "./leave-request-dialog";
 import { ChinaShipmentDialog } from "./china-shipment-dialog";
 import { AppointmentDialog } from "./appointment-dialog";
 import { AppointmentActionButtons, LeaveActionButtons, ShipmentStatusButtons } from "./item-actions";
-import { appointmentTimeText } from "./side-cards";
+import { AppointmentContactLinks, appointmentTimeText } from "./side-cards";
 import { ShipmentImageThumbs } from "./shipment-images";
 
 type ShipmentMilestone = "shipped" | "eta" | "arrived" | "received";
@@ -763,6 +763,7 @@ export function TeamCalendar({
                             <span className="whitespace-pre-line">{a.location}</span>
                           </div>
                         )}
+                        <AppointmentContactLinks appointment={a} />
                         <div className="text-sm text-muted-foreground">
                           ผู้ไปพบ: {a.attendeeName}
                           {a.attendeeId === currentUserId && " (คุณ)"}

@@ -515,6 +515,11 @@ model CustomerAppointment {
   customerId  String?   @map("customer_id")
   customer    Customer? @relation("AppointmentCustomer", fields: [customerId], references: [id], onDelete: SetNull)
   location    String?   @db.Text
+  /// Google Maps link to the meeting place (opens the Maps app on phones)
+  mapUrl      String?   @map("map_url")
+  /// Who we meet there (customer's contact person) and a tappable phone number
+  contactName  String?  @map("contact_name")
+  contactPhone String?  @map("contact_phone")
   date        DateTime  @db.Date
   /// "HH:mm" (Thai local time); endTime optional
   startTime   String    @map("start_time")

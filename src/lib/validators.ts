@@ -488,6 +488,14 @@ export const appointmentSchema = z.object({
   companyName: z.string().trim().min(1, "กรุณาระบุชื่อบริษัท/ลูกค้า").max(200, "ชื่อยาวเกินไป"),
   customerId: z.string().nullable().optional(),
   location: z.string().max(500, "สถานที่ยาวเกินไป").optional(),
+  mapUrl: z
+    .string()
+    .trim()
+    .max(2000, "ลิงก์ยาวเกินไป")
+    .refine((v) => !v || /^https?:\/\//i.test(v), "ลิงก์ต้องขึ้นต้นด้วย http:// หรือ https://")
+    .optional(),
+  contactName: z.string().trim().max(200, "ชื่อยาวเกินไป").optional(),
+  contactPhone: z.string().trim().max(50, "เบอร์โทรยาวเกินไป").optional(),
   date: z.coerce.date({ error: "กรุณาเลือกวันนัด" }),
   startTime: z.string().regex(TIME_RE, "กรุณาระบุเวลาเริ่ม"),
   endTime: z.string().regex(TIME_RE, "เวลาสิ้นสุดไม่ถูกต้อง").optional().or(z.literal("")),
