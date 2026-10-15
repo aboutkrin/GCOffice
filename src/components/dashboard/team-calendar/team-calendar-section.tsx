@@ -54,8 +54,8 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
     ]);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <div className="lg:col-span-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="min-w-0 lg:col-span-2">
         <TeamCalendar
           initialData={calendar}
           initialYear={year}
@@ -66,7 +66,7 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
           attendees={attendees}
         />
       </div>
-      <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-4">
         <UpcomingShipmentsCard shipments={upcoming} />
         <AppointmentsCard
           pending={isAdmin ? pendingAppointments : myAppointments}
