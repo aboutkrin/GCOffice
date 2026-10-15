@@ -245,6 +245,16 @@ export const APPOINTMENT_STATUS_COLORS: Record<string, string> = {
   CANCELLED: "bg-gray-100 text-gray-600",
 };
 
+export const APPOINTMENT_KIND_LABELS: Record<string, string> = {
+  VISIT_CUSTOMER: "ไปพบลูกค้า",
+  SHOWROOM: "ลูกค้ามาชมโชว์รูม",
+};
+
+export const APPOINTMENT_KIND_COLORS: Record<string, string> = {
+  VISIT_CUSTOMER: "bg-teal-100 text-teal-800",
+  SHOWROOM: "bg-violet-100 text-violet-800",
+};
+
 export const PAYROLL_STATUS_LABELS: Record<string, string> = {
   DRAFT: "ฉบับร่าง",
   CONFIRMED: "ยืนยันแล้ว",

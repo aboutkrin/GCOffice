@@ -8,14 +8,14 @@ import {
   getPendingLeaves,
   getTeamCalendar,
   getTeamMembers,
+  getUpcomingAppointments,
   getUpcomingShipments,
 } from "@/data/team-calendar";
 import { getMyLeaveSummary } from "@/data/leave-balances";
 import { TeamCalendar } from "./team-calendar";
 import {
-  MyAppointmentsCard,
+  AppointmentsCard,
   MyLeavesCard,
-  PendingAppointmentsCard,
   PendingLeavesCard,
   UpcomingShipmentsCard,
 } from "./side-cards";
@@ -28,7 +28,18 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
   const { year, month } = getThaiNow();
   const isAdmin = user.role === "ADMIN";
 
-  const [calendar, upcoming, pending, myLeaves, members, myBalance, admins, pendingAppointments, myAppointments] =
+  const [
+    calendar,
+    upcoming,
+    pending,
+    myLeaves,
+    members,
+    myBalance,
+    admins,
+    pendingAppointments,
+    myAppointments,
+    upcomingAppointments,
+  ] =
     await Promise.all([
       getTeamCalendar(year, month),
       getUpcomingShipments(),
@@ -39,6 +50,7 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
       getAdminMembers(),
       isAdmin ? getPendingAppointments() : Promise.resolve([]),
       isAdmin ? Promise.resolve([]) : getMyAppointments(user.id),
+      getUpcomingAppointments(),
     ]);
 
   return (
@@ -55,18 +67,18 @@ export async function TeamCalendarSection({ user }: { user: SessionUser }) {
         />
       </div>
       <div className="flex flex-col gap-4">
-        {isAdmin ? (
-          <>
-            <PendingLeavesCard leaves={pending} currentUserId={user.id} />
-            <PendingAppointmentsCard appointments={pendingAppointments} currentUserId={user.id} />
-          </>
-        ) : (
-          <>
-            <MyLeavesCard leaves={myLeaves} currentUserId={user.id} balance={myBalance} />
-            <MyAppointmentsCard appointments={myAppointments} currentUserId={user.id} />
-          </>
-        )}
         <UpcomingShipmentsCard shipments={upcoming} />
+        <AppointmentsCard
+          pending={isAdmin ? pendingAppointments : myAppointments}
+          upcoming={upcomingAppointments}
+          isAdmin={isAdmin}
+          currentUserId={user.id}
+        />
+        {isAdmin ? (
+          <PendingLeavesCard leaves={pending} currentUserId={user.id} />
+        ) : (
+          <MyLeavesCard leaves={myLeaves} currentUserId={user.id} balance={myBalance} />
+        )}
       </div>
     </div>
   );

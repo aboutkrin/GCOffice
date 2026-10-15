@@ -485,6 +485,7 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /** นัดพบลูกค้า: the attendee must be an ADMIN (checked server-side). */
 export const appointmentSchema = z.object({
+  kind: z.enum(["VISIT_CUSTOMER", "SHOWROOM"]).default("VISIT_CUSTOMER"),
   companyName: z.string().trim().min(1, "กรุณาระบุชื่อบริษัท/ลูกค้า").max(200, "ชื่อยาวเกินไป"),
   customerId: z.string().nullable().optional(),
   location: z.string().max(500, "สถานที่ยาวเกินไป").optional(),
