@@ -167,6 +167,23 @@ export async function cancelAppointment(id: string) {
   revalidatePath("/dashboard");
 }
 
+/**
+ * ADMIN removes a cancelled or declined appointment for good (e.g. a test
+ * entry). Live appointments must be cancelled first so nothing disappears
+ * from the calendar by accident.
+ */
+export async function deleteAppointment(id: string) {
+  await assertAdmin();
+  const appointment = await prisma.customerAppointment.findUniqueOrThrow({ where: { id } });
+
+  if (appointment.status !== "CANCELLED" && appointment.status !== "DECLINED") {
+    throw new Error("ต้องยกเลิกนัดก่อนจึงจะลบได้");
+  }
+
+  await prisma.customerAppointment.delete({ where: { id } });
+  revalidatePath("/dashboard");
+}
+
 export interface AppointmentCustomerOption {
   id: string;
   code: string;

@@ -2,12 +2,12 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { Check, X, Ship, PackageCheck, Undo2 } from "lucide-react";
+import { Check, X, Ship, PackageCheck, Undo2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { reviewLeaveRequest, cancelLeaveRequest } from "@/actions/leave-actions";
 import { setChinaShipmentStatus } from "@/actions/china-shipment-actions";
-import { cancelAppointment, reviewAppointment } from "@/actions/appointment-actions";
+import { cancelAppointment, deleteAppointment, reviewAppointment } from "@/actions/appointment-actions";
 import type {
   CalendarAppointmentItem,
   CalendarLeaveItem,
@@ -156,7 +156,8 @@ export function ShipmentStatusButtons({
 /**
  * "ยกเลิกนัด" for the top-right corner of an appointment card: a grey outlined
  * button while the appointment is live, and a red outlined "ยกเลิกแล้ว" label
- * once it has been cancelled (the card stays on the calendar, struck through).
+ * once it has been cancelled (the card stays on the calendar, struck through),
+ * with a red trash button for admins to delete the cancelled appointment for good.
  */
 export function AppointmentCancelButton({
   appointment,
@@ -174,14 +175,31 @@ export function AppointmentCancelButton({
   const { isPending, run } = useRun(onChanged);
   if (appointment.status === "CANCELLED") {
     return (
-      <span
-        className={cn(
-          "inline-flex h-7 shrink-0 items-center rounded-md border border-red-500 bg-red-50 px-2.5 text-xs font-medium text-red-600",
-          className
+      <>
+        <span
+          className={cn(
+            "inline-flex h-7 shrink-0 items-center rounded-md border border-red-500 bg-red-50 px-2.5 text-xs font-medium text-red-600",
+            className
+          )}
+        >
+          ยกเลิกแล้ว
+        </span>
+        {isAdmin && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 shrink-0 text-red-600"
+            title="ลบนัดนี้ออกถาวร"
+            disabled={isPending}
+            onClick={() => {
+              if (!confirm("ยืนยันลบนัดพบลูกค้านี้ออกถาวร?")) return;
+              run(() => deleteAppointment(appointment.id), "ลบนัดแล้ว");
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         )}
-      >
-        ยกเลิกแล้ว
-      </span>
+      </>
     );
   }
   const canCancel =
