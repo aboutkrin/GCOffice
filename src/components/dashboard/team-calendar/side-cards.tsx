@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { formatLeaveHours, LEAVE_MAIN_TYPES } from "@/lib/leave-policy";
 import type { LeaveBalanceSummary } from "@/data/leave-balances";
@@ -19,7 +20,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { formatThaiDate } from "@/lib/thai-date";
+import { THAI_MONTHS, formatThaiDate } from "@/lib/thai-date";
 import {
   APPOINTMENT_KIND_LABELS,
   APPOINTMENT_STATUS_COLORS,
@@ -62,8 +63,43 @@ function etaText(s: CalendarShipmentItem): { text: string; className: string } {
   return { text: `เลยกำหนด ${-days} วัน`, className: "text-red-600 font-medium" };
 }
 
+/** How many shipment rows are visible before the list scrolls. */
+const SHIPMENT_ROWS_VISIBLE = 4;
+
+/**
+ * Every shipment still on the way, newest lot on top. Only the first
+ * `SHIPMENT_ROWS_VISIBLE` rows are shown; the rest sit below and scroll into
+ * view, so the card never pushes the other side cards off the screen.
+ */
 export function UpcomingShipmentsCard({ shipments }: { shipments: CalendarShipmentItem[] }) {
   const router = useRouter();
+  const listRef = useRef<HTMLUListElement>(null);
+  const overflow = shipments.length > SHIPMENT_ROWS_VISIBLE;
+
+  // Rows vary in height (photos, buttons), so measure the first N rows instead
+  // of guessing a fixed pixel height, and write the result straight to the DOM.
+  // Re-measured whenever a visible row changes size (images loading etc.).
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    if (!overflow) {
+      list.style.maxHeight = "";
+      return;
+    }
+    const rows = Array.from(list.children).slice(0, SHIPMENT_ROWS_VISIBLE) as HTMLElement[];
+    const measure = () => {
+      const last = rows[rows.length - 1];
+      if (!last) return;
+      // Bottom of the Nth row relative to the list top, plus a sliver so the
+      // next row peeks out and hints that the list scrolls.
+      list.style.maxHeight = `${last.offsetTop - list.offsetTop + last.offsetHeight + 6}px`;
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    for (const row of rows) observer.observe(row);
+    return () => observer.disconnect();
+  }, [overflow, shipments]);
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -79,31 +115,44 @@ export function UpcomingShipmentsCard({ shipments }: { shipments: CalendarShipme
             ไม่มีของที่อยู่ระหว่างขนส่ง
           </p>
         ) : (
-          <ul className="space-y-3">
-            {shipments.map((s) => {
-              const eta = etaText(s);
-              return (
-                <li key={s.id} className="space-y-1.5 rounded-md border p-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{s.title}</div>
-                      <div className="text-xs text-muted-foreground">
-                        จีนส่ง {formatThaiDate(new Date(s.shippedDate), "short")}
-                        {s.etaDate && ` · ETA ${formatThaiDate(new Date(s.etaDate), "short")}`}
-                        {s.containerNo && ` · ล็อต ${s.containerNo}`}
+          <div className="relative">
+            <ul
+              ref={listRef}
+              className={cn("space-y-3", overflow && "overflow-y-auto overscroll-contain pr-1")}
+            >
+              {shipments.map((s) => {
+                const eta = etaText(s);
+                return (
+                  <li key={s.id} className="space-y-1.5 rounded-md border p-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium">{s.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          จีนส่ง {formatThaiDate(new Date(s.shippedDate), "short")}
+                          {s.etaDate && ` · ETA ${formatThaiDate(new Date(s.etaDate), "short")}`}
+                          {s.containerNo && ` · ล็อต ${s.containerNo}`}
+                        </div>
+                        <div className={cn("text-xs", eta.className)}>{eta.text}</div>
                       </div>
-                      <div className={cn("text-xs", eta.className)}>{eta.text}</div>
+                      <Badge className={cn("shrink-0", CHINA_SHIPMENT_STATUS_COLORS[s.status])}>
+                        {CHINA_SHIPMENT_STATUS_LABELS[s.status]}
+                      </Badge>
                     </div>
-                    <Badge className={cn("shrink-0", CHINA_SHIPMENT_STATUS_COLORS[s.status])}>
-                      {CHINA_SHIPMENT_STATUS_LABELS[s.status]}
-                    </Badge>
-                  </div>
-                  <ShipmentImageThumbs urls={s.imageUrls} size="sm" />
-                  <ShipmentStatusButtons shipment={s} onChanged={() => router.refresh()} />
-                </li>
-              );
-            })}
-          </ul>
+                    <ShipmentImageThumbs urls={s.imageUrls} size="sm" />
+                    <ShipmentStatusButtons shipment={s} onChanged={() => router.refresh()} />
+                  </li>
+                );
+              })}
+            </ul>
+            {overflow && (
+              <>
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent" />
+                <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+                  เลื่อนลงเพื่อดูอีก {shipments.length - SHIPMENT_ROWS_VISIBLE} รายการ
+                </p>
+              </>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>
@@ -376,23 +425,41 @@ function AppointmentRow({
 }
 
 /**
- * One card for customer appointments, laid out like the shipments card:
- * first the ones waiting for a "ว่าง" confirmation (ADMIN: everyone's PENDING;
- * STAFF: their own pending / declined ones with the admin's answer), then the
- * team's confirmed appointments that are still to come.
+ * One card for customer appointments, scoped to the month shown on the
+ * calendar grid (it follows the ‹ › navigation): first the ones waiting for a
+ * "ว่าง" confirmation (ADMIN: everyone's PENDING; STAFF: their own pending /
+ * declined ones with the admin's answer), then the confirmed appointments of
+ * that month.
  */
 export function AppointmentsCard({
-  pending,
-  upcoming,
+  appointments,
+  year,
+  month,
+  isPending = false,
   isAdmin,
   currentUserId,
 }: {
-  pending: CalendarAppointmentItem[];
-  upcoming: CalendarAppointmentItem[];
+  /** Every appointment of the month (PENDING, CONFIRMED and DECLINED). */
+  appointments: CalendarAppointmentItem[];
+  year: number;
+  month: number;
+  /** True while another month is being fetched. */
+  isPending?: boolean;
   isAdmin: boolean;
   currentUserId: string;
 }) {
+  const { pending, confirmed } = useMemo(() => {
+    const pending = appointments.filter((a) =>
+      isAdmin
+        ? a.status === "PENDING"
+        : (a.status === "PENDING" || a.status === "DECLINED") &&
+          (a.createdById === currentUserId || a.attendeeId === currentUserId)
+    );
+    const confirmed = appointments.filter((a) => a.status === "CONFIRMED");
+    return { pending, confirmed };
+  }, [appointments, isAdmin, currentUserId]);
   const pendingCount = pending.filter((a) => a.status === "PENDING").length;
+  const monthLabel = `${THAI_MONTHS[month - 1]} ${year + 543}`;
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -402,15 +469,16 @@ export function AppointmentsCard({
           {pendingCount > 0 && (
             <Badge className="bg-amber-100 text-amber-800">รอยืนยัน {pendingCount}</Badge>
           )}
-          {upcoming.length > 0 && <Badge variant="secondary">{upcoming.length}</Badge>}
+          {confirmed.length > 0 && <Badge variant="secondary">{confirmed.length}</Badge>}
         </CardTitle>
+        <p className="text-xs text-muted-foreground">{monthLabel}</p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {pending.length === 0 && upcoming.length === 0 ? (
+      <CardContent className={cn("space-y-4 transition-opacity", isPending && "opacity-50")}>
+        {pending.length === 0 && confirmed.length === 0 ? (
           <p className="py-4 text-center text-sm text-muted-foreground">
             {isAdmin
-              ? "ยังไม่มีนัดลูกค้า กด \"นัดลูกค้า\" ในปฏิทินเพื่อเพิ่ม"
-              : "ยังไม่มีนัด กด \"นัดลูกค้า\" ในปฏิทินเพื่อลงนัดให้แอดมิน"}
+              ? `ไม่มีนัดลูกค้าใน${monthLabel} กด "นัดลูกค้า" ในปฏิทินเพื่อเพิ่ม`
+              : `ไม่มีนัดใน${monthLabel} กด "นัดลูกค้า" ในปฏิทินเพื่อลงนัดให้แอดมิน`}
           </p>
         ) : (
           <>
@@ -436,13 +504,15 @@ export function AppointmentsCard({
             <div className="space-y-2">
               <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                 <CalendarCheck className="h-3.5 w-3.5" />
-                นัดที่กำลังจะถึง
+                นัดที่ยืนยันแล้ว
               </div>
-              {upcoming.length === 0 ? (
-                <p className="py-2 text-center text-xs text-muted-foreground">ยังไม่มีนัดที่ยืนยันแล้ว</p>
+              {confirmed.length === 0 ? (
+                <p className="py-2 text-center text-xs text-muted-foreground">
+                  ยังไม่มีนัดที่ยืนยันแล้วในเดือนนี้
+                </p>
               ) : (
                 <ul className="space-y-3">
-                  {upcoming.map((a) => (
+                  {confirmed.map((a) => (
                     <AppointmentRow
                       key={a.id}
                       appointment={a}
