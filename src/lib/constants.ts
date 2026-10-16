@@ -248,11 +248,13 @@ export const APPOINTMENT_STATUS_COLORS: Record<string, string> = {
 export const APPOINTMENT_KIND_LABELS: Record<string, string> = {
   VISIT_CUSTOMER: "ไปพบลูกค้า",
   SHOWROOM: "ลูกค้ามาชมโชว์รูม",
+  PICKUP: "รับสินค้าที่โชว์รูม",
 };
 
 export const APPOINTMENT_KIND_COLORS: Record<string, string> = {
   VISIT_CUSTOMER: "bg-teal-100 text-teal-800",
   SHOWROOM: "bg-pink-100 text-pink-800",
+  PICKUP: "bg-yellow-100 text-yellow-800",
 };
 
 export const PAYROLL_STATUS_LABELS: Record<string, string> = {

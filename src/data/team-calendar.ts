@@ -30,10 +30,14 @@ export interface CalendarShipmentItem {
 
 export interface CalendarAppointmentItem {
   id: string;
-  /** VISIT_CUSTOMER (we go to them) | SHOWROOM (they come to us) */
+  /** VISIT_CUSTOMER (we go to them) | SHOWROOM (they come to us) | PICKUP (they collect goods) */
   kind: string;
   companyName: string;
   customerId: string | null;
+  /** PICKUP: the confirmed quotation being collected */
+  documentId: string | null;
+  documentNumber: string | null;
+  documentItems: { name: string; quantity: number }[];
   location: string | null;
   mapUrl: string | null;
   contactName: string | null;
@@ -155,6 +159,12 @@ type AppointmentRow = {
   kind: string;
   companyName: string;
   customerId: string | null;
+  documentId: string | null;
+  document: {
+    id: string;
+    documentNumber: string | null;
+    lineItems: { productName: string; colorVariantName: string | null; quantity: number }[];
+  } | null;
   location: string | null;
   mapUrl: string | null;
   contactName: string | null;
@@ -177,6 +187,12 @@ function toAppointmentItem(a: AppointmentRow): CalendarAppointmentItem {
     kind: a.kind,
     companyName: a.companyName,
     customerId: a.customerId,
+    documentId: a.document?.id ?? null,
+    documentNumber: a.document?.documentNumber ?? null,
+    documentItems: (a.document?.lineItems ?? []).map((li) => ({
+      name: li.colorVariantName ? `${li.productName} (${li.colorVariantName})` : li.productName,
+      quantity: li.quantity,
+    })),
     location: a.location,
     mapUrl: a.mapUrl,
     contactName: a.contactName,
@@ -199,6 +215,17 @@ const appointmentSelect = {
   kind: true,
   companyName: true,
   customerId: true,
+  documentId: true,
+  document: {
+    select: {
+      id: true,
+      documentNumber: true,
+      lineItems: {
+        select: { productName: true, colorVariantName: true, quantity: true },
+        orderBy: { sequence: "asc" as const },
+      },
+    },
+  },
   location: true,
   mapUrl: true,
   contactName: true,

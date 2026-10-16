@@ -323,6 +323,7 @@ model Document {
   paymentTerms     DocumentPaymentTerm[]
   vendorCosts      VendorCost[]
   stockIssues      StockDocument[]       @relation("StockIssueForDocument")
+  appointments     CustomerAppointment[] @relation("AppointmentDocument")
 
   @@index([type, status])
   @@index([documentDate])
@@ -526,8 +527,13 @@ model CustomerAppointment {
   endTime     String?   @map("end_time")
   note        String?   @db.Text
 
-  /// VISIT_CUSTOMER = we go to the customer; SHOWROOM = the customer visits our showroom
+  /// VISIT_CUSTOMER = we go to the customer; SHOWROOM = the customer visits our showroom;
+  /// PICKUP = the customer comes to the showroom to collect goods (optionally linked to the quotation)
   kind AppointmentKind @default(VISIT_CUSTOMER)
+
+  /// The CONFIRMED/SHIPPED quotation being collected (PICKUP only)
+  documentId String?   @map("document_id")
+  document   Document? @relation("AppointmentDocument", fields: [documentId], references: [id], onDelete: SetNull)
 
   attendeeId String  @map("attendee_id") @db.Uuid
   attendee   Profile @relation("AppointmentAttendee", fields: [attendeeId], references: [id])
@@ -546,6 +552,7 @@ model CustomerAppointment {
 
   @@index([date])
   @@index([attendeeId, status])
+  @@index([documentId])
   @@map("customer_appointments")
 }
 
@@ -927,6 +934,7 @@ enum AppointmentStatus {
 enum AppointmentKind {
   VISIT_CUSTOMER
   SHOWROOM
+  PICKUP
 }
 
 enum ChinaShipmentStatus {

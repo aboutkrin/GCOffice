@@ -184,3 +184,69 @@ export async function getDocumentById(id: string) {
     return null;
   }
 }
+
+/**
+ * CONFIRMED / SHIPPED quotations for the "รับสินค้าที่โชว์รูม" appointment
+ * picker: search by quotation number or customer name, newest first.
+ */
+export async function searchConfirmedQuotations(search: string) {
+  try {
+    const q = search.trim();
+    const documents = await prisma.document.findMany({
+      where: {
+        type: DocumentType.QUOTATION,
+        status: { in: [DocumentStatus.CONFIRMED, DocumentStatus.SHIPPED] },
+        ...(q
+          ? {
+              OR: [
+                { documentNumber: { contains: q, mode: "insensitive" } },
+                { customer: { customerName: { contains: q, mode: "insensitive" } } },
+                { customer: { companyName: { contains: q, mode: "insensitive" } } },
+              ],
+            }
+          : {}),
+      },
+      select: {
+        id: true,
+        documentNumber: true,
+        documentDate: true,
+        customerId: true,
+        customer: {
+          select: {
+            type: true,
+            customerName: true,
+            companyName: true,
+            contactPerson: true,
+            phone: true,
+            address: true,
+          },
+        },
+        lineItems: {
+          select: { productName: true, colorVariantName: true, quantity: true },
+          orderBy: { sequence: "asc" },
+        },
+      },
+      orderBy: { documentDate: "desc" },
+      take: 20,
+    });
+    return documents.map((d) => {
+      const c = d.customer;
+      return {
+        id: d.id,
+        documentNumber: d.documentNumber,
+        documentDate: d.documentDate.toISOString(),
+        customerId: d.customerId,
+        customerName: (c.type === "COMPANY" && c.companyName) || c.customerName || c.companyName || "-",
+        contactPerson: c.contactPerson ?? null,
+        phone: c.phone ?? null,
+        address: c.address ?? null,
+        items: d.lineItems.map((li) => ({
+          name: li.colorVariantName ? `${li.productName} (${li.colorVariantName})` : li.productName,
+          quantity: li.quantity,
+        })),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
