@@ -7,6 +7,7 @@ import { PreviewHeader } from "./preview-header";
 import { PreviewCustomer } from "./preview-customer";
 import { PreviewLineItems } from "./preview-line-items";
 import { PreviewSummary } from "./preview-summary";
+import { PreviewProductImages, type PreviewProductImageItem } from "./preview-product-images";
 import { PreviewPayment } from "./preview-payment";
 import { PreviewFooter } from "./preview-footer";
 
@@ -111,6 +112,8 @@ export interface DocumentData {
   paymentDate?: Date;
   lineItems: LineItem[];
   paymentTerms: PaymentTerm[];
+  /** Receipts: the invoice they pay, for the "รูปสินค้า" box. */
+  sourceInvoice?: { lineItems: PreviewProductImageItem[] } | null;
   createdBy?: {
     firstName?: string | null;
     lastName?: string | null;
@@ -314,8 +317,14 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
       pages ?? [doc.lineItems.map((_, index) => index)];
     const total = resolvedPages.length;
 
+    // Deposit / balance receipts carry no product lines of their own, so show
+    // the invoice's product images in a box of their own above the summary.
+    const showProductImages =
+      doc.type === "RECEIPT" && !doc.lineItems.some((item) => item.productImage);
+
     const summaryBlock = (
       <>
+        {showProductImages && <PreviewProductImages items={doc.sourceInvoice?.lineItems} />}
         {doc.receiptPaymentType && doc.receiptPaymentSummary && (
           <div className="mb-3 rounded border border-blue-200 p-2 text-[11px]">
             <div className="mb-1 font-semibold">รับชำระ{RECEIPT_PAYMENT_LABELS[doc.receiptPaymentType]} ตามใบแจ้งหนี้เลขที่ {doc.receiptPaymentSummary.invoiceNumber}</div>
