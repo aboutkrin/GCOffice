@@ -3,14 +3,17 @@ import { calculateReceiptPayment, RECEIPT_PAYMENT_LABELS, satang, type ReceiptPa
 
 type Tx = Prisma.TransactionClient;
 
-export async function lockInvoice(tx: Tx, id: string) {
+/** Row lock on any document (the invoice a receipt pays, the quotation an invoice bills). */
+export async function lockDocument(tx: Tx, id: string) {
   await tx.$queryRaw`SELECT id FROM documents WHERE id = ${id} FOR UPDATE`;
 }
+export const lockInvoice = lockDocument;
 
 export async function paidReceipts(tx: Tx, invoiceId: string, excludeId?: string) {
   return tx.document.findMany({
     where: { sourceInvoiceId: invoiceId, type: "RECEIPT", status: "PAID", ...(excludeId ? { id: { not: excludeId } } : {}) },
-    select: { netPayable: true, vatAmount: true },
+    select: { netPayable: true, vatAmount: true, paymentMethod: true, paymentReference: true, paymentDate: true },
+    orderBy: [{ paymentDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
   });
 }
 
@@ -23,8 +26,14 @@ export async function syncInvoicePaymentStatus(tx: Tx, invoiceId: string) {
     if (paid > 0) throw new Error("ไม่สามารถรับชำระใบแจ้งหนี้ร่างหรือยกเลิกแล้ว");
     return;
   }
+  // The invoice remembers how it was paid from its newest receipt unless recorded by hand.
+  const latest = receipts.find((r) => r.paymentMethod);
   await tx.document.update({ where: { id: invoiceId }, data: {
     status: paid === 0 ? "BILLED" : paid < satang(invoice.netPayable) ? "DEPOSITED" : "PAID",
+    ...(latest && !invoice.paymentMethod ? {
+      paymentMethod: latest.paymentMethod, paymentReference: latest.paymentReference,
+      paymentDate: latest.paymentDate ?? invoice.paymentDate,
+    } : {}),
   } });
 }
 

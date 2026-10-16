@@ -305,6 +305,18 @@ model Document {
   receiptPaymentType ReceiptPaymentType? @map("receipt_payment_type")
   receiptPaymentSummary Json? @map("receipt_payment_summary")
 
+  /// Invoices issued off a quotation the way receipts are issued off an
+  /// invoice: FULL (the whole quotation), DEPOSIT (one or more, any amount)
+  /// or BALANCE (the remainder, deducting the deposit invoices already issued).
+  /// Null = legacy invoice created before this existed (treated as FULL).
+  invoiceBillingType    ReceiptPaymentType? @map("invoice_billing_type")
+  invoiceBillingSummary Json?               @map("invoice_billing_summary")
+
+  /// How the customer actually paid (recorded when the invoice is marked
+  /// paid / deposited, or picked on the receipt) and a slip / bank reference.
+  paymentMethod    PaymentMethod? @map("payment_method")
+  paymentReference String?        @map("payment_reference")
+
   sourceInvoiceId String?    @map("source_invoice_id")
   sourceInvoice   Document?  @relation("ReceiptFromInvoice", fields: [sourceInvoiceId], references: [id])
   receipts        Document[] @relation("ReceiptFromInvoice")
@@ -330,6 +342,7 @@ model Document {
   @@index([customerId])
   @@index([companyId])
   @@index([sourceInvoiceId])
+  @@index([sourceQuotationId])
   @@map("documents")
 }
 

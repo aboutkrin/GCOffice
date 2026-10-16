@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { documentSchema } from "@/lib/validators";
+import { documentSchema, invoicePaymentRecordSchema } from "@/lib/validators";
 import { generateDocumentNumber, generateCustomInvoiceNumber } from "@/lib/document-number";
 import { requireUserAction, assertAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -12,8 +12,9 @@ import { toUTCNoon } from "@/lib/thai-date";
 import { ZodError } from "zod";
 import { checkAvailabilityForDocument, type StockShortage } from "@/data/stock-availability";
 import { clearDocumentLineCosts, lockDocumentLineCosts } from "@/data/document-profit";
-import { applyReceiptPayment, lockInvoice, paidReceipts, syncInvoicePaymentStatus } from "@/lib/receipt-payment-server";
+import { applyReceiptPayment, lockDocument, paidReceipts, syncInvoicePaymentStatus } from "@/lib/receipt-payment-server";
 import { satang } from "@/lib/receipt-payment";
+import { applyInvoiceBilling, hasFinalInvoice } from "@/lib/invoice-billing-server";
 
 function formatZodError(error: ZodError): string {
   return error.issues
@@ -79,6 +80,9 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
     if (validated.type === "RECEIPT" && (!validated.receiptPaymentType || !validated.receiptAmount)) {
       throw new Error("กรุณาเลือกประเภทและยอดรับชำระ");
     }
+    if (validated.type === "INVOICE" && (!validated.invoiceBillingType || !validated.invoiceBillingAmount)) {
+      throw new Error("กรุณาเลือกประเภทและยอดเรียกเก็บ");
+    }
 
     const asDraft = options?.asDraft ?? false;
     // A deposit invoice's document number IS the manually-typed tax-invoice
@@ -137,7 +141,13 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
     const documentDate = toUTCNoon(new Date(validated.documentDate));
 
     const document = await prisma.$transaction(async (tx: any) => {
-      if (validated.type === "RECEIPT") await lockInvoice(tx, validated.sourceInvoiceId!);
+      if (validated.type === "RECEIPT") await lockDocument(tx, validated.sourceInvoiceId!);
+      if (validated.type === "INVOICE") {
+        await lockDocument(tx, validated.sourceQuotationId!);
+        if (validated.invoiceBillingType !== "DEPOSIT" && (await hasFinalInvoice(tx, validated.sourceQuotationId!))) {
+          throw new Error("ใบเสนอราคานี้มีใบแจ้งหนี้เต็มจำนวนหรือยอดคงเหลือแล้ว");
+        }
+      }
       const { rows: deductionRows, total: depositDeduction } = await resolveDepositDeductions(
         tx,
         validated.depositDeductions ?? []
@@ -198,6 +208,8 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
           paymentDate: validated.paymentDate
             ? toUTCNoon(new Date(validated.paymentDate))
             : undefined,
+          paymentMethod: validated.type === "RECEIPT" ? validated.paymentMethod ?? undefined : undefined,
+          paymentReference: validated.type === "RECEIPT" ? validated.paymentReference?.trim() || undefined : undefined,
           sourceQuotationId:
             validated.type === "INVOICE" ? validated.sourceQuotationId : undefined,
           sourceInvoiceId:
@@ -264,6 +276,18 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
         await applyReceiptPayment(tx, doc.id, { sourceInvoiceId: validated.sourceInvoiceId!,
           type: validated.receiptPaymentType!, amount: validated.receiptAmount! });
         if (!asDraft) await syncInvoicePaymentStatus(tx, validated.sourceInvoiceId!);
+      }
+      if (validated.type === "INVOICE") {
+        // Deposit / balance invoices are generated from the quotation; a FULL
+        // invoice keeps the lines and terms edited in the form (they came from
+        // the quotation too) but still records the billing snapshot.
+        if (validated.invoiceBillingType === "FULL") {
+          await applyInvoiceBilling(tx, doc.id, { sourceQuotationId: validated.sourceQuotationId!,
+            type: "FULL", amount: validated.invoiceBillingAmount! }, false, { keepContent: true });
+        } else {
+          await applyInvoiceBilling(tx, doc.id, { sourceQuotationId: validated.sourceQuotationId!,
+            type: validated.invoiceBillingType!, amount: validated.invoiceBillingAmount! });
+        }
       }
 
       // Return full document with relations
@@ -333,10 +357,39 @@ export async function updateDocument(id: string, data: unknown) {
 
     const document = await prisma.$transaction(async (tx: any) => {
       const before = await tx.document.findUniqueOrThrow({ where: { id } });
-      await lockInvoice(tx, before.sourceInvoiceId || id);
+      await lockDocument(tx, before.sourceInvoiceId || before.sourceQuotationId || id);
       const current = await tx.document.findUniqueOrThrow({ where: { id } });
       if (current.type !== validated.type || (current.sourceInvoiceId && current.sourceInvoiceId !== validated.sourceInvoiceId)) {
         throw new Error("ไม่สามารถเปลี่ยนประเภทหรือใบแจ้งหนี้อ้างอิงของเอกสาร");
+      }
+      if (current.type === "INVOICE" && validated.sourceQuotationId && current.sourceQuotationId
+        && current.sourceQuotationId !== validated.sourceQuotationId) {
+        throw new Error("ไม่สามารถเปลี่ยนใบเสนอราคาอ้างอิงของใบแจ้งหนี้");
+      }
+      // Deposit / balance invoices are generated from the quotation: only the
+      // type / amount, date and notes can change, and not once a receipt is paid.
+      if (current.type === "INVOICE" && current.invoiceBillingType && current.invoiceBillingType !== "FULL") {
+        if (!validated.invoiceBillingType || !validated.invoiceBillingAmount) throw new Error("กรุณาระบุยอดเรียกเก็บ");
+        if (current.status === "CANCELLED") throw new Error("กรุณาคืนสถานะใบแจ้งหนี้ก่อนแก้ไข");
+        const changed = current.invoiceBillingType !== validated.invoiceBillingType
+          || satang(current.grandTotal) !== satang(validated.invoiceBillingAmount);
+        if (changed && (await paidReceipts(tx, id)).length) {
+          throw new Error("กรุณายกเลิกใบเสร็จที่รับชำระแล้วก่อนเปลี่ยนยอดใบแจ้งหนี้");
+        }
+        if (changed || current.status === "DRAFT") {
+          await applyInvoiceBilling(tx, id, { sourceQuotationId: current.sourceQuotationId!,
+            type: validated.invoiceBillingType, amount: validated.invoiceBillingAmount });
+        }
+        await tx.document.update({ where: { id }, data: {
+          documentDate, footerNotes: validated.footerNotes,
+          productionDays: validated.productionDays,
+          productionDaysMin: validated.productionDaysMin ?? null,
+          productionDaysMax: validated.productionDaysMax ?? null,
+          skipWeekends: validated.skipWeekends, skipHolidays: validated.skipHolidays,
+          deliveryDateStart: validated.deliveryDateStart ? toUTCNoon(new Date(validated.deliveryDateStart)) : null,
+          deliveryDateEnd: validated.deliveryDateEnd ? toUTCNoon(new Date(validated.deliveryDateEnd)) : null,
+        } });
+        return tx.document.findUniqueOrThrow({ where: { id }, include: { lineItems: true, paymentTerms: true, depositDeductions: true } });
       }
       if (!current.isDepositInvoice && validated.isDepositInvoice) throw new Error("ไม่สามารถสร้างใบแจ้งหนี้มัดจำใหม่");
       if (current.receiptPaymentType) {
@@ -351,6 +404,8 @@ export async function updateDocument(id: string, data: unknown) {
           documentDate, footerNotes: validated.footerNotes,
           customInvoiceNumber: validated.customInvoiceNumber?.trim() || null,
           paymentDate: validated.paymentDate ? toUTCNoon(new Date(validated.paymentDate)) : null,
+          paymentMethod: validated.paymentMethod ?? null,
+          paymentReference: validated.paymentReference?.trim() || null,
         } });
         if (current.status === "PAID") await syncInvoicePaymentStatus(tx, current.sourceInvoiceId);
         return tx.document.findUniqueOrThrow({ where: { id }, include: { lineItems: true, paymentTerms: true, depositDeductions: true } });
@@ -444,6 +499,10 @@ export async function updateDocument(id: string, data: unknown) {
           paymentDate: validated.paymentDate
             ? toUTCNoon(new Date(validated.paymentDate))
             : null,
+          ...(validated.type === "RECEIPT" ? {
+            paymentMethod: validated.paymentMethod ?? null,
+            paymentReference: validated.paymentReference?.trim() || null,
+          } : {}),
         },
       });
 
@@ -507,6 +566,12 @@ export async function updateDocument(id: string, data: unknown) {
       if (current.type === "RECEIPT" && current.sourceInvoiceId && current.status === "PAID") {
         await syncInvoicePaymentStatus(tx, current.sourceInvoiceId);
       }
+      // A FULL invoice edited in the form keeps its content but refreshes the
+      // billing snapshot (quotation total / deposits may have moved).
+      if (current.type === "INVOICE" && current.invoiceBillingType === "FULL" && current.sourceQuotationId) {
+        await applyInvoiceBilling(tx, id, { sourceQuotationId: current.sourceQuotationId,
+          type: "FULL", amount: grandTotal }, false, { keepContent: true });
+      }
 
       // Return full document with relations
       return tx.document.findUniqueOrThrow({
@@ -547,7 +612,7 @@ export async function updateDocumentStatus(
   const { document, enteringConfirmed } = await prisma.$transaction(async (tx) => {
     // Fetch current status to determine reservation actions
     const before = await tx.document.findUniqueOrThrow({ where: { id } });
-    await lockInvoice(tx, before.sourceInvoiceId || id);
+    await lockDocument(tx, before.sourceInvoiceId || before.sourceQuotationId || id);
     const currentDocument = await tx.document.findUniqueOrThrow({ where: { id } });
     const allowed: Record<string, string[]> = {
       QUOTATION: ["DRAFT", "QUOTED", "CONFIRMED", "SHIPPED", "CANCELLED"],
@@ -559,6 +624,24 @@ export async function updateDocumentStatus(
       await syncInvoicePaymentStatus(tx, id);
       const derived = await tx.document.findUniqueOrThrow({ where: { id } });
       if (derived.status !== status) throw new Error("สถานะคำนวณจากใบเสร็จ กรุณายกเลิกใบเสร็จที่รับชำระแล้วก่อน");
+    }
+    if (currentDocument.type === "INVOICE" && currentDocument.sourceQuotationId) {
+      const issuing = ["BILLED", "DEPOSITED", "PAID"].includes(status);
+      const wasIssued = ["BILLED", "DEPOSITED", "PAID"].includes(currentDocument.status);
+      // A deposit invoice the balance invoice already deducted cannot be withdrawn.
+      if (wasIssued && !issuing && (currentDocument.invoiceBillingType === "DEPOSIT" || currentDocument.isDepositInvoice)
+        && (await hasFinalInvoice(tx, currentDocument.sourceQuotationId, id))) {
+        throw new Error("กรุณายกเลิกใบแจ้งหนี้ยอดคงเหลือของใบเสนอราคานี้ก่อน");
+      }
+      // Leaving DRAFT re-checks the snapshot against the quotation and the deposits issued meanwhile.
+      if (issuing && !wasIssued && currentDocument.invoiceBillingType && currentDocument.invoiceBillingType !== "FULL") {
+        await applyInvoiceBilling(tx, id, { sourceQuotationId: currentDocument.sourceQuotationId,
+          type: currentDocument.invoiceBillingType, amount: Number(currentDocument.grandTotal) }, true);
+      }
+      if (issuing && !wasIssued && (currentDocument.invoiceBillingType === "FULL" || currentDocument.invoiceBillingType === "BALANCE")
+        && (await hasFinalInvoice(tx, currentDocument.sourceQuotationId, id))) {
+        throw new Error("ใบเสนอราคานี้มีใบแจ้งหนี้เต็มจำนวนหรือยอดคงเหลือแล้ว");
+      }
     }
     if (currentDocument.type === "RECEIPT" && status === "PAID" && currentDocument.status !== "PAID" && currentDocument.receiptPaymentType) {
       await applyReceiptPayment(tx, id, { sourceInvoiceId: currentDocument.sourceInvoiceId!,
@@ -646,6 +729,37 @@ export async function updateDocumentStatus(
   return serialize({ ...document, shortages });
 }
 
+/**
+ * Mark an invoice ชำระแล้ว / มัดจำแล้ว and remember how the customer paid.
+ * The status itself still goes through updateDocumentStatus, so an invoice
+ * whose status is derived from paid receipts keeps rejecting a mismatch.
+ */
+export async function recordInvoicePayment(id: string, data: unknown) {
+  try {
+    const validated = invoicePaymentRecordSchema.parse(data);
+    await requireUserAction();
+    const document = await prisma.document.findUniqueOrThrow({ where: { id }, select: { type: true, status: true } });
+    if (document.type !== "INVOICE") throw new Error("บันทึกการชำระได้เฉพาะใบแจ้งหนี้");
+    if (document.status === "CANCELLED") throw new Error("ใบแจ้งหนี้นี้ถูกยกเลิกแล้ว");
+    await prisma.document.update({ where: { id }, data: {
+      paymentMethod: validated.paymentMethod,
+      paymentReference: validated.paymentReference?.trim() || null,
+      paymentDate: toUTCNoon(new Date(validated.paymentDate)),
+    } });
+    const result = document.status === validated.status
+      ? null
+      : await updateDocumentStatus(id, validated.status as DocumentStatus);
+    revalidatePath("/invoices");
+    return { success: true as const, data: result };
+  } catch (error) {
+    console.error("recordInvoicePayment error:", error);
+    if (error instanceof ZodError) {
+      return { success: false as const, error: `ข้อมูลไม่ถูกต้อง: ${formatZodError(error)}` };
+    }
+    return { success: false as const, error: error instanceof Error ? error.message : "บันทึกการชำระไม่สำเร็จ" };
+  }
+}
+
 export async function getDocumentForShare(id: string) {
   const document = await prisma.document.findUnique({
     where: { id },
@@ -654,6 +768,7 @@ export async function getDocumentForShare(id: string) {
       paymentTerms: { orderBy: { sequence: "asc" } },
       depositDeductions: { orderBy: { sequence: "asc" } },
       sourceInvoice: { include: { lineItems: { orderBy: { sequence: "asc" } } } },
+      sourceQuotation: { include: { lineItems: { orderBy: { sequence: "asc" } } } },
       company: true,
       customer: true,
       createdBy: true,

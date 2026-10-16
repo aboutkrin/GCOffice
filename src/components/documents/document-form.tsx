@@ -60,6 +60,9 @@ import { createDocument, updateDocument } from "@/actions/document-actions";
 import { calculateDeliveryDates, type Holiday } from "@/lib/delivery-date";
 
 import { RECEIPT_PAYMENT_LABELS, satang, type ReceiptPaymentKind } from "@/lib/receipt-payment";
+import { type InvoiceBillingKind } from "@/lib/invoice-billing";
+import { InvoiceBillingPanel, type BillingQuotationOption } from "./invoice-billing-panel";
+import { PaymentMethodChips, type PaymentMethodKind } from "./payment-method-chips";
 
 // Form schema for top-level fields only (line items & payment terms handled by hooks)
 const formSchema = z.object({
@@ -146,6 +149,8 @@ interface DocumentFormProps {
   invoices?: any[];
   /** Preselect this invoice on a new receipt (e.g. "ออกใบเสร็จยอดคงเหลือ"). */
   initialInvoiceId?: string;
+  /** INVOICE new: preselect this quotation (from "ออกใบแจ้งหนี้ยอดคงเหลือ"). */
+  initialQuotationId?: string;
   paymentTermTemplates?: any[];
   holidays?: Holiday[];
 }
@@ -158,6 +163,7 @@ export function DocumentForm({
   quotations,
   invoices,
   initialInvoiceId,
+  initialQuotationId,
   paymentTermTemplates,
   holidays = [],
 }: DocumentFormProps) {
@@ -208,9 +214,12 @@ export function DocumentForm({
   const [deliveryCompletedDate, setDeliveryCompletedDate] = useState<Date | null>(
     initialData?.deliveryCompletedDate ? new Date(initialData.deliveryCompletedDate) : null
   );
-  const [paymentDate] = useState<Date | null>(
-    initialData?.paymentDate ? new Date(initialData.paymentDate) : null
+  const [paymentDate, setPaymentDate] = useState<Date | null>(
+    initialData?.paymentDate ? new Date(initialData.paymentDate) : type === "RECEIPT" && !initialData ? toUTCNoon(new Date()) : null
   );
+  const [paymentDatePopoverOpen, setPaymentDatePopoverOpen] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodKind | null>(initialData?.paymentMethod ?? null);
+  const [paymentReference, setPaymentReference] = useState<string>(initialData?.paymentReference || "");
   const [sourceQuotationId, setSourceQuotationId] = useState<string | undefined>(
     initialData?.sourceQuotationId || undefined
   );
@@ -243,6 +252,26 @@ export function DocumentForm({
     : receiptPaymentType === "FULL" ? invoiceTotal
     : receiptPaymentType === "BALANCE" ? outstanding
     : satang(receiptBasis === "PERCENTAGE" ? invoiceTotal * receiptValue / 100 : receiptValue) / 100;
+
+  // Invoices are issued off a quotation the way receipts are issued off an invoice.
+  const managedInvoice = type === "INVOICE" && (!initialData || !!initialData.invoiceBillingType);
+  const [invoiceBillingType, setInvoiceBillingType] = useState<InvoiceBillingKind>(initialData?.invoiceBillingType || "FULL");
+  const [invoiceBillingTouched, setInvoiceBillingTouched] = useState(false);
+  const [invoiceBasis, setInvoiceBasis] = useState<"AMOUNT" | "PERCENTAGE">("AMOUNT");
+  const [invoiceValue, setInvoiceValue] = useState(Number(initialData?.grandTotal || 0));
+  const [invoiceSelectedTermIndex, setInvoiceSelectedTermIndex] = useState("");
+  const billingQuotation = (initialData?.sourceQuotation || quotations?.find((q) => q.id === sourceQuotationId)) as BillingQuotationOption | undefined;
+  const quotationTotal = Number(billingQuotation?.grandTotal ?? 0);
+  const previousDeposits = (billingQuotation?.invoices || []).filter((d) => d.id !== initialData?.id)
+    .reduce((sum, d) => sum + satang(d.grandTotal), 0) / 100;
+  const remainingToBill = (satang(quotationTotal) - satang(previousDeposits)) / 100;
+  // Only DEPOSIT / BALANCE invoices are generated; a FULL invoice keeps the editable form.
+  const generatedInvoice = managedInvoice && invoiceBillingType !== "FULL";
+  const invoiceHasPaidReceipts = !!initialData?.receipts?.length;
+  const depositBillingAmount = initialData?.invoiceBillingType && initialData.invoiceBillingType !== "FULL" && !invoiceBillingTouched
+    ? Number(initialData.grandTotal)
+    : invoiceBillingType === "BALANCE" ? remainingToBill
+    : satang(invoiceBasis === "PERCENTAGE" ? quotationTotal * invoiceValue / 100 : invoiceValue) / 100;
 
   const [depositDeductionRows, setDepositDeductionRows] = useState<DepositDeductionRow[]>(
     initialData?.depositDeductions
@@ -477,6 +506,11 @@ export function DocumentForm({
     if (!q) return;
 
     setSourceQuotationId(quotationId);
+    const depositsIssued = ((q.invoices as BillingQuotationOption["invoices"]) || []).reduce((sum, d) => sum + satang(d.grandTotal), 0);
+    setInvoiceBillingType(depositsIssued > 0 ? "BALANCE" : "FULL");
+    setInvoiceBasis("AMOUNT");
+    setInvoiceValue(Number(q.paymentTerms?.[0]?.calculatedAmount || 0));
+    setInvoiceSelectedTermIndex("");
 
     // Pre-fill company and customer
     form.setValue("companyId", q.companyId);
@@ -588,6 +622,16 @@ export function DocumentForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialInvoiceId, invoices, isEditing, type]);
 
+  // Preselect the quotation once when opened from "ออกใบแจ้งหนี้ยอดคงเหลือ".
+  const appliedInitialQuotation = useRef(false);
+  useEffect(() => {
+    if (appliedInitialQuotation.current || isEditing || type !== "INVOICE" || !initialQuotationId) return;
+    if (!quotations?.some((q: { id: string }) => q.id === initialQuotationId)) return;
+    appliedInitialQuotation.current = true;
+    handleQuotationSelect(initialQuotationId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuotationId, quotations, isEditing, type]);
+
   const assembleData = (formData: FormData) => {
     const checkedDeductions = !isDepositInvoice
       ? depositDeductionRows.filter(
@@ -608,6 +652,10 @@ export function DocumentForm({
       depositPercent: isDepositInvoice && depositBasisType === "PERCENTAGE" ? depositBasisValue : undefined,
       receiptPaymentType: managedReceipt ? receiptPaymentType : undefined,
       receiptAmount: managedReceipt ? receiptAmount : undefined,
+      invoiceBillingType: managedInvoice ? invoiceBillingType : undefined,
+      invoiceBillingAmount: managedInvoice ? (generatedInvoice ? depositBillingAmount : pricing.grandTotal) : undefined,
+      paymentMethod: type === "RECEIPT" ? paymentMethod : undefined,
+      paymentReference: type === "RECEIPT" ? paymentReference || undefined : undefined,
       discountType,
       discountValue,
       vatEnabled: formData.vatEnabled,
@@ -681,7 +729,12 @@ export function DocumentForm({
       return;
     }
 
-    if (items.length === 0) {
+    if (generatedInvoice) {
+      if (!Number.isFinite(depositBillingAmount) || depositBillingAmount <= 0 || satang(depositBillingAmount) > satang(remainingToBill)) {
+        alert("ยอดเรียกเก็บต้องมากกว่า 0 และไม่เกินยอดที่ยังไม่ได้เรียกเก็บ");
+        return;
+      }
+    } else if (items.length === 0) {
       alert("กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ");
       return;
     }
@@ -693,7 +746,7 @@ export function DocumentForm({
     }
 
     // Validate shipping — a deposit invoice never carries shipping.
-    if (!managedReceipt && !isDepositInvoice && !pickupAtShowroom && !freeShipping && shippingCost <= 0) {
+    if (!managedReceipt && !generatedInvoice && !isDepositInvoice && !pickupAtShowroom && !freeShipping && shippingCost <= 0) {
       setShippingError("กรุณาระบุค่าจัดส่ง หรือเลือก จัดส่งฟรี หรือ รับเองที่โชว์รูม");
       const el = document.getElementById("shipping-section");
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -702,7 +755,7 @@ export function DocumentForm({
     setShippingError("");
 
     // Validate payment terms
-    if (!managedReceipt && terms.length === 0) {
+    if (!managedReceipt && !generatedInvoice && terms.length === 0) {
       setPaymentTermsError("กรุณาเพิ่มเงื่อนไขการชำระเงินอย่างน้อย 1 งวด");
       const el = document.getElementById("payment-terms-section");
       el?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -810,8 +863,46 @@ export function DocumentForm({
               </div>
             )}
 
+            {managedInvoice && billingQuotation && (
+              <InvoiceBillingPanel
+                quotation={billingQuotation}
+                thumbs={<ProductThumbs items={billingQuotation.lineItems} size="lg" showNames />}
+                billingType={invoiceBillingType}
+                onBillingTypeChange={(value) => {
+                  setInvoiceBillingTouched(true);
+                  setInvoiceBillingType(value);
+                  // A deposit can never exceed what is still unbilled.
+                  if (value === "DEPOSIT") {
+                    setInvoiceBasis("AMOUNT");
+                    setInvoiceSelectedTermIndex("");
+                    setInvoiceValue(Math.min(Number(billingQuotation.paymentTerms?.[0]?.calculatedAmount || 0) || remainingToBill, remainingToBill));
+                  }
+                }}
+                basis={invoiceBasis}
+                onBasisChange={(value) => {
+                  setInvoiceBillingTouched(true);
+                  setInvoiceBasis(value);
+                  setInvoiceValue(value === "PERCENTAGE" ? (quotationTotal ? depositBillingAmount / quotationTotal * 100 : 0) : depositBillingAmount);
+                }}
+                value={invoiceValue}
+                onValueChange={(value) => { setInvoiceBillingTouched(true); setInvoiceValue(value); }}
+                selectedTermIndex={invoiceSelectedTermIndex}
+                onSelectTerm={(index) => {
+                  setInvoiceBillingTouched(true);
+                  setInvoiceSelectedTermIndex(index);
+                  setInvoiceBasis("AMOUNT");
+                  setInvoiceValue(Number(billingQuotation.paymentTerms[Number(index)].calculatedAmount));
+                }}
+                quotationTotal={quotationTotal}
+                previousDeposits={previousDeposits}
+                remaining={remainingToBill}
+                amount={generatedInvoice ? depositBillingAmount : pricing.grandTotal}
+                locked={invoiceHasPaidReceipts}
+              />
+            )}
+
             {/* Deduct deposit(s) already invoiced — final invoice only (new or edit) */}
-            {type === "INVOICE" && !isDepositInvoice && isEditing && Number(initialData?.depositDeduction) > 0 && (
+            {type === "INVOICE" && !managedInvoice && !isDepositInvoice && isEditing && Number(initialData?.depositDeduction) > 0 && (
               <div className="mb-4">
                 <div className="rounded-lg border p-3 space-y-3">
                   <Label className="text-sm font-medium">หักเงินมัดจำที่ชำระแล้ว</Label>
@@ -1013,6 +1104,32 @@ export function DocumentForm({
                   <span>คงเหลือหลังรับชำระ {formatBaht((satang(outstanding) - satang(receiptAmount)) / 100)}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">ยอดรับชำระรวมภาษีตามใบแจ้งหนี้แล้ว ใบเสร็จร่างยังไม่หักยอดคงเหลือ</p>
+                <Separator />
+                <div className="space-y-2">
+                  <Label>ช่องทางที่ลูกค้าชำระ</Label>
+                  <PaymentMethodChips value={paymentMethod} onChange={setPaymentMethod} />
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>วันที่ชำระเงิน</Label>
+                    <Popover open={paymentDatePopoverOpen} onOpenChange={setPaymentDatePopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !paymentDate && "text-muted-foreground")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {paymentDate ? formatThaiDate(paymentDate, "short") : "เลือกวันที่ชำระ"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={paymentDate ?? undefined}
+                          onSelect={(date) => { setPaymentDate(date ? toUTCNoon(date) : null); setPaymentDatePopoverOpen(false); }} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>เลขอ้างอิง / หมายเหตุการชำระ</Label>
+                    <Input value={paymentReference} onChange={(e) => setPaymentReference(e.target.value)} placeholder="เช่น KBank 16 ต.ค. 14:32" maxLength={200} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1042,7 +1159,7 @@ export function DocumentForm({
                   <FormItem>
                     <FormLabel>บริษัท <span className="text-destructive">*</span></FormLabel>
                     <Select
-                      disabled={managedReceipt}
+                      disabled={managedReceipt || generatedInvoice}
                       onValueChange={(companyId) => {
                         field.onChange(companyId);
                         const selected = companies.find((c) => c.id === companyId);
@@ -1078,7 +1195,7 @@ export function DocumentForm({
                 render={({ field }) => (
                   <FormItem className="min-w-0">
                     <FormLabel>ลูกค้า <span className="text-destructive">*</span></FormLabel>
-                    <fieldset disabled={managedReceipt}>
+                    <fieldset disabled={managedReceipt || generatedInvoice}>
                     <CustomerSelect
                       customers={customers}
                       value={field.value}
@@ -1134,7 +1251,7 @@ export function DocumentForm({
           </CardContent>
         </Card>
 
-        {!managedReceipt && (<>
+        {!managedReceipt && !generatedInvoice && (<>
         {/* Section 2: Line Items */}
         <Card>
           <CardHeader>

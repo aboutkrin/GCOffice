@@ -139,6 +139,10 @@ export const documentSchema = z.object({
   sourceInvoiceId: z.string().optional(),
   receiptPaymentType: z.enum(["FULL", "DEPOSIT", "BALANCE"]).optional(),
   receiptAmount: z.coerce.number().finite().positive("กรุณาระบุยอดรับชำระมากกว่า 0").optional(),
+  invoiceBillingType: z.enum(["FULL", "DEPOSIT", "BALANCE"]).optional(),
+  invoiceBillingAmount: z.coerce.number().finite().positive("กรุณาระบุยอดเรียกเก็บมากกว่า 0").optional(),
+  paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"]).optional().nullable(),
+  paymentReference: z.string().max(200, "เลขอ้างอิงยาวเกินไป").optional(),
   isDepositInvoice: z.boolean().default(false),
   taxInvoiceNumber: z.string().optional(),
   depositPercent: z.coerce.number().optional().nullable(),
@@ -200,6 +204,14 @@ export const documentSchema = z.object({
   },
   { message: "จำนวนวันสูงสุดต้องมากกว่าหรือเท่ากับจำนวนวันต่ำสุด", path: ["productionDaysMax"] }
 );
+
+/** Recording how an invoice was actually paid (from the invoice list). */
+export const invoicePaymentRecordSchema = z.object({
+  status: z.enum(["PAID", "DEPOSITED"]),
+  paymentMethod: z.enum(["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"], { error: "กรุณาเลือกช่องทางการชำระ" }),
+  paymentDate: z.coerce.date({ error: "กรุณาเลือกวันที่ชำระ" }),
+  paymentReference: z.string().max(200, "เลขอ้างอิงยาวเกินไป").optional(),
+});
 
 export const paymentTermTemplateItemSchema = z.object({
   sequence: z.number(),

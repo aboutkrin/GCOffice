@@ -2,7 +2,8 @@
 
 import { formatNumber } from "@/lib/thai-currency";
 import { formatThaiDate } from "@/lib/thai-date";
-import { Landmark } from "lucide-react";
+import { Landmark, Wallet } from "lucide-react";
+import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 
 interface PaymentTerm {
   sequence: number;
@@ -24,6 +25,8 @@ interface PreviewPaymentProps {
   };
   documentType?: "QUOTATION" | "INVOICE" | "RECEIPT";
   paymentDate?: Date;
+  paymentMethod?: string | null;
+  paymentReference?: string | null;
   productionDays?: string;
   deliveryDateStart?: Date;
   deliveryDateEnd?: Date;
@@ -35,6 +38,8 @@ export function PreviewPayment({
   company,
   documentType,
   paymentDate,
+  paymentMethod,
+  paymentReference,
   productionDays,
   deliveryDateStart,
   deliveryDateEnd,
@@ -46,11 +51,31 @@ export function PreviewPayment({
   const hasBankInfo =
     !isReceipt &&
     (company.bankName || company.accountName || company.accountNumber);
+  // Invoices already paid print how the customer paid, next to the delivery info.
+  const hasPaymentRecord = !!paymentMethod && documentType !== "QUOTATION";
   const hasDeliveryInfo = isReceipt
-    ? !!(deliveryCompletedDate || paymentDate)
-    : productionDays || deliveryDateStart || deliveryDateEnd;
+    ? !!(deliveryCompletedDate || paymentDate || paymentMethod)
+    : productionDays || deliveryDateStart || deliveryDateEnd || hasPaymentRecord;
 
   if (!hasPaymentTerms && !hasBankInfo && !hasDeliveryInfo) return null;
+
+  const paymentRecordRows = hasPaymentRecord ? (
+    <>
+      <span className="font-bold">ช่องทางการชำระ</span>
+      <span className="font-bold">:</span>
+      <span>
+        {PAYMENT_METHOD_LABELS[paymentMethod!] ?? paymentMethod}
+        {paymentReference ? ` (${paymentReference})` : ""}
+      </span>
+      {!isReceipt && paymentDate && (
+        <>
+          <span className="font-bold">วันที่ชำระเงิน</span>
+          <span className="font-bold">:</span>
+          <span>{formatThaiDate(new Date(paymentDate))}</span>
+        </>
+      )}
+    </>
+  ) : null;
 
   return (
     <div className="mb-3">
@@ -176,6 +201,7 @@ export function PreviewPayment({
                             <span>{formatThaiDate(new Date(paymentDate))}</span>
                           </>
                         )}
+                        {paymentRecordRows}
                         {deliveryCompletedDate && (
                           <>
                             <span className="font-bold">วันที่จัดส่งสินค้าสำเร็จ</span>
@@ -206,6 +232,7 @@ export function PreviewPayment({
                             </span>
                           </>
                         )}
+                        {paymentRecordRows}
                       </>
                     )}
                   </div>
@@ -266,6 +293,26 @@ export function PreviewPayment({
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Stacked layout (no bank box): how the customer paid */}
+          {hasPaymentRecord && (
+            <div className="mb-4 rounded border border-blue-200 p-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Wallet className="h-3.5 w-3.5 text-blue-600" />
+                <h4 className="text-[10px] font-bold text-gray-800">การรับชำระ</h4>
+              </div>
+              <div className="grid grid-cols-[auto_auto_1fr] gap-x-1 gap-y-0.5 text-[10px] text-gray-700">
+                {paymentRecordRows}
+                {isReceipt && paymentDate && (
+                  <>
+                    <span className="font-bold">วันที่ชำระเงิน</span>
+                    <span className="font-bold">:</span>
+                    <span>{formatThaiDate(new Date(paymentDate))}</span>
+                  </>
+                )}
+              </div>
             </div>
           )}
 

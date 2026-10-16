@@ -59,8 +59,10 @@ export const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   RECEIPT: "ใบเสร็จรับเงิน",
 };
 
-/** Label for an INVOICE with isDepositInvoice = true (see document-preview.tsx). */
+/** Label for a legacy INVOICE with isDepositInvoice = true (see document-preview.tsx). */
 export const DEPOSIT_INVOICE_LABEL = "ใบแจ้งหนี้มัดจำ";
+
+/** Invoice billing types (เต็มจำนวน / มัดจำ / ยอดคงเหลือ) live in src/lib/invoice-billing.ts. */
 
 export const STATUS_LABELS: Record<string, string> = {
   ACTIVE: "ใช้งาน",

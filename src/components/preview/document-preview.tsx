@@ -12,6 +12,7 @@ import { PreviewPayment } from "./preview-payment";
 import { PreviewFooter } from "./preview-footer";
 
 import { type ReceiptPaymentKind, type ReceiptPaymentSummary, RECEIPT_PAYMENT_LABELS } from "@/lib/receipt-payment";
+import { type InvoiceBillingKind, type InvoiceBillingSummary, INVOICE_BILLING_LABELS, invoiceBillingTitle } from "@/lib/invoice-billing";
 import { formatBaht } from "@/lib/thai-currency";
 
 interface CompanySnapshot {
@@ -101,6 +102,11 @@ export interface DocumentData {
   isDepositInvoice?: boolean;
   receiptPaymentType?: ReceiptPaymentKind | null;
   receiptPaymentSummary?: ReceiptPaymentSummary | null;
+  invoiceBillingType?: InvoiceBillingKind | null;
+  invoiceBillingSummary?: InvoiceBillingSummary | null;
+  /** How the customer actually paid (receipts; invoices once marked paid). */
+  paymentMethod?: "CASH" | "TRANSFER" | "CREDIT_CARD" | "PROMPTPAY" | "OTHER" | null;
+  paymentReference?: string | null;
   depositDeduction?: number;
   netPayable?: number;
   depositDeductions?: DepositDeduction[];
@@ -114,6 +120,8 @@ export interface DocumentData {
   paymentTerms: PaymentTerm[];
   /** Receipts: the invoice they pay, for the "รูปสินค้า" box. */
   sourceInvoice?: { lineItems: PreviewProductImageItem[] } | null;
+  /** Deposit invoices: the quotation they bill, for the "รูปสินค้า" box. */
+  sourceQuotation?: { lineItems: PreviewProductImageItem[] } | null;
   createdBy?: {
     firstName?: string | null;
     lastName?: string | null;
@@ -140,12 +148,15 @@ const CONTENT_HEIGHT_PX =
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
-function documentTypeLabel(documentType: string, vatEnabled?: boolean, isDepositInvoice?: boolean): string {
+function documentTypeLabel(documentType: string, vatEnabled?: boolean, isDepositInvoice?: boolean, invoiceBillingType?: InvoiceBillingKind | null): string {
   if (documentType === "RECEIPT") {
     return vatEnabled ? "ใบเสร็จรับเงิน/ใบกำกับภาษี" : "ใบเสร็จรับเงิน";
   }
   if (documentType === "INVOICE" && isDepositInvoice) {
     return vatEnabled ? "ใบแจ้งหนี้มัดจำ/ใบกำกับภาษี" : "ใบแจ้งหนี้มัดจำ";
+  }
+  if (documentType === "INVOICE" && (invoiceBillingType === "DEPOSIT" || invoiceBillingType === "BALANCE")) {
+    return invoiceBillingTitle(invoiceBillingType);
   }
   return DOCUMENT_TYPE_LABELS[documentType] || documentType;
 }
@@ -156,6 +167,7 @@ function ContinuationHeader({
   documentType,
   vatEnabled,
   isDepositInvoice,
+  invoiceBillingType,
   documentNumber,
   documentDate,
 }: {
@@ -163,6 +175,7 @@ function ContinuationHeader({
   documentType: string;
   vatEnabled?: boolean;
   isDepositInvoice?: boolean;
+  invoiceBillingType?: InvoiceBillingKind | null;
   documentNumber: string | null;
   documentDate: Date;
 }) {
@@ -191,7 +204,7 @@ function ContinuationHeader({
       </div>
       <div className="shrink-0 text-right">
         <div className="text-xs font-bold text-primary">
-          {documentTypeLabel(documentType, vatEnabled, isDepositInvoice)} (ต่อ)
+          {documentTypeLabel(documentType, vatEnabled, isDepositInvoice, invoiceBillingType)} (ต่อ)
         </div>
         <div className="text-[9px] text-gray-500">
           เลขที่ {documentNumber ?? "ร่าง"} · {formatThaiDate(new Date(documentDate))}
@@ -319,18 +332,33 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
 
     // Deposit / balance receipts carry no product lines of their own, so show
     // the invoice's product images in a box of their own above the summary.
+    // A deposit invoice is the same shape, with the quotation's product images.
+    const depositInvoice = doc.type === "INVOICE" && doc.invoiceBillingType === "DEPOSIT";
     const showProductImages =
-      doc.type === "RECEIPT" && !doc.lineItems.some((item) => item.productImage);
+      (doc.type === "RECEIPT" || depositInvoice) && !doc.lineItems.some((item) => item.productImage);
+    const productImageItems = doc.type === "RECEIPT" ? doc.sourceInvoice?.lineItems : doc.sourceQuotation?.lineItems;
     // A deposit / balance receipt has one "รับชำระ..." line and no products,
     // so its price column must not read "ราคา/กล่อง".
     const paymentLines =
-      doc.type === "RECEIPT" &&
-      !!doc.receiptPaymentType &&
+      ((doc.type === "RECEIPT" && !!doc.receiptPaymentType) || depositInvoice) &&
       !doc.lineItems.some((item) => item.productSku);
+    const billing = doc.type === "INVOICE" && doc.invoiceBillingType && doc.invoiceBillingType !== "FULL"
+      ? doc.invoiceBillingSummary : null;
 
     const summaryBlock = (
       <>
-        {showProductImages && <PreviewProductImages items={doc.sourceInvoice?.lineItems} />}
+        {showProductImages && <PreviewProductImages items={productImageItems} />}
+        {billing && doc.invoiceBillingType && (
+          <div className={`mb-3 rounded border p-2 text-[11px] ${doc.invoiceBillingType === "DEPOSIT" ? "border-amber-200 bg-amber-50/40" : "border-blue-200 bg-blue-50/40"}`}>
+            <div className="mb-1 font-semibold">เรียกเก็บ{INVOICE_BILLING_LABELS[doc.invoiceBillingType]} ตามใบเสนอราคาเลขที่ {billing.quotationNumber}</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+              <span>ยอดใบเสนอราคา</span><span className="text-right">{formatBaht(billing.quotationTotal)}</span>
+              <span>เรียกเก็บมัดจำแล้วก่อนหน้านี้</span><span className="text-right">{formatBaht(billing.previousDeposits)}</span>
+              <strong>เรียกเก็บครั้งนี้</strong><strong className="text-right">{formatBaht(billing.billedAmount)}</strong>
+              <span>คงเหลือหลังใบนี้</span><span className="text-right">{formatBaht(billing.remainingBalance)}</span>
+            </div>
+          </div>
+        )}
         {doc.receiptPaymentType && doc.receiptPaymentSummary && (
           <div className="mb-3 rounded border border-blue-200 p-2 text-[11px]">
             <div className="mb-1 font-semibold">รับชำระ{RECEIPT_PAYMENT_LABELS[doc.receiptPaymentType]} ตามใบแจ้งหนี้เลขที่ {doc.receiptPaymentSummary.invoiceNumber}</div>
@@ -370,6 +398,8 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           }}
           documentType={doc.type}
           paymentDate={doc.paymentDate}
+          paymentMethod={doc.paymentMethod}
+          paymentReference={doc.paymentReference}
           productionDays={doc.productionDays}
           deliveryDateStart={doc.deliveryDateStart}
           deliveryDateEnd={doc.deliveryDateEnd}
@@ -407,6 +437,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
                     documentType={doc.type}
                     vatEnabled={doc.vatEnabled}
                     isDepositInvoice={doc.isDepositInvoice}
+                    invoiceBillingType={doc.invoiceBillingType}
                     copyLabel={copyLabel}
                   />
                   <PreviewCustomer
@@ -423,6 +454,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
                   documentType={doc.type}
                   vatEnabled={doc.vatEnabled}
                   isDepositInvoice={doc.isDepositInvoice}
+                  invoiceBillingType={doc.invoiceBillingType}
                   documentNumber={doc.documentNumber}
                   documentDate={doc.documentDate}
                 />
@@ -454,6 +486,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
               documentType={doc.type}
               vatEnabled={doc.vatEnabled}
               isDepositInvoice={doc.isDepositInvoice}
+              invoiceBillingType={doc.invoiceBillingType}
               copyLabel={copyLabel}
             />
             <PreviewCustomer
@@ -470,6 +503,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
               documentType={doc.type}
               vatEnabled={doc.vatEnabled}
               isDepositInvoice={doc.isDepositInvoice}
+              invoiceBillingType={doc.invoiceBillingType}
               documentNumber={doc.documentNumber}
               documentDate={doc.documentDate}
             />
