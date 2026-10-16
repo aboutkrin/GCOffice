@@ -356,7 +356,11 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
         {showProductImages && <PreviewProductImages items={productImageItems} />}
         {billing && doc.invoiceBillingType && (
           <div className="mb-3 flex items-stretch gap-3">
-            <div className={`flex-1 min-w-0 rounded border p-2 text-[11px] ${doc.invoiceBillingType === "DEPOSIT" ? "border-amber-200 bg-amber-50/40" : "border-blue-200 bg-blue-50/40"}`}>
+            {/* Same two columns as the รวมทั้งสิ้น row below: bank box left, billing box right */}
+            <div className="flex-1 min-w-0">
+              {bankInfo && <BankInfoBox company={bankInfo} compact />}
+            </div>
+            <div className={`w-full max-w-sm shrink-0 rounded border p-2 text-[11px] ${doc.invoiceBillingType === "DEPOSIT" ? "border-amber-200 bg-amber-50/40" : "border-blue-200 bg-blue-50/40"}`}>
               <div className="mb-1 font-semibold">{INVOICE_BILLING_LABELS[doc.invoiceBillingType]} ตามใบเสนอราคา {billing.quotationNumber}</div>
               <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5">
                 <span>ยอดใบเสนอราคา</span><span className="text-right">{formatBaht(billing.quotationTotal)}</span>
@@ -365,11 +369,6 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
                 <span>คงเหลือ</span><span className="text-right">{formatBaht(billing.remainingBalance)}</span>
               </div>
             </div>
-            {bankInfo && (
-              <div className="flex-1 min-w-0">
-                <BankInfoBox company={bankInfo} compact />
-              </div>
-            )}
           </div>
         )}
         {doc.receiptPaymentType && doc.receiptPaymentSummary && (
