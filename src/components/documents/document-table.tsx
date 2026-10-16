@@ -216,8 +216,10 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
   };
 
   /** Invoice to issue the balance receipt for: a paid deposit receipt or a DEPOSITED invoice. */
-  const balanceReceiptInvoiceId = (doc: { id: string; status: string; receiptPaymentType?: string | null; sourceInvoiceId?: string | null }): string | null => {
+  const balanceReceiptInvoiceId = (doc: { id: string; status: string; receiptPaymentType?: string | null; sourceInvoiceId?: string | null; sourceInvoice?: { status: string } | null }): string | null => {
     if (documentType === "RECEIPT" && doc.receiptPaymentType === "DEPOSIT" && doc.status === "PAID") {
+      // Nothing left to receive once the invoice is fully paid.
+      if (doc.sourceInvoice && doc.sourceInvoice.status !== "DEPOSITED") return null;
       return doc.sourceInvoiceId ?? null;
     }
     if (documentType === "INVOICE" && doc.status === "DEPOSITED") return doc.id;
