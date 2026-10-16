@@ -2,7 +2,8 @@
 
 import { formatNumber } from "@/lib/thai-currency";
 import { formatThaiDate } from "@/lib/thai-date";
-import { Landmark } from "lucide-react";
+import { Landmark, Wallet } from "lucide-react";
+import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 
 interface PaymentTerm {
   sequence: number;
@@ -24,10 +25,73 @@ interface PreviewPaymentProps {
   };
   documentType?: "QUOTATION" | "INVOICE" | "RECEIPT";
   paymentDate?: Date;
+  paymentMethod?: string | null;
+  paymentReference?: string | null;
   productionDays?: string;
   deliveryDateStart?: Date;
   deliveryDateEnd?: Date;
   deliveryCompletedDate?: Date;
+}
+
+/** "ข้อมูลบัญชีสำหรับการชำระ": bank account + PromptPay QR. `compact` fits half a row. */
+export function BankInfoBox({ company, compact = false }: { company: PreviewPaymentProps["company"]; compact?: boolean }) {
+  return (
+            <div className={`h-full rounded border border-blue-200 bg-blue-50/50 ${compact ? "p-2" : "p-3"}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Landmark className="h-4 w-4 text-blue-600" />
+                <h4 className="text-[10px] font-bold text-gray-800">
+                  ข้อมูลบัญชีสำหรับการชำระ
+                </h4>
+              </div>
+              <div className="flex items-start justify-between gap-4">
+                <div className="grid grid-cols-1 gap-1 text-[10px]">
+                  {company.bankName && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 w-20 shrink-0">ธนาคาร:</span>
+                      <div className="flex items-center gap-1.5">
+                        {company.bankLogoUrl && (
+                          <img
+                            src={company.bankLogoUrl}
+                            alt={company.bankName}
+                            className="h-5 w-5 object-contain shrink-0"
+                          />
+                        )}
+                        <span className="font-medium text-gray-800">
+                          {company.bankName}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  {company.accountName && (
+                    <div className="flex gap-2">
+                      <span className="text-gray-500 w-20 shrink-0">ชื่อบัญชี:</span>
+                      <span className="font-medium text-gray-800">
+                        {company.accountName}
+                      </span>
+                    </div>
+                  )}
+                  {company.accountNumber && (
+                    <div className="flex gap-2">
+                      <span className="text-gray-500 w-20 shrink-0">เลขที่บัญชี:</span>
+                      <span className="font-medium text-gray-800 tracking-wide">
+                        {company.accountNumber}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {company.promptpayQrUrl && (
+                  <div className="flex flex-col items-center shrink-0">
+                    <img
+                      src={company.promptpayQrUrl}
+                      alt="PromptPay QR Code"
+                      className={compact ? "h-20 w-20 object-contain" : "h-24 w-24 sm:h-28 sm:w-28 object-contain"}
+                    />
+                    <span className="text-[10px] text-gray-500 mt-1">พร้อมเพย์</span>
+                  </div>
+                )}
+              </div>
+            </div>
+  );
 }
 
 export function PreviewPayment({
@@ -35,6 +99,8 @@ export function PreviewPayment({
   company,
   documentType,
   paymentDate,
+  paymentMethod,
+  paymentReference,
   productionDays,
   deliveryDateStart,
   deliveryDateEnd,
@@ -46,11 +112,33 @@ export function PreviewPayment({
   const hasBankInfo =
     !isReceipt &&
     (company.bankName || company.accountName || company.accountNumber);
+  // Invoices already paid print how the customer paid, next to the delivery info.
+  const hasPaymentRecord = !!paymentMethod && documentType !== "QUOTATION";
   const hasDeliveryInfo = isReceipt
-    ? !!(deliveryCompletedDate || paymentDate)
-    : productionDays || deliveryDateStart || deliveryDateEnd;
+    ? !!(deliveryCompletedDate || paymentDate || paymentMethod)
+    : productionDays || deliveryDateStart || deliveryDateEnd || hasPaymentRecord;
 
   if (!hasPaymentTerms && !hasBankInfo && !hasDeliveryInfo) return null;
+
+  const paymentRecordRows = hasPaymentRecord ? (
+    <>
+      <span className="font-bold">ช่องทางการชำระ</span>
+      <span className="font-bold">:</span>
+      <span>
+        {PAYMENT_METHOD_LABELS[paymentMethod!] ?? paymentMethod}
+        {paymentReference ? ` (${paymentReference})` : ""}
+      </span>
+      {!isReceipt && paymentDate && (
+        <>
+          <span className="font-bold">วันที่ชำระเงิน</span>
+          <span className="font-bold">:</span>
+          <span>{formatThaiDate(new Date(paymentDate))}</span>
+        </>
+      )}
+    </>
+  ) : null;
+
+  const bankOnlyBox = <BankInfoBox company={company} />;
 
   return (
     <div className="mb-3">
@@ -176,6 +264,7 @@ export function PreviewPayment({
                             <span>{formatThaiDate(new Date(paymentDate))}</span>
                           </>
                         )}
+                        {paymentRecordRows}
                         {deliveryCompletedDate && (
                           <>
                             <span className="font-bold">วันที่จัดส่งสินค้าสำเร็จ</span>
@@ -206,6 +295,7 @@ export function PreviewPayment({
                             </span>
                           </>
                         )}
+                        {paymentRecordRows}
                       </>
                     )}
                   </div>
@@ -269,64 +359,52 @@ export function PreviewPayment({
             </div>
           )}
 
-          {/* Bank Account Info only (no payment terms) */}
-          {hasBankInfo && (
-            <div className="rounded border border-blue-200 bg-blue-50/50 p-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Landmark className="h-4 w-4 text-blue-600" />
-                <h4 className="text-[10px] font-bold text-gray-800">
-                  ข้อมูลบัญชีสำหรับการชำระ
-                </h4>
+          {/* No terms table: the bank box fills the row (deposit / balance
+              invoices), with "การรับชำระ" beside it once the customer has paid. */}
+          {hasBankInfo && hasPaymentRecord ? (
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">{bankOnlyBox}</div>
+              <div className="w-full max-w-sm shrink-0">
+                <div className="w-full">
+            <div className="rounded border border-blue-200 bg-emerald-50/40 p-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Wallet className="h-3.5 w-3.5 text-blue-600" />
+                <h4 className="text-[10px] font-bold text-gray-800">การรับชำระ</h4>
               </div>
-              <div className="flex items-start justify-between gap-4">
-                <div className="grid grid-cols-1 gap-1 text-[10px]">
-                  {company.bankName && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500 w-20 shrink-0">ธนาคาร:</span>
-                      <div className="flex items-center gap-1.5">
-                        {company.bankLogoUrl && (
-                          <img
-                            src={company.bankLogoUrl}
-                            alt={company.bankName}
-                            className="h-5 w-5 object-contain shrink-0"
-                          />
-                        )}
-                        <span className="font-medium text-gray-800">
-                          {company.bankName}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  {company.accountName && (
-                    <div className="flex gap-2">
-                      <span className="text-gray-500 w-20 shrink-0">ชื่อบัญชี:</span>
-                      <span className="font-medium text-gray-800">
-                        {company.accountName}
-                      </span>
-                    </div>
-                  )}
-                  {company.accountNumber && (
-                    <div className="flex gap-2">
-                      <span className="text-gray-500 w-20 shrink-0">เลขที่บัญชี:</span>
-                      <span className="font-medium text-gray-800 tracking-wide">
-                        {company.accountNumber}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                {company.promptpayQrUrl && (
-                  <div className="flex flex-col items-center shrink-0">
-                    <img
-                      src={company.promptpayQrUrl}
-                      alt="PromptPay QR Code"
-                      className="h-24 w-24 sm:h-28 sm:w-28 object-contain"
-                    />
-                    <span className="text-[10px] text-gray-500 mt-1">พร้อมเพย์</span>
-                  </div>
+              <div className="grid grid-cols-[auto_auto_1fr] gap-x-1 gap-y-0.5 text-[10px] text-gray-700">
+                {paymentRecordRows}
+                {isReceipt && paymentDate && (
+                  <>
+                    <span className="font-bold">วันที่ชำระเงิน</span>
+                    <span className="font-bold">:</span>
+                    <span>{formatThaiDate(new Date(paymentDate))}</span>
+                  </>
                 )}
               </div>
             </div>
-          )}
+                </div>
+              </div>
+            </div>
+          ) : hasPaymentRecord ? (
+            <div className="mb-4">
+            <div className="rounded border border-blue-200 p-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Wallet className="h-3.5 w-3.5 text-blue-600" />
+                <h4 className="text-[10px] font-bold text-gray-800">การรับชำระ</h4>
+              </div>
+              <div className="grid grid-cols-[auto_auto_1fr] gap-x-1 gap-y-0.5 text-[10px] text-gray-700">
+                {paymentRecordRows}
+                {isReceipt && paymentDate && (
+                  <>
+                    <span className="font-bold">วันที่ชำระเงิน</span>
+                    <span className="font-bold">:</span>
+                    <span>{formatThaiDate(new Date(paymentDate))}</span>
+                  </>
+                )}
+              </div>
+            </div>
+            </div>
+          ) : hasBankInfo ? bankOnlyBox : null}
         </>
       )}
 

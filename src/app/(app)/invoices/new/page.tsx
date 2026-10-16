@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export default async function NewInvoicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string; month?: string }>;
+  searchParams: Promise<{ year?: string; month?: string; quotationId?: string }>;
 }) {
   const params = await searchParams;
   const now = new Date();
@@ -21,7 +21,7 @@ export default async function NewInvoicePage({
   const [companies, customers, quotations, paymentTermTemplates, holidays] = await Promise.all([
     getCompanies(),
     getCustomers({ status: "ACTIVE" }),
-    getConfirmedQuotations({ year, month }),
+    getConfirmedQuotations({ year, month, includeId: params.quotationId }),
     getActivePaymentTermTemplates(),
     getActiveHolidays(),
   ]);
@@ -30,7 +30,7 @@ export default async function NewInvoicePage({
     <div>
       <PageHeader
         title="สร้างใบแจ้งหนี้"
-        description="สร้างใบแจ้งหนี้ใหม่"
+        description={params.quotationId ? "ออกใบแจ้งหนี้ยอดคงเหลือตามใบเสนอราคา" : "สร้างใบแจ้งหนี้ใหม่"}
       />
 
       <DocumentForm
@@ -38,6 +38,7 @@ export default async function NewInvoicePage({
         companies={companies}
         customers={customers}
         quotations={quotations}
+        initialQuotationId={params.quotationId}
         paymentTermTemplates={paymentTermTemplates}
         holidays={holidays}
       />

@@ -1,6 +1,7 @@
 "use client";
 
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
+import { invoiceBillingTitle, type InvoiceBillingKind } from "@/lib/invoice-billing";
 import { formatCompanyAddress } from "@/lib/company-address";
 import {
   Phone,
@@ -34,6 +35,7 @@ interface PreviewHeaderProps {
   documentType: string;
   vatEnabled?: boolean;
   isDepositInvoice?: boolean;
+  invoiceBillingType?: InvoiceBillingKind | null;
   copyLabel?: string;
 }
 
@@ -42,8 +44,10 @@ export function PreviewHeader({
   documentType,
   vatEnabled,
   isDepositInvoice,
+  invoiceBillingType,
   copyLabel,
 }: PreviewHeaderProps) {
+  const billedPart = documentType === "INVOICE" && (invoiceBillingType === "DEPOSIT" || invoiceBillingType === "BALANCE");
   let typeLabel: string;
   if (documentType === "RECEIPT") {
     typeLabel = vatEnabled
@@ -51,11 +55,13 @@ export function PreviewHeader({
       : "ใบเสร็จรับเงิน";
   } else if (documentType === "INVOICE" && isDepositInvoice) {
     typeLabel = vatEnabled ? "ใบแจ้งหนี้มัดจำ/ใบกำกับภาษี" : "ใบแจ้งหนี้มัดจำ";
+  } else if (billedPart) {
+    typeLabel = invoiceBillingTitle(invoiceBillingType);
   } else {
     typeLabel = DOCUMENT_TYPE_LABELS[documentType] || documentType;
   }
 
-  const isTaxInvoice = documentType === "RECEIPT" || isDepositInvoice;
+  const isTaxInvoice = documentType === "RECEIPT" || isDepositInvoice || billedPart;
   const isLongName = company.name.length > 25;
 
   return (

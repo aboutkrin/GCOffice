@@ -13,7 +13,8 @@ export function DocumentPreviewPage({ document }: DocumentPreviewPageProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const isReceipt = document.type === "RECEIPT";
   // A deposit invoice is a tax invoice too — print ต้นฉบับ + สำเนา like a VAT receipt.
-  const isTaxInvoice = (isReceipt && document.vatEnabled) || !!document.isDepositInvoice;
+  const billedPart = document.invoiceBillingType === "DEPOSIT" || document.invoiceBillingType === "BALANCE";
+  const isTaxInvoice = ((isReceipt || billedPart) && document.vatEnabled) || !!document.isDepositInvoice;
 
   return (
     <div className="min-h-screen bg-gray-100 print:bg-white">

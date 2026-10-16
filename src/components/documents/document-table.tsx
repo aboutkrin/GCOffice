@@ -45,9 +45,12 @@ import {
   RECEIPT_STATUS_OPTIONS,
   DEPOSIT_INVOICE_LABEL,
 } from "@/lib/constants";
-import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal, Loader2, FileDown, ImageIcon, Receipt } from "lucide-react";
+import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal, Loader2, FileDown, ImageIcon, Receipt, FilePlus2 } from "lucide-react";
 
 import { RECEIPT_PAYMENT_LABELS, type ReceiptPaymentKind } from "@/lib/receipt-payment";
+import { INVOICE_BILLING_COLORS, INVOICE_BILLING_LABELS, type InvoiceBillingKind } from "@/lib/invoice-billing";
+import { PaymentRecordDialog, PAYMENT_METHOD_ICONS, type PaymentRecordTarget } from "./payment-record-dialog";
+import { PAYMENT_METHOD_LABELS } from "@/lib/constants";
 
 interface DocumentTableProps {
   documents: any[];
@@ -69,9 +72,31 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
   const [isPending, startTransition] = useTransition();
   const [isSharing, setIsSharing] = useState(false);
   const [shareDocData, setShareDocData] = useState<any>(null);
+  const [paymentTarget, setPaymentTarget] = useState<PaymentRecordTarget | null>(null);
   const offscreenRef = useRef<HTMLDivElement>(null);
 
-  const handleStatusChange = (docId: string, newStatus: string) => {
+  /** The row fields the payment record needs (the list query selects them for invoices). */
+  type PaymentRow = {
+    id: string; documentNumber?: string | null; status: string; netPayable?: number | string | null;
+    grandTotal: number | string; paymentMethod?: PaymentRecordTarget["paymentMethod"];
+    paymentReference?: string | null; paymentDate?: string | Date | null;
+  };
+
+  /** Marking an invoice paid / deposited asks how the customer paid first. */
+  const openPaymentRecord = (doc: PaymentRow, status: "PAID" | "DEPOSITED") => {
+    setPaymentTarget({
+      id: doc.id, documentNumber: doc.documentNumber, amount: Number(doc.netPayable ?? doc.grandTotal), status,
+      paymentMethod: doc.paymentMethod ?? null, paymentReference: doc.paymentReference ?? null,
+      paymentDate: doc.paymentDate ?? null,
+    });
+  };
+
+  const handleStatusChange = (doc: PaymentRow, newStatus: string) => {
+    if (documentType === "INVOICE" && (newStatus === "PAID" || newStatus === "DEPOSITED")) {
+      openPaymentRecord(doc, newStatus);
+      return;
+    }
+    const docId = doc.id;
     startTransition(async () => {
       try {
         const result = await updateDocumentStatus(docId, newStatus as any);
@@ -225,6 +250,38 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
   };
   const balanceReceiptHref = (invoiceId: string) => `/receipts/new?invoiceId=${invoiceId}`;
 
+  /** Deposit invoice → the balance invoice is issued off the same quotation. */
+  const balanceInvoiceHref = (doc: { invoiceBillingType?: string | null; sourceQuotationId?: string | null; status: string }) =>
+    documentType === "INVOICE" && doc.invoiceBillingType === "DEPOSIT" && doc.sourceQuotationId && doc.status !== "CANCELLED"
+      ? `/invoices/new?quotationId=${doc.sourceQuotationId}`
+      : null;
+
+  const billingBadge = (doc: { invoiceBillingType?: string | null }) =>
+    documentType === "INVOICE" && doc.invoiceBillingType && doc.invoiceBillingType !== "FULL" ? (
+      <Badge className={`${INVOICE_BILLING_COLORS[doc.invoiceBillingType as InvoiceBillingKind]} text-[10px] pointer-events-none`}>
+        {INVOICE_BILLING_LABELS[doc.invoiceBillingType as InvoiceBillingKind]}
+      </Badge>
+    ) : null;
+
+  /** "โอนเงิน · 16 ต.ค. 69" under the status badge; click to edit the record. */
+  const paymentLine = (doc: PaymentRow, align: "center" | "end") => {
+    if (documentType !== "INVOICE" || !doc.paymentMethod) return null;
+    const Icon = PAYMENT_METHOD_ICONS[doc.paymentMethod];
+    const status: "PAID" | "DEPOSITED" = doc.status === "DEPOSITED" ? "DEPOSITED" : "PAID";
+    return (
+      <button
+        type="button"
+        title={doc.paymentReference || "แก้ไขการรับชำระ"}
+        onClick={(e) => { e.stopPropagation(); openPaymentRecord(doc, status); }}
+        className={`mt-1 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground ${align === "center" ? "mx-auto" : ""}`}
+      >
+        {Icon && <Icon className="h-3 w-3" />}
+        <span>{PAYMENT_METHOD_LABELS[doc.paymentMethod]}</span>
+        {doc.paymentDate && <span>· {formatThaiDate(new Date(doc.paymentDate), "short")}</span>}
+      </button>
+    );
+  };
+
   if (documents.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground border rounded-lg">
@@ -246,7 +303,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
               <TableHead className="text-center">ออกบิล Vat</TableHead>
               <TableHead className="text-right">ยอดรวม</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
-              <TableHead className="w-[200px] text-center">จัดการ</TableHead>
+              <TableHead className="w-[230px] text-center">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -265,6 +322,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                         {DEPOSIT_INVOICE_LABEL}
                       </Badge>
                     )}
+                    {billingBadge(doc)}
                   </div>
                   {doc.customInvoiceNumber && (
                     <div className="text-xs text-muted-foreground">{doc.customInvoiceNumber}</div>
@@ -305,7 +363,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                         <DropdownMenuItem
                           key={status}
                           disabled={status === doc.status}
-                          onClick={() => handleStatusChange(doc.id, status)}
+                          onClick={() => handleStatusChange(doc, status)}
                         >
                           <Badge
                             className={`${DOCUMENT_STATUS_COLORS[status]} text-xs pointer-events-none`}
@@ -321,6 +379,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  {paymentLine(doc, "center")}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-center gap-1">
@@ -333,6 +392,17 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    {balanceInvoiceHref(doc) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-blue-700"
+                        title="ออกใบแจ้งหนี้ยอดคงเหลือ"
+                        onClick={() => router.push(balanceInvoiceHref(doc)!)}
+                      >
+                        <FilePlus2 className="h-4 w-4" />
+                      </Button>
+                    )}
                     {balanceReceiptInvoiceId(doc) && (
                       <Button
                         variant="ghost"
@@ -405,6 +475,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                     {DEPOSIT_INVOICE_LABEL}
                   </Badge>
                 )}
+                {billingBadge(doc)}
                 {doc.customInvoiceNumber && (
                   <span className="text-xs text-muted-foreground ml-1">({doc.customInvoiceNumber})</span>
                 )}
@@ -421,11 +492,11 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {STATUS_OPTIONS.map((status) => (
+                    {getStatusOptions(doc.status).map((status) => (
                       <DropdownMenuItem
                         key={status}
                         disabled={status === doc.status}
-                        onClick={() => handleStatusChange(doc.id, status)}
+                        onClick={() => handleStatusChange(doc, status)}
                       >
                         <Badge
                           className={`${DOCUMENT_STATUS_COLORS[status]} text-xs pointer-events-none`}
@@ -448,6 +519,12 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {balanceInvoiceHref(doc) && (
+                      <DropdownMenuItem onClick={() => router.push(balanceInvoiceHref(doc)!)}>
+                        <FilePlus2 className="h-4 w-4 mr-2" />
+                        ออกใบแจ้งหนี้ยอดคงเหลือ
+                      </DropdownMenuItem>
+                    )}
                     {balanceReceiptInvoiceId(doc) && (
                       <>
                         <DropdownMenuItem
@@ -525,9 +602,12 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                 </span>
               )}
             </div>
+            {paymentLine(doc, "end")}
           </div>
         ))}
       </div>
+
+      <PaymentRecordDialog target={paymentTarget} onClose={() => setPaymentTarget(null)} />
 
       {/* Off-screen preview for direct share */}
       {shareDocData && (

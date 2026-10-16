@@ -72,6 +72,11 @@ export async function getDocuments(params?: {
         isDepositInvoice: true,
         netPayable: true,
         sourceInvoiceId: true,
+        sourceQuotationId: true,
+        invoiceBillingType: true,
+        paymentMethod: true,
+        paymentReference: true,
+        paymentDate: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -82,20 +87,38 @@ export async function getDocuments(params?: {
   }
 }
 
-export async function getConfirmedQuotations(params?: { year?: number; month?: number }) {
+/** Issued (not draft / cancelled) deposit invoice, new style or legacy. */
+const DEPOSIT_INVOICE_WHERE = {
+  type: "INVOICE" as const,
+  status: { in: ["BILLED" as const, "DEPOSITED" as const, "PAID" as const] },
+  OR: [{ invoiceBillingType: "DEPOSIT" as const }, { invoiceBillingType: null, isDepositInvoice: true }],
+};
+
+/** Non-cancelled FULL / BALANCE invoice (new style, or legacy with no billing type). */
+const FINAL_INVOICE_WHERE = {
+  status: { not: "CANCELLED" as const },
+  OR: [
+    { invoiceBillingType: { in: ["FULL" as const, "BALANCE" as const] } },
+    { invoiceBillingType: null, isDepositInvoice: false },
+  ],
+};
+
+export async function getConfirmedQuotations(params?: { year?: number; month?: number; includeId?: string }) {
   try {
     const where: any = {
       type: "QUOTATION",
       status: "CONFIRMED",
-      // A quotation stays selectable for the final invoice as long as no
-      // non-cancelled *final* invoice has been issued off it yet — deposit
-      // invoices don't consume it (there can be several of those).
-      invoices: { none: { status: { not: "CANCELLED" }, isDepositInvoice: false } },
+      // A quotation stays selectable as long as no non-cancelled *final*
+      // (FULL / BALANCE) invoice has been issued off it yet — deposit invoices
+      // don't consume it (there can be several of those).
+      invoices: { none: FINAL_INVOICE_WHERE },
     };
     if (params?.year && params?.month) {
       const startDate = new Date(Date.UTC(params.year, params.month - 1, 1));
       const endDate = new Date(Date.UTC(params.year, params.month, 1));
-      where.documentDate = { gte: startDate, lt: endDate };
+      const inMonth = { documentDate: { gte: startDate, lt: endDate } };
+      // "ออกใบแจ้งหนี้ยอดคงเหลือ" preselects a quotation that may be outside the month shown.
+      where.AND = params.includeId ? [{ OR: [inMonth, { id: params.includeId }] }] : [inMonth];
     }
     const data = await prisma.document.findMany({
       where,
@@ -104,6 +127,7 @@ export async function getConfirmedQuotations(params?: { year?: number; month?: n
         documentNumber: true,
         documentDate: true,
         grandTotal: true,
+        vatAmount: true,
         customerSnapshot: true,
         companyId: true,
         customerId: true,
@@ -123,15 +147,17 @@ export async function getConfirmedQuotations(params?: { year?: number; month?: n
         skipHolidays: true,
         lineItems: { orderBy: { sequence: "asc" } },
         paymentTerms: { orderBy: { sequence: "asc" } },
-        // Deposit invoices already issued off this quotation — candidates for
-        // deduction on the final invoice.
+        // Deposit invoices already issued off this quotation: they are what
+        // the balance invoice deducts.
         invoices: {
-          where: { isDepositInvoice: true, status: { not: "CANCELLED" } },
+          where: DEPOSIT_INVOICE_WHERE,
           select: {
             id: true,
             documentNumber: true,
             documentDate: true,
             grandTotal: true,
+            vatAmount: true,
+            status: true,
             depositPercent: true,
           },
           orderBy: { documentDate: "asc" },
@@ -173,6 +199,16 @@ export async function getDocumentById(id: string) {
           paymentTerms: { orderBy: { sequence: "asc" } },
           receipts: { where: { status: "PAID", type: "RECEIPT" }, select: { id: true, netPayable: true } },
         } },
+        sourceQuotation: { include: {
+          lineItems: { orderBy: { sequence: "asc" } },
+          paymentTerms: { orderBy: { sequence: "asc" } },
+          invoices: {
+            where: DEPOSIT_INVOICE_WHERE,
+            select: { id: true, documentNumber: true, documentDate: true, grandTotal: true, vatAmount: true, status: true },
+            orderBy: { documentDate: "asc" },
+          },
+        } },
+        receipts: { where: { status: "PAID", type: "RECEIPT" }, select: { id: true, netPayable: true } },
         company: true,
         customer: true,
         createdBy: true,
