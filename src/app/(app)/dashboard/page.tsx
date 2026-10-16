@@ -137,22 +137,22 @@ export default async function DashboardPage() {
       {/* This Month Stats */}
       <div className="mt-8">
         <h2 className="text-lg font-semibold mb-4">เดือนนี้</h2>
-        <div className="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-5">
+        <div className="grid grid-cols-4 gap-2 md:gap-4 lg:grid-cols-5">
           {thisMonthCards.map((card, index) => (
             <Link
               key={card.title}
               href={card.href}
-              className={index === thisMonthCards.length - 1 ? "col-span-2 lg:col-span-1" : ""}
+              className={index === thisMonthCards.length - 1 ? "col-span-4 lg:col-span-1" : ""}
             >
-              <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
+              <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full gap-2 py-3 md:gap-6 md:py-6">
+                <CardHeader className="flex flex-row items-center justify-between px-3 pb-1 md:px-6 md:pb-2">
+                  <CardTitle className="text-[11px] leading-tight md:text-sm font-medium text-muted-foreground">
                     {card.title}
                   </CardTitle>
-                  <card.icon className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+                  <card.icon className="hidden md:block h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <p className="text-lg md:text-2xl font-bold">{card.value}</p>
+                <CardContent className="px-3 md:px-6">
+                  <p className="text-base md:text-2xl font-bold">{card.value}</p>
                   {card.subtitle && (
                     <p className="text-xs text-muted-foreground mt-1">{card.subtitle}</p>
                   )}
