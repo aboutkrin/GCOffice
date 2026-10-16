@@ -19,6 +19,7 @@ import type { AppointmentAttendeeOption, CalendarAppointmentItem } from "@/data/
 import { cn } from "@/lib/utils";
 import { formatThaiDate } from "@/lib/thai-date";
 import { APPOINTMENT_KIND_LABELS } from "@/lib/constants";
+import { QuotationThumb } from "./quotation-thumb";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -304,7 +305,11 @@ export function AppointmentDialog({
                     <FormLabel>ใบเสนอราคาที่มารับ</FormLabel>
                     {documentId ? (
                       <div className="flex items-start justify-between gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm">
-                        <div className="min-w-0">
+                        <QuotationThumb
+                          documentId={documentId}
+                          documentNumber={pickedQuotation?.documentNumber ?? appointment?.documentNumber}
+                        />
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 font-medium text-yellow-900">
                             <FileText className="h-4 w-4 shrink-0" />
                             {pickedQuotation?.documentNumber ?? appointment?.documentNumber ?? "ใบเสนอราคา"}
