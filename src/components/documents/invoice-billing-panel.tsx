@@ -30,7 +30,8 @@ const TYPE_STYLES: Record<InvoiceBillingKind, { accent: string; chip: string; ic
 interface InvoiceBillingPanelProps {
   quotation: BillingQuotationOption;
   thumbs?: ReactNode;
-  billingType: InvoiceBillingKind;
+  /** Empty until the user picks one: a new invoice has no default type. */
+  billingType: InvoiceBillingKind | "";
   onBillingTypeChange: (type: InvoiceBillingKind) => void;
   basis: "AMOUNT" | "PERCENTAGE";
   onBasisChange: (basis: "AMOUNT" | "PERCENTAGE") => void;
@@ -44,7 +45,13 @@ interface InvoiceBillingPanelProps {
   amount: number;
   /** Editing an invoice that already has paid receipts: type / amount locked. */
   locked?: boolean;
+  /** Shown under the type select when saving without a type. */
+  billingTypeError?: string;
+  /** Shown under the term select when saving a deposit without a term. */
+  termError?: string;
 }
+
+const EMPTY_STYLE = { accent: "border-l-muted-foreground/40", hint: "กรุณาเลือกประเภทการเรียกเก็บก่อนบันทึก" };
 
 /**
  * "เรียกเก็บตามใบเสนอราคา": the invoice counterpart of the receipt's
@@ -54,22 +61,26 @@ interface InvoiceBillingPanelProps {
 export function InvoiceBillingPanel({
   quotation, thumbs, billingType, onBillingTypeChange, basis, onBasisChange, value, onValueChange,
   selectedTermIndex, onSelectTerm, quotationTotal, previousDeposits, remaining, amount, locked = false,
+  billingTypeError, termError,
 }: InvoiceBillingPanelProps) {
-  const style = TYPE_STYLES[billingType];
-  const Icon = style.icon;
+  const style = billingType ? TYPE_STYLES[billingType] : EMPTY_STYLE;
+  const Icon = billingType ? TYPE_STYLES[billingType].icon : FileText;
+  const paymentTerms = quotation.paymentTerms || [];
   const afterThis = (satang(remaining) - satang(amount)) / 100;
   const deposits = quotation.invoices || [];
 
   return (
-    <div className={cn("mb-4 space-y-4 rounded-lg border border-l-4 p-4", style.accent)}>
+    <div id="invoice-billing-section" className={cn("mb-4 space-y-4 rounded-lg border border-l-4 p-4", style.accent)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Icon className="h-5 w-5 text-muted-foreground" />
           <p className="font-medium">เรียกเก็บตามใบเสนอราคา {quotation.documentNumber ?? "-"}</p>
         </div>
-        <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", style.chip)}>
-          ใบแจ้งหนี้{INVOICE_BILLING_LABELS[billingType]}
-        </span>
+        {billingType && (
+          <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", TYPE_STYLES[billingType].chip)}>
+            ใบแจ้งหนี้{INVOICE_BILLING_LABELS[billingType]}
+          </span>
+        )}
       </div>
       {thumbs}
 
@@ -91,30 +102,37 @@ export function InvoiceBillingPanel({
       )}
 
       <div className="space-y-2">
-        <Label>ประเภทการเรียกเก็บ</Label>
+        <Label>ประเภทการเรียกเก็บ <span className="text-destructive">*</span></Label>
         <Select value={billingType} onValueChange={(v) => onBillingTypeChange(v as InvoiceBillingKind)} disabled={locked}>
-          <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+          <SelectTrigger className={cn("w-full", billingTypeError && "border-destructive")} aria-invalid={!!billingTypeError}>
+            <SelectValue placeholder="เลือกประเภทการเรียกเก็บ" />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="FULL" disabled={previousDeposits > 0}>เต็มจำนวน</SelectItem>
             <SelectItem value="DEPOSIT" disabled={satang(remaining) <= 0}>มัดจำ</SelectItem>
             <SelectItem value="BALANCE" disabled={previousDeposits <= 0}>ยอดคงเหลือ</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">{style.hint}</p>
+        {billingTypeError
+          ? <p className="text-xs text-destructive">{billingTypeError}</p>
+          : <p className="text-xs text-muted-foreground">{style.hint}</p>}
       </div>
 
       {billingType === "DEPOSIT" && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <div className="space-y-2">
-            <Label>เลือกงวดชำระ (หรือระบุเอง)</Label>
-            <Select value={selectedTermIndex} onValueChange={onSelectTerm} disabled={locked}>
-              <SelectTrigger className="w-full"><SelectValue placeholder="เลือกงวดชำระ" /></SelectTrigger>
+            <Label>เลือกงวดชำระ {paymentTerms.length > 0 && <span className="text-destructive">*</span>}</Label>
+            <Select value={selectedTermIndex} onValueChange={onSelectTerm} disabled={locked || paymentTerms.length === 0}>
+              <SelectTrigger className={cn("w-full", termError && "border-destructive")} aria-invalid={!!termError}>
+                <SelectValue placeholder={paymentTerms.length > 0 ? "เลือกงวดชำระ" : "ใบเสนอราคานี้ไม่มีงวดชำระ"} />
+              </SelectTrigger>
               <SelectContent>
-                {(quotation.paymentTerms || []).map((term, index) => (
+                {paymentTerms.map((term, index) => (
                   <SelectItem key={index} value={String(index)}>{term.name} — {formatBaht(Number(term.calculatedAmount))}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {termError && <p className="text-xs text-destructive">{termError}</p>}
           </div>
           <div className="space-y-2">
             <Label>ระบุยอดเป็น</Label>
@@ -133,13 +151,15 @@ export function InvoiceBillingPanel({
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-muted p-3">
-        <strong>เรียกเก็บ{INVOICE_BILLING_LABELS[billingType]}ครั้งนี้ {formatBaht(amount)}</strong>
-        <span className={cn("text-sm", afterThis < 0 ? "text-destructive" : "text-muted-foreground")}>
-          คงเหลือหลังใบนี้ {formatBaht(afterThis)}
-        </span>
-      </div>
-      {billingType !== "FULL" && (
+      {billingType && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-muted p-3">
+          <strong>เรียกเก็บ{INVOICE_BILLING_LABELS[billingType]}ครั้งนี้ {formatBaht(amount)}</strong>
+          <span className={cn("text-sm", afterThis < 0 ? "text-destructive" : "text-muted-foreground")}>
+            คงเหลือหลังใบนี้ {formatBaht(afterThis)}
+          </span>
+        </div>
+      )}
+      {billingType && billingType !== "FULL" && (
         <p className="text-xs text-muted-foreground">
           รายการสินค้า ยอดรวม ภาษี และงวดชำระจะถูกสร้างจากใบเสนอราคาให้อัตโนมัติ
           ช่องทางการชำระที่พิมพ์ในใบคือบัญชีของบริษัทตามใบเสนอราคา
