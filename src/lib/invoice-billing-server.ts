@@ -88,9 +88,10 @@ export async function applyInvoiceBilling(tx: Tx, id: string, input: {
     quotationNumber: quotation.documentNumber ?? "", quotationTotal: total,
     previousDeposits: issued, billedAmount: calculated.amount, remainingBalance: calculated.remaining,
   };
-  // FULL and BALANCE carry the quotation's own lines and totals; a deposit is one generated line.
-  const copyLines = input.type !== "DEPOSIT";
-  const depositDeduction = input.type === "BALANCE" ? issued : 0;
+  // Only FULL carries the quotation's own lines and totals; a deposit or
+  // balance invoice is one generated line for the amount billed this time
+  // (the summary box on the print shows the quotation total and the deposits).
+  const copyLines = input.type === "FULL";
   await tx.document.update({ where: { id }, data: {
     invoiceBillingType: input.type, invoiceBillingSummary: { ...summary },
     companyId: quotation.companyId, customerId: quotation.customerId,
@@ -108,7 +109,7 @@ export async function applyInvoiceBilling(tx: Tx, id: string, input: {
     vatEnabled: quotation.vatEnabled, vatRate: quotation.vatRate,
     vatAmount: copyLines ? quotation.vatAmount : calculated.vat,
     grandTotal: copyLines ? quotation.grandTotal : calculated.amount,
-    depositDeduction, netPayable: copyLines ? total - depositDeduction : calculated.amount,
+    depositDeduction: 0, netPayable: copyLines ? total : calculated.amount,
     isDepositInvoice: false, depositPercent: null,
   } });
   await tx.documentLineItem.deleteMany({ where: { documentId: id } });
@@ -122,7 +123,7 @@ export async function applyInvoiceBilling(tx: Tx, id: string, input: {
     unitPrice: item.unitPrice, lineTotal: item.lineTotal,
     productId: item.productId, colorVariantId: item.colorVariantId,
   })) : [{
-    documentId: id, sequence: 1, productName: invoiceBillingLineName("DEPOSIT", quotation.documentNumber),
+    documentId: id, sequence: 1, productName: invoiceBillingLineName(input.type, quotation.documentNumber),
     quantity: 1, unitPrice: calculated.base, lineTotal: calculated.base, showImage: false,
   }];
   await tx.documentLineItem.createMany({ data: items });
@@ -139,12 +140,5 @@ export async function applyInvoiceBilling(tx: Tx, id: string, input: {
       documentId: id, sequence: 1, name: INVOICE_BILLING_LABELS[input.type], type: "AMOUNT",
       value: calculated.amount, calculatedAmount: calculated.amount,
     } });
-  }
-  if (input.type === "BALANCE") {
-    await tx.documentDepositDeduction.createMany({ data: deposits.map((d, index) => ({
-      documentId: id, sequence: index + 1, depositDocumentId: d.id,
-      label: "เงินมัดจำที่เรียกเก็บแล้ว", taxInvoiceNumber: d.documentNumber,
-      amount: d.grandTotal, depositDate: d.documentDate,
-    })) });
   }
 }
