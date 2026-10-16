@@ -76,7 +76,7 @@ export function TeamCalendarBoard({
   // Desktop: the month grid takes two thirds of the width with the
   // "ของจากจีนที่กำลังมา" card beside it on the right; the other three cards
   // sit in a row underneath. Phones and tablets stack the grid, then the
-  // shipments card, then the remaining cards two by two.
+  // shipments card, then the remaining cards one under the other.
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div className="min-w-0 lg:col-span-2">
@@ -93,7 +93,7 @@ export function TeamCalendarBoard({
         />
       </div>
       <div className="min-w-0">{beforeAppointments}</div>
-      <div className="grid min-w-0 grid-cols-2 items-start gap-3 sm:gap-4 lg:col-span-3 lg:grid-cols-3 [&>*]:min-w-0">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:col-span-3 lg:grid-cols-3 [&>*]:min-w-0">
         <AppointmentsCard
           appointments={data.appointments}
           year={year}
