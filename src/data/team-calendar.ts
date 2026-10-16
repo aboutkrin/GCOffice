@@ -38,6 +38,8 @@ export interface CalendarAppointmentItem {
   documentId: string | null;
   documentNumber: string | null;
   documentItems: { name: string; quantity: number }[];
+  /** PICKUP: sample photos of the goods being collected (colour photo → line snapshot → product photo), deduped */
+  documentImageUrls: string[];
   location: string | null;
   mapUrl: string | null;
   contactName: string | null;
@@ -163,7 +165,14 @@ type AppointmentRow = {
   document: {
     id: string;
     documentNumber: string | null;
-    lineItems: { productName: string; colorVariantName: string | null; quantity: number }[];
+    lineItems: {
+      productName: string;
+      productImage: string | null;
+      colorVariantName: string | null;
+      quantity: number;
+      product: { imageUrl: string | null } | null;
+      colorVariant: { imageUrl: string | null } | null;
+    }[];
   } | null;
   location: string | null;
   mapUrl: string | null;
@@ -193,6 +202,13 @@ function toAppointmentItem(a: AppointmentRow): CalendarAppointmentItem {
       name: li.colorVariantName ? `${li.productName} (${li.colorVariantName})` : li.productName,
       quantity: li.quantity,
     })),
+    documentImageUrls: Array.from(
+      new Set(
+        (a.document?.lineItems ?? [])
+          .map((li) => li.colorVariant?.imageUrl || li.productImage || li.product?.imageUrl || null)
+          .filter((url): url is string => !!url)
+      )
+    ),
     location: a.location,
     mapUrl: a.mapUrl,
     contactName: a.contactName,
@@ -221,7 +237,14 @@ const appointmentSelect = {
       id: true,
       documentNumber: true,
       lineItems: {
-        select: { productName: true, colorVariantName: true, quantity: true },
+        select: {
+          productName: true,
+          productImage: true,
+          colorVariantName: true,
+          quantity: true,
+          product: { select: { imageUrl: true } },
+          colorVariant: { select: { imageUrl: true } },
+        },
         orderBy: { sequence: "asc" as const },
       },
     },

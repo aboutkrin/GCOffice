@@ -150,6 +150,51 @@ export function ShipmentImageThumbs({
   );
 }
 
+/**
+ * One tappable thumbnail for a stack of photos (pickup card): the first photo
+ * with a "+N" corner badge when there are more; tapping opens the full-size
+ * viewer with ‹ › through all of them.
+ */
+export function StackedImageThumb({
+  urls,
+  alt = "รูปสินค้า",
+  className,
+}: {
+  urls: string[];
+  alt?: string;
+  className?: string;
+}) {
+  const [viewIndex, setViewIndex] = useState<number | null>(null);
+  if (urls.length === 0) return null;
+  return (
+    <>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setViewIndex(0);
+        }}
+        aria-label={`ดู${alt} ${urls.length} รูป`}
+        className={cn("relative block shrink-0", className)}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={urls[0]}
+          alt={alt}
+          loading="lazy"
+          className="size-16 rounded-md border bg-white object-cover hover:opacity-80"
+        />
+        {urls.length > 1 && (
+          <span className="absolute right-1 bottom-1 rounded-full bg-black/60 px-1.5 py-px text-[10px] font-medium text-white">
+            +{urls.length - 1}
+          </span>
+        )}
+      </button>
+      <ImageViewer urls={urls} index={viewIndex} onIndexChange={setViewIndex} />
+    </>
+  );
+}
+
 function ImageViewer({
   urls,
   index,

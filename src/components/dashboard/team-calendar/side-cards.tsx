@@ -47,7 +47,7 @@ import {
   LeaveActionButtons,
   ShipmentStatusButtons,
 } from "./item-actions";
-import { ShipmentImageThumbs } from "./shipment-images";
+import { ShipmentImageThumbs, StackedImageThumb } from "./shipment-images";
 
 export function daysUntil(iso: string): number {
   const todayKey = new Intl.DateTimeFormat("en-CA", {
@@ -490,18 +490,24 @@ function AppointmentRow({
             )}
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {showStatus && !cancelled && (
-            <Badge className={cn("shrink-0", APPOINTMENT_STATUS_COLORS[a.status])}>
-              {APPOINTMENT_STATUS_LABELS[a.status]}
-            </Badge>
+        <div className="flex shrink-0 flex-col items-end justify-between gap-2 self-stretch">
+          <div className="flex items-center gap-1.5">
+            {showStatus && !cancelled && (
+              <Badge className={cn("shrink-0", APPOINTMENT_STATUS_COLORS[a.status])}>
+                {APPOINTMENT_STATUS_LABELS[a.status]}
+              </Badge>
+            )}
+            <AppointmentCancelButton
+              appointment={a}
+              isAdmin={isAdmin}
+              currentUserId={currentUserId}
+              onChanged={() => router.refresh()}
+            />
+          </div>
+          {/* PICKUP: sample photos of the goods, bottom-right like the shipments card */}
+          {a.kind === "PICKUP" && a.documentImageUrls.length > 0 && (
+            <StackedImageThumb urls={a.documentImageUrls} className={cn(cancelled && "opacity-60")} />
           )}
-          <AppointmentCancelButton
-            appointment={a}
-            isAdmin={isAdmin}
-            currentUserId={currentUserId}
-            onChanged={() => router.refresh()}
-          />
         </div>
       </div>
       {a.note && <div className={cn("text-sm", cancelled && "text-muted-foreground line-through")}>{a.note}</div>}
