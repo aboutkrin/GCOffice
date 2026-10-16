@@ -1,4 +1,7 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
+import { Receipt } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { DocumentForm } from "@/components/documents/document-form";
 import { getDocumentById } from "@/data/documents";
@@ -42,7 +45,16 @@ export default async function InvoiceEditPage({
       <PageHeader
         title="แก้ไขใบแจ้งหนี้"
         description={`เลขที่: ${document.documentNumber ?? "ร่าง"}`}
-      />
+      >
+        {document.status === "DEPOSITED" && (
+          <Link href={`/receipts/new?invoiceId=${document.id}`}>
+            <Button variant="outline">
+              <Receipt className="h-4 w-4 mr-2" />
+              ออกใบเสร็จยอดคงเหลือ
+            </Button>
+          </Link>
+        )}
+      </PageHeader>
 
       <DocumentForm
         type="INVOICE"

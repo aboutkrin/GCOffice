@@ -321,11 +321,30 @@ export async function getTeamCalendar(
   };
 }
 
-/** Every shipment still on the way (not yet received into the warehouse), newest lot first. */
+/** How long a RECEIVED shipment stays on the dashboard card after it was received. */
+const RECEIVED_SHIPMENT_VISIBLE_DAYS = 30;
+
+/**
+ * Every shipment on the way plus the ones received into the warehouse during
+ * the last `RECEIVED_SHIPMENT_VISIBLE_DAYS` days (receiving goods must not make
+ * the lot vanish from the card), newest lot first.
+ */
 export async function getUpcomingShipments(): Promise<CalendarShipmentItem[]> {
   try {
+    const receivedSince = new Date(Date.now() - RECEIVED_SHIPMENT_VISIBLE_DAYS * 86_400_000);
     const rows = await prisma.chinaShipment.findMany({
-      where: { status: { in: ["SHIPPED", "ARRIVED_TH"] } },
+      where: {
+        OR: [
+          { status: { in: ["SHIPPED", "ARRIVED_TH"] } },
+          {
+            status: "RECEIVED",
+            OR: [
+              { receivedDate: { gte: receivedSince } },
+              { receivedDate: null, updatedAt: { gte: receivedSince } },
+            ],
+          },
+        ],
+      },
       orderBy: [{ createdAt: "desc" }, { shippedDate: "desc" }],
     });
     return rows.map(toShipmentItem);

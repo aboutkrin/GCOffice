@@ -62,6 +62,14 @@ export function daysUntil(iso: string): number {
 }
 
 function etaText(s: CalendarShipmentItem): { text: string; className: string } {
+  if (s.status === "RECEIVED") {
+    return {
+      text: s.receivedDate
+        ? `รับเข้าคลังแล้ว ${formatThaiDate(new Date(s.receivedDate), "short")}`
+        : "รับเข้าคลังแล้ว",
+      className: "text-emerald-700",
+    };
+  }
   if (s.status === "ARRIVED_TH") {
     return { text: "ถึงไทยแล้ว รอรับเข้าคลัง", className: "text-violet-700" };
   }
@@ -76,7 +84,8 @@ function etaText(s: CalendarShipmentItem): { text: string; className: string } {
 const SHIPMENT_ROWS_VISIBLE = 4;
 
 /**
- * Every shipment still on the way, newest lot on top. Only the first
+ * Every shipment still on the way (plus recently received lots), newest lot on
+ * top. Only the first
  * `SHIPMENT_ROWS_VISIBLE` rows are shown; the rest sit below and scroll into
  * view, so the card never pushes the other side cards off the screen.
  */

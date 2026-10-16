@@ -45,7 +45,7 @@ import {
   RECEIPT_STATUS_OPTIONS,
   DEPOSIT_INVOICE_LABEL,
 } from "@/lib/constants";
-import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal, Loader2, FileDown, ImageIcon } from "lucide-react";
+import { Pencil, Eye, Trash2, ChevronDown, Share2, MoreHorizontal, Loader2, FileDown, ImageIcon, Receipt } from "lucide-react";
 
 import { RECEIPT_PAYMENT_LABELS, type ReceiptPaymentKind } from "@/lib/receipt-payment";
 
@@ -215,6 +215,16 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
     return "-";
   };
 
+  /** Invoice to issue the balance receipt for: a paid deposit receipt or a DEPOSITED invoice. */
+  const balanceReceiptInvoiceId = (doc: { id: string; status: string; receiptPaymentType?: string | null; sourceInvoiceId?: string | null }): string | null => {
+    if (documentType === "RECEIPT" && doc.receiptPaymentType === "DEPOSIT" && doc.status === "PAID") {
+      return doc.sourceInvoiceId ?? null;
+    }
+    if (documentType === "INVOICE" && doc.status === "DEPOSITED") return doc.id;
+    return null;
+  };
+  const balanceReceiptHref = (invoiceId: string) => `/receipts/new?invoiceId=${invoiceId}`;
+
   if (documents.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground border rounded-lg">
@@ -236,7 +246,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
               <TableHead className="text-center">ออกบิล Vat</TableHead>
               <TableHead className="text-right">ยอดรวม</TableHead>
               <TableHead className="text-center">สถานะ</TableHead>
-              <TableHead className="w-[160px] text-center">จัดการ</TableHead>
+              <TableHead className="w-[200px] text-center">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -323,6 +333,17 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
+                    {balanceReceiptInvoiceId(doc) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-emerald-700"
+                        title="ออกใบเสร็จยอดคงเหลือ"
+                        onClick={() => router.push(balanceReceiptHref(balanceReceiptInvoiceId(doc)!))}
+                      >
+                        <Receipt className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -427,6 +448,17 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    {balanceReceiptInvoiceId(doc) && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => router.push(balanceReceiptHref(balanceReceiptInvoiceId(doc)!))}
+                        >
+                          <Receipt className="h-4 w-4 mr-2" />
+                          ออกใบเสร็จยอดคงเหลือ
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
                     <DropdownMenuItem
                       onClick={() => router.push(`${basePath}/${doc.id}/preview`)}
                     >

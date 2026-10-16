@@ -71,6 +71,7 @@ export async function getDocuments(params?: {
         receiptPaymentType: true,
         isDepositInvoice: true,
         netPayable: true,
+        sourceInvoiceId: true,
       },
       orderBy: { createdAt: "desc" },
     });
