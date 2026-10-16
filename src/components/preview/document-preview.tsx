@@ -321,6 +321,12 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
     // the invoice's product images in a box of their own above the summary.
     const showProductImages =
       doc.type === "RECEIPT" && !doc.lineItems.some((item) => item.productImage);
+    // A deposit / balance receipt has one "รับชำระ..." line and no products,
+    // so its price column must not read "ราคา/กล่อง".
+    const paymentLines =
+      doc.type === "RECEIPT" &&
+      !!doc.receiptPaymentType &&
+      !doc.lineItems.some((item) => item.productSku);
 
     const summaryBlock = (
       <>
@@ -422,7 +428,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
                 />
               )}
 
-              <PreviewLineItems items={items} />
+              <PreviewLineItems items={items} paymentLines={paymentLines} />
 
               {/* Spacer: pushes summary (last page) and page number to the bottom */}
               <div className="flex-grow" />
@@ -469,7 +475,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
             />
           </div>
           <div data-m="items">
-            <PreviewLineItems items={doc.lineItems} />
+            <PreviewLineItems items={doc.lineItems} paymentLines={paymentLines} />
           </div>
           <div data-m="summary" className="flex flex-col">
             {summaryBlock}

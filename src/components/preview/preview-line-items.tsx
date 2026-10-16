@@ -42,14 +42,23 @@ function formatQuantity(n: number) {
 
 interface PreviewLineItemsProps {
   items: LineItem[];
+  /**
+   * The lines are payments, not goods (a deposit / balance receipt): the
+   * price column is headed "ราคา" and no unit is printed after the quantity.
+   */
+  paymentLines?: boolean;
 }
 
-export function PreviewLineItems({ items }: PreviewLineItemsProps) {
+export function PreviewLineItems({ items, paymentLines = false }: PreviewLineItemsProps) {
   // "ราคา/กล่อง" when every line shares one unit; otherwise the generic
   // header and the unit printed after each quantity.
   const units = new Set(items.map(unitOf));
-  const commonUnit = units.size === 1 ? [...units][0] : null;
-  const priceHeader = commonUnit ? `ราคา/${commonUnit}` : "ราคา/หน่วย";
+  const commonUnit = paymentLines ? DEFAULT_UNIT : units.size === 1 ? [...units][0] : null;
+  const priceHeader = paymentLines
+    ? "ราคา"
+    : commonUnit
+      ? `ราคา/${commonUnit}`
+      : "ราคา/หน่วย";
 
   return (
     <div className="mb-3">
