@@ -9,7 +9,7 @@ import type {
   TeamMemberOption,
 } from "@/data/team-calendar";
 import { TeamCalendar } from "./team-calendar";
-import { AppointmentsCard } from "./side-cards";
+import { AppointmentsCard, PickupCard } from "./side-cards";
 
 interface TeamCalendarBoardProps {
   initialData: TeamCalendarData;
@@ -91,6 +91,14 @@ export function TeamCalendarBoard({
       <div className="flex min-w-0 flex-col gap-4">
         {beforeAppointments}
         <AppointmentsCard
+          appointments={data.appointments}
+          year={year}
+          month={month}
+          isPending={isPending}
+          isAdmin={isAdmin}
+          currentUserId={currentUserId}
+        />
+        <PickupCard
           appointments={data.appointments}
           year={year}
           month={month}

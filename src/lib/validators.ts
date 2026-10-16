@@ -483,11 +483,16 @@ export const leaveReviewSchema = z.object({
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-/** นัดพบลูกค้า: the attendee must be an ADMIN (checked server-side). */
+/**
+ * นัดพบลูกค้า: going out (VISIT_CUSTOMER) needs an ADMIN attendee (checked
+ * server-side). PICKUP = the customer collects goods at the showroom, optionally
+ * linked to the CONFIRMED quotation (`documentId`).
+ */
 export const appointmentSchema = z.object({
-  kind: z.enum(["VISIT_CUSTOMER", "SHOWROOM"]).default("VISIT_CUSTOMER"),
+  kind: z.enum(["VISIT_CUSTOMER", "SHOWROOM", "PICKUP"]).default("VISIT_CUSTOMER"),
   companyName: z.string().trim().min(1, "กรุณาระบุชื่อบริษัท/ลูกค้า").max(200, "ชื่อยาวเกินไป"),
   customerId: z.string().nullable().optional(),
+  documentId: z.string().nullable().optional(),
   location: z.string().max(500, "สถานที่ยาวเกินไป").optional(),
   mapUrl: z
     .string()

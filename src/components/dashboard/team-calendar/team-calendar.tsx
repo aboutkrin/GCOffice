@@ -14,7 +14,6 @@ import {
   CalendarOff,
   Handshake,
   MapPin,
-  Store,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -62,7 +61,12 @@ import {
   LeaveActionButtons,
   ShipmentStatusButtons,
 } from "./item-actions";
-import { AppointmentContactLinks, appointmentTimeText } from "./side-cards";
+import {
+  AppointmentContactLinks,
+  AppointmentQuotationLine,
+  appointmentKindStyle,
+  appointmentTimeText,
+} from "./side-cards";
 import { ShipmentImageThumbs } from "./shipment-images";
 
 type ShipmentMilestone = "shipped" | "eta" | "arrived" | "received";
@@ -160,6 +164,12 @@ function buildEventMap(data: TeamCalendarData, year: number, month: number) {
   return map;
 }
 
+function appointmentPrefix(kind: string): string {
+  if (kind === "SHOWROOM") return "โชว์รูม ";
+  if (kind === "PICKUP") return "รับของ ";
+  return "";
+}
+
 function chipLabel(ev: DayEvent): string {
   if (ev.kind === "holiday") return ev.item.name;
   if (ev.kind === "leave") {
@@ -167,8 +177,7 @@ function chipLabel(ev: DayEvent): string {
     return `${ev.item.profileName} (${LEAVE_TYPE_LABELS[ev.item.type]}${period})`;
   }
   if (ev.kind === "appointment") {
-    const prefix = ev.item.kind === "SHOWROOM" ? "โชว์รูม " : "";
-    return `${ev.item.startTime} ${prefix}${ev.item.companyName} (${ev.item.attendeeName})`;
+    return `${ev.item.startTime} ${appointmentPrefix(ev.item.kind)}${ev.item.companyName} (${ev.item.attendeeName})`;
   }
   return `${MILESTONE_LABELS[ev.milestone]}: ${ev.item.title}`;
 }
@@ -194,6 +203,11 @@ function chipClass(ev: DayEvent): string {
         ? "bg-pink-50 text-pink-800 border-pink-300 border-dashed"
         : "bg-pink-100 text-pink-800 border-pink-200";
     }
+    if (ev.item.kind === "PICKUP") {
+      return ev.item.status === "PENDING"
+        ? "bg-yellow-50 text-yellow-800 border-yellow-300 border-dashed"
+        : "bg-yellow-100 text-yellow-800 border-yellow-200";
+    }
     return ev.item.status === "PENDING"
       ? "bg-teal-50 text-teal-800 border-teal-300 border-dashed"
       : "bg-teal-100 text-teal-800 border-teal-200";
@@ -209,8 +223,7 @@ function shortLabel(ev: DayEvent): string {
   if (ev.kind === "holiday") return ev.item.name;
   if (ev.kind === "leave") return ev.item.profileName;
   if (ev.kind === "appointment") {
-    const prefix = ev.item.kind === "SHOWROOM" ? "โชว์รูม " : "";
-    return `${ev.item.startTime} ${prefix}${ev.item.companyName}`;
+    return `${ev.item.startTime} ${appointmentPrefix(ev.item.kind)}${ev.item.companyName}`;
   }
   return ev.item.title;
 }
@@ -753,17 +766,13 @@ export function TeamCalendar({
                 const a = ev.item;
                 const cancelled = a.status === "CANCELLED";
                 const canEdit = !cancelled && (isAdmin || a.createdById === currentUserId);
-                const showroom = a.kind === "SHOWROOM";
+                const style = appointmentKindStyle(a.kind);
                 return (
                   <div
                     key={i}
                     className={cn(
                       "space-y-2 rounded-md border p-3",
-                      cancelled
-                        ? "border-gray-200 bg-gray-50/60"
-                        : showroom
-                          ? "border-pink-200"
-                          : "border-teal-200"
+                      cancelled ? "border-gray-200 bg-gray-50/60" : style.border
                     )}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -773,17 +782,13 @@ export function TeamCalendar({
                           cancelled && "text-muted-foreground line-through decoration-gray-400"
                         )}
                       >
-                        <div
-                          className={cn(
-                            "flex items-center gap-2 text-xs",
-                            showroom ? "text-pink-700" : "text-teal-700"
-                          )}
-                        >
-                          {showroom ? <Store className="h-3.5 w-3.5" /> : <Handshake className="h-3.5 w-3.5" />}
+                        <div className={cn("flex items-center gap-2 text-xs", style.text)}>
+                          <style.Icon className="h-3.5 w-3.5" />
                           {APPOINTMENT_KIND_LABELS[a.kind] ?? "นัดพบลูกค้า"} · {appointmentTimeText(a)} น.
                         </div>
                         <div className="font-medium">{a.companyName}</div>
-                        {a.location && (
+                        <AppointmentQuotationLine appointment={a} className="text-sm" />
+                        {!style.atShowroom && a.location && (
                           <div className="flex items-start gap-1 text-sm text-muted-foreground">
                             <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                             <span className="whitespace-pre-line">{a.location}</span>
@@ -791,7 +796,7 @@ export function TeamCalendar({
                         )}
                         <AppointmentContactLinks appointment={a} />
                         <div className="text-sm text-muted-foreground">
-                          {showroom ? "ผู้รับนัด" : "ผู้ไปพบ"}: {a.attendeeName}
+                          {style.attendeeLabel}: {a.attendeeName}
                           {a.attendeeId === currentUserId && " (คุณ)"}
                           {a.createdById !== a.attendeeId && ` · ลงโดย ${a.createdByName}`}
                         </div>

@@ -4,17 +4,20 @@ import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Check, Loader2, Search, Store, Navigation } from "lucide-react";
+import { Check, FileText, Loader2, PackageCheck, Search, Store, Navigation, X } from "lucide-react";
 
 import { appointmentSchema, type AppointmentFormData } from "@/lib/validators";
 import {
   createAppointment,
   searchCustomersForAppointmentAction,
+  searchQuotationsForAppointmentAction,
   updateAppointment,
   type AppointmentCustomerOption,
+  type AppointmentQuotationOption,
 } from "@/actions/appointment-actions";
 import type { AppointmentAttendeeOption, CalendarAppointmentItem } from "@/data/team-calendar";
 import { cn } from "@/lib/utils";
+import { formatThaiDate } from "@/lib/thai-date";
 import { APPOINTMENT_KIND_LABELS } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
@@ -75,9 +78,13 @@ function buildDefaults(
 ): AppointmentFormData {
   if (appointment) {
     return {
-      kind: appointment.kind === "SHOWROOM" ? "SHOWROOM" : "VISIT_CUSTOMER",
+      kind:
+        appointment.kind === "SHOWROOM" || appointment.kind === "PICKUP"
+          ? appointment.kind
+          : "VISIT_CUSTOMER",
       companyName: appointment.companyName,
       customerId: appointment.customerId,
+      documentId: appointment.documentId,
       location: appointment.location ?? "",
       mapUrl: appointment.mapUrl ?? "",
       contactName: appointment.contactName ?? "",
@@ -95,6 +102,7 @@ function buildDefaults(
     kind: "VISIT_CUSTOMER",
     companyName: "",
     customerId: null,
+    documentId: null,
     location: "",
     mapUrl: "",
     contactName: "",
@@ -129,7 +137,11 @@ export function AppointmentDialog({
 
   const attendeeId = form.watch("attendeeId");
   const kind = form.watch("kind");
-  const isShowroom = kind === "SHOWROOM";
+  const isPickup = kind === "PICKUP";
+  // Showroom visits and pickups both happen at our place: no location, staff may receive.
+  const isShowroom = kind === "SHOWROOM" || isPickup;
+  const documentId = form.watch("documentId");
+  const [pickedQuotation, setPickedQuotation] = useState<AppointmentQuotationOption | null>(null);
   const admins = attendees.filter((a) => a.role === "ADMIN");
   // Staff can only receive customers at the showroom; going out is admin-only.
   const attendeeOptions = isShowroom ? attendees : admins;
@@ -138,6 +150,14 @@ export function AppointmentDialog({
   // Self-booked or booked for a staff member: confirmed at once, no admin approval.
   const needsConfirmation = !selfBooked && attendee?.role === "ADMIN";
   const attendeeName = attendee?.name;
+
+  // The linked quotation belongs to a pickup only.
+  useEffect(() => {
+    if (!isPickup && form.getValues("documentId")) form.setValue("documentId", null);
+  }, [isPickup, form]);
+  useEffect(() => {
+    if (!open) setPickedQuotation(null);
+  }, [open]);
 
   // Switching back to "ไปพบลูกค้า" with a staff attendee picked: fall back to an admin.
   useEffect(() => {
@@ -179,6 +199,24 @@ export function AppointmentDialog({
     });
   }
 
+  function pickQuotation(q: AppointmentQuotationOption) {
+    setPickedQuotation(q);
+    form.setValue("documentId", q.id, { shouldValidate: true });
+    form.setValue("customerId", q.customerId);
+    form.setValue("companyName", q.customerName, { shouldValidate: true });
+    if (!form.getValues("contactName") && q.contactPerson) {
+      form.setValue("contactName", q.contactPerson);
+    }
+    if (!form.getValues("contactPhone") && q.phone) {
+      form.setValue("contactPhone", q.phone);
+    }
+  }
+
+  function clearQuotation() {
+    setPickedQuotation(null);
+    form.setValue("documentId", null);
+  }
+
   function pickCustomer(c: AppointmentCustomerOption) {
     form.setValue("companyName", c.companyName || c.customerName, { shouldValidate: true });
     form.setValue("customerId", c.id);
@@ -199,7 +237,9 @@ export function AppointmentDialog({
         <DialogHeader>
           <DialogTitle>{appointment ? "แก้ไขนัดพบลูกค้า" : "นัดพบลูกค้า"}</DialogTitle>
           <DialogDescription>
-            {isShowroom
+            {isPickup
+              ? "ลูกค้ามารับสินค้าที่โชว์รูม เลือกใบเสนอราคาที่ยืนยันแล้วเพื่อให้รู้ว่ามารับรายการไหน · ลงให้พนักงานรับนัดหรือรับเองได้ นัดจะยืนยันทันที"
+              : isShowroom
               ? "ลงให้พนักงานรับนัดหรือรับเอง นัดจะยืนยันทันที · ถ้าลงให้แอดมินคนอื่น จะแสดงเป็น \"รอยืนยัน\" จนกว่าแอดมินจะยืนยันว่าว่าง"
               : "ถ้าคุณเป็นผู้ไปพบเอง นัดจะยืนยันทันที · ถ้าลงให้แอดมินคนอื่น จะแสดงเป็น \"รอยืนยัน\" จนกว่าแอดมินจะยืนยันว่าว่าง"}
           </DialogDescription>
@@ -214,11 +254,12 @@ export function AppointmentDialog({
                 <FormItem>
                   <FormLabel>ประเภทนัด</FormLabel>
                   <FormControl>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       {(
                         [
                           { value: "VISIT_CUSTOMER", icon: Navigation },
                           { value: "SHOWROOM", icon: Store },
+                          { value: "PICKUP", icon: PackageCheck },
                         ] as const
                       ).map(({ value, icon: Icon }) => {
                         const active = field.value === value;
@@ -229,11 +270,13 @@ export function AppointmentDialog({
                             onClick={() => field.onChange(value)}
                             aria-pressed={active}
                             className={cn(
-                              "flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
+                              "flex flex-col items-center justify-center gap-1 rounded-md border px-2 py-2 text-center text-xs leading-tight transition-colors sm:text-sm",
                               active
                                 ? value === "SHOWROOM"
                                   ? "border-pink-300 bg-pink-50 font-medium text-pink-800"
-                                  : "border-teal-300 bg-teal-50 font-medium text-teal-800"
+                                  : value === "PICKUP"
+                                    ? "border-yellow-300 bg-yellow-50 font-medium text-yellow-800"
+                                    : "border-teal-300 bg-teal-50 font-medium text-teal-800"
                                 : "text-muted-foreground hover:bg-muted"
                             )}
                           >
@@ -249,12 +292,64 @@ export function AppointmentDialog({
               )}
             />
 
+            {isPickup && (
+              <FormField
+                control={form.control}
+                name="documentId"
+                render={() => (
+                  <FormItem>
+                    <FormLabel>ใบเสนอราคาที่มารับ</FormLabel>
+                    {documentId ? (
+                      <div className="flex items-start justify-between gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 font-medium text-yellow-900">
+                            <FileText className="h-4 w-4 shrink-0" />
+                            {pickedQuotation?.documentNumber ?? appointment?.documentNumber ?? "ใบเสนอราคา"}
+                          </div>
+                          {(() => {
+                            const items = pickedQuotation?.items ?? appointment?.documentItems ?? [];
+                            if (items.length === 0) return null;
+                            return (
+                              <div className="mt-0.5 text-xs text-yellow-800/80">
+                                {items.slice(0, 3).map((it) => `${it.name} ×${it.quantity}`).join(", ")}
+                                {items.length > 3 && ` +${items.length - 3}`}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={clearQuotation}
+                          className="shrink-0 rounded p-0.5 text-yellow-800 hover:bg-yellow-100"
+                          title="เอาใบเสนอราคาออก"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      open && <QuotationPicker onPick={pickQuotation} />
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      เลือกได้เฉพาะใบเสนอราคาที่ยืนยันแล้ว · เลือกแล้วชื่อลูกค้าและผู้ติดต่อจะถูกกรอกให้
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="companyName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{isShowroom ? "บริษัท / ลูกค้าที่มาชม" : "บริษัท / ลูกค้าที่พบ"}</FormLabel>
+                  <FormLabel>
+                    {isPickup
+                      ? "ลูกค้าที่มารับสินค้า"
+                      : isShowroom
+                        ? "บริษัท / ลูกค้าที่มาชม"
+                        : "บริษัท / ลูกค้าที่พบ"}
+                  </FormLabel>
                   <div className="flex gap-2">
                     <FormControl>
                       <Input
@@ -433,7 +528,11 @@ export function AppointmentDialog({
                 <FormItem>
                   <FormLabel>หมายเหตุ (ไม่บังคับ)</FormLabel>
                   <FormControl>
-                    <Textarea rows={2} placeholder="เช่น เอาตัวอย่างสินค้าไปด้วย" {...field} />
+                    <Textarea
+                      rows={2}
+                      placeholder={isPickup ? "เช่น มารับ Cloudy 4 กล่อง" : "เช่น เอาตัวอย่างสินค้าไปด้วย"}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -512,6 +611,85 @@ function CustomerPicker({ onPick }: { onPick: (c: AppointmentCustomerOption) => 
                     <span className="truncate font-medium">{c.companyName || c.customerName}</span>
                     <span className="truncate text-xs text-muted-foreground">
                       {[c.code, c.companyName ? c.customerName : null, c.address]
+                        .filter(Boolean)
+                        .join(" | ")}
+                    </span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Search CONFIRMED / SHIPPED quotations and hand the picked one back (fills customer / contact). */
+function QuotationPicker({ onPick }: { onPick: (q: AppointmentQuotationOption) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<AppointmentQuotationOption[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      searchQuotationsForAppointmentAction(query)
+        .then((rows) => {
+          if (!cancelled) setResults(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open, query]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" className="w-full justify-start font-normal text-muted-foreground">
+          <Search className="mr-2 h-4 w-4" />
+          ค้นหาใบเสนอราคาที่ยืนยันแล้ว...
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[min(380px,calc(100vw-2rem))] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="เลขที่ใบเสนอราคา / ชื่อลูกค้า..." value={query} onValueChange={setQuery} />
+          <CommandList className="max-h-64">
+            <CommandEmpty>{loading ? "กำลังค้นหา..." : "ไม่พบใบเสนอราคาที่ยืนยันแล้ว"}</CommandEmpty>
+            <CommandGroup>
+              {results.map((q) => (
+                <CommandItem
+                  key={q.id}
+                  value={q.id}
+                  onSelect={() => {
+                    onPick(q);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("mr-2 size-4 opacity-0")} />
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate font-medium">
+                      {q.documentNumber ?? "(ไม่มีเลขที่)"} · {q.customerName}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {[
+                        formatThaiDate(new Date(q.documentDate), "short"),
+                        q.items
+                          .slice(0, 3)
+                          .map((it) => `${it.name} ×${it.quantity}`)
+                          .join(", ") + (q.items.length > 3 ? ` +${q.items.length - 3}` : ""),
+                      ]
                         .filter(Boolean)
                         .join(" | ")}
                     </span>

@@ -7,6 +7,7 @@ import { assertAdmin, requireUserAction } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { actionErrorMessage } from "@/lib/action-error";
 import { searchCustomers } from "@/data/customers";
+import { searchConfirmedQuotations } from "@/data/documents";
 
 type Validated = ReturnType<typeof appointmentSchema.parse>;
 
@@ -15,6 +16,7 @@ function appointmentData(validated: Validated) {
     kind: validated.kind,
     companyName: validated.companyName.trim(),
     customerId: validated.customerId || null,
+    documentId: validated.kind === "PICKUP" ? validated.documentId || null : null,
     location: validated.location?.trim() || null,
     mapUrl: validated.mapUrl?.trim() || null,
     contactName: validated.contactName?.trim() || null,
@@ -28,8 +30,9 @@ function appointmentData(validated: Validated) {
 }
 
 /**
- * Going out to a customer is for admins only. A showroom visit can also be
- * received by any active staff member. Returns whether the attendee is an admin.
+ * Going out to a customer is for admins only. A showroom visit or a goods
+ * pickup can also be received by any active staff member. Returns whether the
+ * attendee is an admin.
  */
 async function assertAttendee(attendeeId: string, kind: Validated["kind"]): Promise<{ isAdmin: boolean }> {
   const attendee = await prisma.profile.findUnique({
@@ -40,10 +43,22 @@ async function assertAttendee(attendeeId: string, kind: Validated["kind"]): Prom
     throw new Error("ผู้รับนัดต้องเป็นผู้ใช้ที่ยังใช้งานอยู่");
   }
   const isAdmin = attendee.role === "ADMIN";
-  if (kind !== "SHOWROOM" && !isAdmin) {
-    throw new Error("ผู้ไปพบลูกค้าต้องเป็นแอดมิน (พนักงานรับนัดได้เฉพาะลูกค้ามาชมโชว์รูม)");
+  if (kind === "VISIT_CUSTOMER" && !isAdmin) {
+    throw new Error("ผู้ไปพบลูกค้าต้องเป็นแอดมิน (พนักงานรับนัดได้เฉพาะลูกค้ามาชมโชว์รูม / รับสินค้า)");
   }
   return { isAdmin };
+}
+
+/** A pickup may only be linked to a quotation that is already sold (CONFIRMED / SHIPPED). */
+async function assertPickupDocument(documentId: string | null) {
+  if (!documentId) return;
+  const doc = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: { type: true, status: true },
+  });
+  if (!doc || doc.type !== "QUOTATION" || (doc.status !== "CONFIRMED" && doc.status !== "SHIPPED")) {
+    throw new Error("เลือกได้เฉพาะใบเสนอราคาที่ยืนยันแล้ว");
+  }
 }
 
 /**
@@ -57,6 +72,7 @@ export async function createAppointment(data: unknown): Promise<{ error?: string
     const user = await requireUserAction();
     const validated = appointmentSchema.parse(data);
     const attendee = await assertAttendee(validated.attendeeId, validated.kind);
+    await assertPickupDocument(validated.kind === "PICKUP" ? validated.documentId || null : null);
     const autoConfirmed = validated.attendeeId === user.id || !attendee.isAdmin;
 
     await prisma.customerAppointment.create({
@@ -95,6 +111,7 @@ export async function updateAppointment(id: string, data: unknown): Promise<{ er
       throw new Error("นัดนี้ถูกยกเลิกแล้ว");
     }
     const attendee = await assertAttendee(validated.attendeeId, validated.kind);
+    await assertPickupDocument(validated.kind === "PICKUP" ? validated.documentId || null : null);
 
     const next = appointmentData(validated);
     const scheduleChanged =
@@ -209,4 +226,25 @@ export async function searchCustomersForAppointmentAction(
     contactPerson: c.contactPerson ?? null,
     phone: c.phone ?? null,
   }));
+}
+
+export interface AppointmentQuotationOption {
+  id: string;
+  documentNumber: string | null;
+  /** ISO date */
+  documentDate: string;
+  customerId: string;
+  customerName: string;
+  contactPerson: string | null;
+  phone: string | null;
+  address: string | null;
+  items: { name: string; quantity: number }[];
+}
+
+/** Confirmed-quotation search for the "รับสินค้าที่โชว์รูม" appointment dialog. */
+export async function searchQuotationsForAppointmentAction(
+  query: string
+): Promise<AppointmentQuotationOption[]> {
+  await requireUserAction();
+  return searchConfirmedQuotations(query);
 }
