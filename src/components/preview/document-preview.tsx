@@ -387,7 +387,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           netPayable={doc.netPayable}
         />
         <PreviewPayment
-          paymentTerms={doc.paymentTerms}
+          paymentTerms={billedPart ? [] : doc.paymentTerms}
           company={{
             bankName: doc.companySnapshot.bankName,
             accountName: doc.companySnapshot.accountName,
@@ -399,9 +399,9 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           paymentDate={doc.paymentDate}
           paymentMethod={doc.paymentMethod}
           paymentReference={doc.paymentReference}
-          productionDays={doc.productionDays}
-          deliveryDateStart={doc.deliveryDateStart}
-          deliveryDateEnd={doc.deliveryDateEnd}
+          productionDays={billedPart ? undefined : doc.productionDays}
+          deliveryDateStart={billedPart ? undefined : doc.deliveryDateStart}
+          deliveryDateEnd={billedPart ? undefined : doc.deliveryDateEnd}
           deliveryCompletedDate={doc.deliveryCompletedDate}
         />
         <PreviewFooter
