@@ -12,8 +12,8 @@ import { PreviewPayment } from "./preview-payment";
 import { PreviewFooter } from "./preview-footer";
 
 import { type ReceiptPaymentKind, type ReceiptPaymentSummary, RECEIPT_PAYMENT_LABELS } from "@/lib/receipt-payment";
-import { type InvoiceBillingKind, type InvoiceBillingSummary, INVOICE_BILLING_LABELS, invoiceBillingTitle } from "@/lib/invoice-billing";
-import { formatBaht } from "@/lib/thai-currency";
+import { type InvoiceBillingKind, type InvoiceBillingSummary, invoiceBillingTitle } from "@/lib/invoice-billing";
+import { formatBaht, formatNumber } from "@/lib/thai-currency";
 
 interface CompanySnapshot {
   name: string;
@@ -342,23 +342,13 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
     const paymentLines =
       ((doc.type === "RECEIPT" && !!doc.receiptPaymentType) || depositInvoice) &&
       !doc.lineItems.some((item) => item.productSku);
-    const billing = doc.type === "INVOICE" && doc.invoiceBillingType && doc.invoiceBillingType !== "FULL"
-      ? doc.invoiceBillingSummary : null;
+    // A deposit invoice prints one quiet reference line under the total; the
+    // balance invoice already says it all in its deduction rows.
+    const depositNote = depositInvoice && doc.invoiceBillingSummary ? doc.invoiceBillingSummary : null;
 
     const summaryBlock = (
       <>
         {showProductImages && <PreviewProductImages items={productImageItems} />}
-        {billing && doc.invoiceBillingType && (
-          <div className={`mb-3 rounded border p-2 text-[11px] ${doc.invoiceBillingType === "DEPOSIT" ? "border-amber-200 bg-amber-50/40" : "border-blue-200 bg-blue-50/40"}`}>
-            <div className="mb-1 font-semibold">เรียกเก็บ{INVOICE_BILLING_LABELS[doc.invoiceBillingType]} ตามใบเสนอราคาเลขที่ {billing.quotationNumber}</div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-              <span>ยอดใบเสนอราคา</span><span className="text-right">{formatBaht(billing.quotationTotal)}</span>
-              <span>เรียกเก็บมัดจำแล้วก่อนหน้านี้</span><span className="text-right">{formatBaht(billing.previousDeposits)}</span>
-              <strong>เรียกเก็บครั้งนี้</strong><strong className="text-right">{formatBaht(billing.billedAmount)}</strong>
-              <span>คงเหลือหลังใบนี้</span><span className="text-right">{formatBaht(billing.remainingBalance)}</span>
-            </div>
-          </div>
-        )}
         {doc.receiptPaymentType && doc.receiptPaymentSummary && (
           <div className="mb-3 rounded border border-blue-200 p-2 text-[11px]">
             <div className="mb-1 font-semibold">รับชำระ{RECEIPT_PAYMENT_LABELS[doc.receiptPaymentType]} ตามใบแจ้งหนี้เลขที่ {doc.receiptPaymentSummary.invoiceNumber}</div>
@@ -387,6 +377,12 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           depositDeductions={doc.depositDeductions}
           netPayable={doc.netPayable}
         />
+        {depositNote && (
+          <div className="-mt-2 mb-3 text-right text-[10px] text-gray-500">
+            {depositNote.previousDeposits > 0 ? "เงินมัดจำเพิ่มเติม" : "เงินมัดจำ"}ตามใบเสนอราคาเลขที่ {depositNote.quotationNumber}
+            {" · "}คงเหลือหลังมัดจำ {formatNumber(depositNote.remainingBalance)}
+          </div>
+        )}
         <PreviewPayment
           paymentTerms={doc.paymentTerms}
           company={{
