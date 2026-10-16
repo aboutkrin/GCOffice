@@ -75,7 +75,7 @@ export function TeamCalendarBoard({
 
   // Desktop: the month grid takes the full width (its labels need the room),
   // and the four side cards sit in a row underneath, so nothing is left as a
-  // tall single column beside an empty area. Narrow screens stack everything.
+  // tall single column beside an empty area. Phones and tablets show the cards two by two.
   return (
     <div className="flex flex-col gap-4">
       <div className="min-w-0">
@@ -91,7 +91,7 @@ export function TeamCalendarBoard({
           attendees={attendees}
         />
       </div>
-      <div className="grid min-w-0 grid-cols-1 items-start gap-4 md:grid-cols-2 2xl:grid-cols-4">
+      <div className="grid min-w-0 grid-cols-2 items-start gap-3 sm:gap-4 2xl:grid-cols-4 [&>*]:min-w-0">
         {beforeAppointments}
         <AppointmentsCard
           appointments={data.appointments}
