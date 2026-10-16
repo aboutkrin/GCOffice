@@ -372,13 +372,20 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           </div>
         )}
         {doc.receiptPaymentType && doc.receiptPaymentSummary && (
-          <div className="mb-3 rounded border border-blue-200 p-2 text-[11px]">
-            <div className="mb-1 font-semibold">รับชำระ{RECEIPT_PAYMENT_LABELS[doc.receiptPaymentType]} ตามใบแจ้งหนี้เลขที่ {doc.receiptPaymentSummary.invoiceNumber}</div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-              <span>ยอดใบแจ้งหนี้</span><span className="text-right">{formatBaht(doc.receiptPaymentSummary.invoiceTotal)}</span>
-              <span>รับชำระก่อนหน้านี้</span><span className="text-right">{formatBaht(doc.receiptPaymentSummary.previousPayments)}</span>
-              <strong>รับชำระครั้งนี้</strong><strong className="text-right">{formatBaht(doc.receiptPaymentSummary.paymentAmount)}</strong>
-              <span>ยอดคงเหลือหลังรับชำระ</span><span className="text-right">{formatBaht(doc.receiptPaymentSummary.remainingBalance)}</span>
+          <div className="mb-3 flex items-stretch gap-3">
+            {/* Same layout as the deposit / balance invoice: bank box left, payment box right.
+                Receipts are always blue (the balance-invoice colour), never amber. */}
+            <div className="flex-1 min-w-0">
+              {bankInfo && <BankInfoBox company={bankInfo} compact />}
+            </div>
+            <div className="w-full max-w-sm shrink-0 rounded border border-blue-200 bg-blue-50/40 p-2 text-[11px]">
+              <div className="mb-1 font-semibold">รับชำระ{RECEIPT_PAYMENT_LABELS[doc.receiptPaymentType]} ตามใบแจ้งหนี้เลขที่ {doc.receiptPaymentSummary.invoiceNumber}</div>
+              <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5">
+                <span className="text-gray-500">ยอดใบแจ้งหนี้</span><span className="text-right text-gray-500">{formatBaht(doc.receiptPaymentSummary.invoiceTotal)}</span>
+                <span className="text-gray-500">รับชำระก่อนหน้านี้</span><span className="text-right text-gray-500">{formatBaht(doc.receiptPaymentSummary.previousPayments)}</span>
+                <strong className="text-gray-900">รับชำระครั้งนี้</strong><strong className="text-right text-gray-900">{formatBaht(doc.receiptPaymentSummary.paymentAmount)}</strong>
+                <span className="text-gray-500">ยอดคงเหลือหลังรับชำระ</span><span className="text-right text-gray-500">{formatBaht(doc.receiptPaymentSummary.remainingBalance)}</span>
+              </div>
             </div>
           </div>
         )}
