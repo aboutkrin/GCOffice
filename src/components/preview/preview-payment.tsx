@@ -33,52 +33,10 @@ interface PreviewPaymentProps {
   deliveryCompletedDate?: Date;
 }
 
-export function PreviewPayment({
-  paymentTerms,
-  company,
-  documentType,
-  paymentDate,
-  paymentMethod,
-  paymentReference,
-  productionDays,
-  deliveryDateStart,
-  deliveryDateEnd,
-  deliveryCompletedDate,
-}: PreviewPaymentProps) {
-  const isReceipt = documentType === "RECEIPT";
-  const hasPaymentTerms = paymentTerms.length > 0;
-  // Receipts don't show the bank account / QR box.
-  const hasBankInfo =
-    !isReceipt &&
-    (company.bankName || company.accountName || company.accountNumber);
-  // Invoices already paid print how the customer paid, next to the delivery info.
-  const hasPaymentRecord = !!paymentMethod && documentType !== "QUOTATION";
-  const hasDeliveryInfo = isReceipt
-    ? !!(deliveryCompletedDate || paymentDate || paymentMethod)
-    : productionDays || deliveryDateStart || deliveryDateEnd || hasPaymentRecord;
-
-  if (!hasPaymentTerms && !hasBankInfo && !hasDeliveryInfo) return null;
-
-  const paymentRecordRows = hasPaymentRecord ? (
-    <>
-      <span className="font-bold">ช่องทางการชำระ</span>
-      <span className="font-bold">:</span>
-      <span>
-        {PAYMENT_METHOD_LABELS[paymentMethod!] ?? paymentMethod}
-        {paymentReference ? ` (${paymentReference})` : ""}
-      </span>
-      {!isReceipt && paymentDate && (
-        <>
-          <span className="font-bold">วันที่ชำระเงิน</span>
-          <span className="font-bold">:</span>
-          <span>{formatThaiDate(new Date(paymentDate))}</span>
-        </>
-      )}
-    </>
-  ) : null;
-
-  const bankOnlyBox = (
-            <div className="rounded border border-blue-200 bg-blue-50/50 p-3">
+/** "ข้อมูลบัญชีสำหรับการชำระ": bank account + PromptPay QR. `compact` fits half a row. */
+export function BankInfoBox({ company, compact = false }: { company: PreviewPaymentProps["company"]; compact?: boolean }) {
+  return (
+            <div className={`h-full rounded border border-blue-200 bg-blue-50/50 ${compact ? "p-2" : "p-3"}`}>
               <div className="flex items-center gap-2 mb-2">
                 <Landmark className="h-4 w-4 text-blue-600" />
                 <h4 className="text-[10px] font-bold text-gray-800">
@@ -126,7 +84,7 @@ export function PreviewPayment({
                     <img
                       src={company.promptpayQrUrl}
                       alt="PromptPay QR Code"
-                      className="h-24 w-24 sm:h-28 sm:w-28 object-contain"
+                      className={compact ? "h-20 w-20 object-contain" : "h-24 w-24 sm:h-28 sm:w-28 object-contain"}
                     />
                     <span className="text-[10px] text-gray-500 mt-1">พร้อมเพย์</span>
                   </div>
@@ -134,6 +92,53 @@ export function PreviewPayment({
               </div>
             </div>
   );
+}
+
+export function PreviewPayment({
+  paymentTerms,
+  company,
+  documentType,
+  paymentDate,
+  paymentMethod,
+  paymentReference,
+  productionDays,
+  deliveryDateStart,
+  deliveryDateEnd,
+  deliveryCompletedDate,
+}: PreviewPaymentProps) {
+  const isReceipt = documentType === "RECEIPT";
+  const hasPaymentTerms = paymentTerms.length > 0;
+  // Receipts don't show the bank account / QR box.
+  const hasBankInfo =
+    !isReceipt &&
+    (company.bankName || company.accountName || company.accountNumber);
+  // Invoices already paid print how the customer paid, next to the delivery info.
+  const hasPaymentRecord = !!paymentMethod && documentType !== "QUOTATION";
+  const hasDeliveryInfo = isReceipt
+    ? !!(deliveryCompletedDate || paymentDate || paymentMethod)
+    : productionDays || deliveryDateStart || deliveryDateEnd || hasPaymentRecord;
+
+  if (!hasPaymentTerms && !hasBankInfo && !hasDeliveryInfo) return null;
+
+  const paymentRecordRows = hasPaymentRecord ? (
+    <>
+      <span className="font-bold">ช่องทางการชำระ</span>
+      <span className="font-bold">:</span>
+      <span>
+        {PAYMENT_METHOD_LABELS[paymentMethod!] ?? paymentMethod}
+        {paymentReference ? ` (${paymentReference})` : ""}
+      </span>
+      {!isReceipt && paymentDate && (
+        <>
+          <span className="font-bold">วันที่ชำระเงิน</span>
+          <span className="font-bold">:</span>
+          <span>{formatThaiDate(new Date(paymentDate))}</span>
+        </>
+      )}
+    </>
+  ) : null;
+
+  const bankOnlyBox = <BankInfoBox company={company} />;
 
   return (
     <div className="mb-3">
