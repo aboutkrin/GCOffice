@@ -8,7 +8,12 @@ import { getActiveHolidays } from "@/data/holidays";
 
 export const dynamic = 'force-dynamic';
 
-export default async function NewReceiptPage() {
+export default async function NewReceiptPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invoiceId?: string }>;
+}) {
+  const { invoiceId } = await searchParams;
   const [companies, customers, invoices, paymentTermTemplates, holidays] = await Promise.all([
     getCompanies(),
     getCustomers({ status: "ACTIVE" }),
@@ -21,7 +26,7 @@ export default async function NewReceiptPage() {
     <div>
       <PageHeader
         title="สร้างใบเสร็จรับเงิน"
-        description="สร้างใบเสร็จรับเงินใหม่"
+        description={invoiceId ? "ออกใบเสร็จยอดคงเหลือตามใบแจ้งหนี้" : "สร้างใบเสร็จรับเงินใหม่"}
       />
 
       <DocumentForm
@@ -29,6 +34,7 @@ export default async function NewReceiptPage() {
         companies={companies}
         customers={customers}
         invoices={invoices}
+        initialInvoiceId={invoiceId}
         paymentTermTemplates={paymentTermTemplates}
         holidays={holidays}
       />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -144,6 +144,8 @@ interface DocumentFormProps {
   customers: any[];
   quotations?: any[];
   invoices?: any[];
+  /** Preselect this invoice on a new receipt (e.g. "ออกใบเสร็จยอดคงเหลือ"). */
+  initialInvoiceId?: string;
   paymentTermTemplates?: any[];
   holidays?: Holiday[];
 }
@@ -155,6 +157,7 @@ export function DocumentForm({
   customers,
   quotations,
   invoices,
+  initialInvoiceId,
   paymentTermTemplates,
   holidays = [],
 }: DocumentFormProps) {
@@ -514,7 +517,10 @@ export function DocumentForm({
     const alreadyPaid = (inv.receipts as ReceiptInvoiceOption["receipts"] || []).reduce((sum, r) => sum + satang(r.netPayable), 0);
     setReceiptPaymentType(alreadyPaid > 0 ? "BALANCE" : "FULL");
     setReceiptBasis("AMOUNT");
-    setReceiptValue(Number(inv.paymentTerms?.[0]?.calculatedAmount || 0));
+    // A partly paid invoice defaults to what is still owed, not the first (deposit) term again.
+    const outstandingNow = (satang(inv.netPayable ?? inv.grandTotal) - alreadyPaid) / 100;
+    setReceiptValue(alreadyPaid > 0 ? outstandingNow : Number(inv.paymentTerms?.[0]?.calculatedAmount || 0));
+    setReceiptSelectedTermIndex("");
 
     // Pre-fill company and customer
     form.setValue("companyId", inv.companyId);
@@ -571,6 +577,16 @@ export function DocumentForm({
     setSkipWeekends(inv.skipWeekends ?? false);
     setSkipHolidays(inv.skipHolidays ?? false);
   };
+
+  // Preselect the invoice once when opened from "ออกใบเสร็จยอดคงเหลือ".
+  const appliedInitialInvoice = useRef(false);
+  useEffect(() => {
+    if (appliedInitialInvoice.current || isEditing || type !== "RECEIPT" || !initialInvoiceId) return;
+    if (!invoices?.some((inv: { id: string }) => inv.id === initialInvoiceId)) return;
+    appliedInitialInvoice.current = true;
+    handleInvoiceSelect(initialInvoiceId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialInvoiceId, invoices, isEditing, type]);
 
   const assembleData = (formData: FormData) => {
     const checkedDeductions = !isDepositInvoice

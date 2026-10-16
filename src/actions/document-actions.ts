@@ -653,6 +653,7 @@ export async function getDocumentForShare(id: string) {
       lineItems: lineItemsWithSpecsInclude,
       paymentTerms: { orderBy: { sequence: "asc" } },
       depositDeductions: { orderBy: { sequence: "asc" } },
+      sourceInvoice: { include: { lineItems: { orderBy: { sequence: "asc" } } } },
       company: true,
       customer: true,
       createdBy: true,
