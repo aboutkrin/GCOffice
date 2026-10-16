@@ -25,12 +25,12 @@ export function PreviewProductImages({ items }: PreviewProductImagesProps) {
   if (shown.length === 0) return null;
 
   return (
-    <div className="mb-3 rounded border border-gray-300 p-2">
+    <div className="mb-3">
       <div className="mb-1.5 text-[11px] font-semibold">รูปสินค้า</div>
       <div className="flex flex-wrap gap-3">
         {shown.map((item) => (
           <div key={item.productImage!} className="flex w-16 flex-col items-center gap-1">
-            <div className="h-14 w-14 overflow-hidden rounded border border-gray-200">
+            <div className="h-14 w-14 overflow-hidden rounded">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={item.productImage!} alt={item.productName} className="h-full w-full object-cover" />
             </div>
