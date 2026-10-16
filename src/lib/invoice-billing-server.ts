@@ -123,7 +123,7 @@ export async function applyInvoiceBilling(tx: Tx, id: string, input: {
     unitPrice: item.unitPrice, lineTotal: item.lineTotal,
     productId: item.productId, colorVariantId: item.colorVariantId,
   })) : [{
-    documentId: id, sequence: 1, productName: invoiceBillingLineName(input.type, quotation.documentNumber),
+    documentId: id, sequence: 1, productName: invoiceBillingLineName(input.type, quotation.documentNumber, { amount: calculated.amount, quotationTotal: total }),
     quantity: 1, unitPrice: calculated.base, lineTotal: calculated.base, showImage: false,
   }];
   await tx.documentLineItem.createMany({ data: items });

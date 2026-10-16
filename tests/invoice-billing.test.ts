@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  calculateInvoiceBilling as calculate, invoiceBillingLineName, invoiceBillingTitle, satang,
+  calculateInvoiceBilling as calculate, invoiceBillingLineName, invoiceBillingPercentLabel, invoiceBillingTitle, satang,
 } from "../src/lib/invoice-billing";
 
 test("deposit invoices and the balance invoice reconcile to the quotation total and VAT", () => {
@@ -54,4 +54,24 @@ test("titles and generated line names", () => {
   assert.equal(invoiceBillingTitle("FULL"), "ใบแจ้งหนี้");
   assert.equal(invoiceBillingTitle(null), "ใบแจ้งหนี้");
   assert.equal(invoiceBillingLineName("DEPOSIT", "QT-6910-0001"), "เรียกเก็บเงินมัดจำ ตามใบเสนอราคาเลขที่ QT-6910-0001");
+  assert.equal(
+    invoiceBillingLineName("DEPOSIT", "QT-6910-0019", { amount: 61050, quotationTotal: 610500 }),
+    "เรียกเก็บเงินมัดจำ 10% ตามใบเสนอราคาเลขที่ QT-6910-0019",
+  );
+  assert.equal(
+    invoiceBillingLineName("DEPOSIT", "QT-6910-0019", { amount: 3333.33, quotationTotal: 10000 }),
+    "เรียกเก็บเงินมัดจำ 33.33% ตามใบเสนอราคาเลขที่ QT-6910-0019",
+  );
+  assert.equal(
+    invoiceBillingLineName("BALANCE", "QT-6910-0019", { amount: 549450, quotationTotal: 610500 }),
+    "เรียกเก็บยอดคงเหลือ ตามใบเสนอราคาเลขที่ QT-6910-0019",
+  );
+});
+
+test("deposit percent label", () => {
+  assert.equal(invoiceBillingPercentLabel(5000, 10000), "50%");
+  assert.equal(invoiceBillingPercentLabel(1250, 10000), "12.5%");
+  assert.equal(invoiceBillingPercentLabel(61050, 610500), "10%");
+  assert.equal(invoiceBillingPercentLabel(0, 10000), null);
+  assert.equal(invoiceBillingPercentLabel(100, 0), null);
 });

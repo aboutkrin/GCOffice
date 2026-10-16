@@ -31,10 +31,32 @@ export function invoiceBillingTitle(type?: InvoiceBillingKind | null): string {
   return "ใบแจ้งหนี้";
 }
 
-/** Name of the single generated line / payment term on a deposit or balance invoice. */
-export function invoiceBillingLineName(type: InvoiceBillingKind, quotationNumber: string | null): string {
+/**
+ * Share of the quotation total billed by this invoice, as printed on the line
+ * ("10%", "33.33%"). Derived from the amounts so it is right whether the deposit
+ * was entered as ฿, as a % or picked from a payment term. Null when unknown.
+ */
+export function invoiceBillingPercentLabel(amount: number, quotationTotal: number): string | null {
+  const total = satang(quotationTotal);
+  const billed = satang(amount);
+  if (!Number.isFinite(total) || !Number.isFinite(billed) || total <= 0 || billed <= 0) return null;
+  const percent = Math.round((billed / total) * 10000) / 100;
+  if (percent <= 0) return null;
+  return `${percent.toFixed(2).replace(/\.?0+$/, "")}%`;
+}
+
+/**
+ * Name of the single generated line / payment term on a deposit or balance
+ * invoice. A deposit line carries the % of the quotation it bills
+ * ("เรียกเก็บเงินมัดจำ 10% ตามใบเสนอราคาเลขที่ QT-…") when the amounts are known.
+ */
+export function invoiceBillingLineName(
+  type: InvoiceBillingKind, quotationNumber: string | null,
+  billing?: { amount: number; quotationTotal: number },
+): string {
   const label = type === "DEPOSIT" ? "เงินมัดจำ" : "ยอดคงเหลือ";
-  return `เรียกเก็บ${label} ตามใบเสนอราคาเลขที่ ${quotationNumber ?? "-"}`;
+  const percent = type === "DEPOSIT" && billing ? invoiceBillingPercentLabel(billing.amount, billing.quotationTotal) : null;
+  return `เรียกเก็บ${label}${percent ? ` ${percent}` : ""} ตามใบเสนอราคาเลขที่ ${quotationNumber ?? "-"}`;
 }
 
 const INVOICE_MESSAGES: Record<string, string> = {
