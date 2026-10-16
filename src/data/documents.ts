@@ -72,6 +72,7 @@ export async function getDocuments(params?: {
         isDepositInvoice: true,
         netPayable: true,
         sourceInvoiceId: true,
+        sourceInvoice: { select: { status: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -145,13 +146,19 @@ export async function getConfirmedQuotations(params?: { year?: number; month?: n
   }
 }
 
+/** What the receipt form / invoice page shows for each receipt already issued against an invoice. */
+const receiptListSelect = {
+  id: true, documentNumber: true, customInvoiceNumber: true, status: true,
+  documentDate: true, netPayable: true, receiptPaymentType: true,
+} as const;
+
 export async function getReceiptInvoices() {
   const data = await prisma.document.findMany({
     where: { type: "INVOICE", status: { in: ["BILLED", "DEPOSITED", "PAID"] } },
     include: {
       lineItems: { orderBy: { sequence: "asc" } },
       paymentTerms: { orderBy: { sequence: "asc" } },
-      receipts: { where: { status: "PAID", type: "RECEIPT" }, select: { id: true, netPayable: true } },
+      receipts: { where: { status: "PAID", type: "RECEIPT" }, select: receiptListSelect, orderBy: { createdAt: "asc" } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -171,8 +178,10 @@ export async function getDocumentById(id: string) {
         sourceInvoice: { include: {
           lineItems: { orderBy: { sequence: "asc" } },
           paymentTerms: { orderBy: { sequence: "asc" } },
-          receipts: { where: { status: "PAID", type: "RECEIPT" }, select: { id: true, netPayable: true } },
+          receipts: { where: { status: "PAID", type: "RECEIPT" }, select: receiptListSelect, orderBy: { createdAt: "asc" } },
         } },
+        // Receipts already issued against this invoice (shown on the invoice page so the deposit receipt is easy to find).
+        receipts: { where: { type: "RECEIPT", status: { not: "CANCELLED" } }, select: receiptListSelect, orderBy: { createdAt: "asc" } },
         company: true,
         customer: true,
         createdBy: true,

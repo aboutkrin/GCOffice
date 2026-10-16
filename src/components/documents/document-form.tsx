@@ -41,6 +41,7 @@ import { DecimalInput } from "@/components/ui/decimal-input";
 import { CalendarIcon, Save, FileText, Loader2, AlertTriangle, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
+import { IssuedReceiptsList, type IssuedReceipt } from "./issued-receipts";
 import { formatBaht } from "@/lib/thai-currency";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
 
@@ -77,7 +78,7 @@ interface ReceiptInvoiceOption {
   documentNumber: string | null;
   netPayable: number | string;
   grandTotal: number | string;
-  receipts: { id: string; netPayable: number | string }[];
+  receipts: IssuedReceipt[];
   paymentTerms: { name: string; calculatedAmount: number | string }[];
 }
 
@@ -962,6 +963,12 @@ export function DocumentForm({
                   <div>รับชำระแล้ว <strong>{formatBaht(previousPayments)}</strong></div>
                   <div>ยอดคงเหลือ <strong>{formatBaht(outstanding)}</strong></div>
                 </div>
+                {(receiptInvoice.receipts || []).some((r) => r.id !== initialData?.id) && (
+                  <div className="space-y-1.5">
+                    <p className="text-sm text-muted-foreground">ใบเสร็จที่ออกไปแล้วของใบแจ้งหนี้นี้ (กดเลขที่เพื่อเปิดดู/พิมพ์)</p>
+                    <IssuedReceiptsList receipts={receiptInvoice.receipts || []} excludeId={initialData?.id} />
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label>ประเภทการรับชำระ</Label>
                   <Select value={receiptPaymentType} onValueChange={(value) => { setReceiptPaymentTouched(true); setReceiptPaymentType(value as ReceiptPaymentKind); }}>
@@ -1012,6 +1019,15 @@ export function DocumentForm({
                   <strong>รับชำระ{RECEIPT_PAYMENT_LABELS[receiptPaymentType]}ครั้งนี้ {formatBaht(receiptAmount)}</strong>
                   <span>คงเหลือหลังรับชำระ {formatBaht((satang(outstanding) - satang(receiptAmount)) / 100)}</span>
                 </div>
+                {satang(receiptAmount) > satang(outstanding) && (
+                  <div className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800">
+                    <AlertTriangle className="h-4 w-4 shrink-0" />
+                    <span>
+                      ยอดนี้เกินยอดคงเหลือของใบแจ้งหนี้ ({formatBaht(outstanding)}) ระบบจะไม่บันทึก
+                      {previousPayments > 0 && " — ถ้าใบเสร็จนี้คือยอดส่วนที่เหลือ ให้เลือกประเภท \"ยอดคงเหลือ\" ส่วนงวดที่รับไปแล้วดูได้จากรายการใบเสร็จด้านบน"}
+                    </span>
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">ยอดรับชำระรวมภาษีตามใบแจ้งหนี้แล้ว ใบเสร็จร่างยังไม่หักยอดคงเหลือ</p>
               </div>
             )}

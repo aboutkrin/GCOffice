@@ -12,6 +12,7 @@ import { getActiveHolidays } from "@/data/holidays";
 import { getDocumentProfit } from "@/data/document-profit";
 import { getCurrentUser } from "@/lib/auth";
 import { DocumentProfitCard } from "@/components/documents/document-profit-card";
+import { IssuedReceiptsList } from "@/components/documents/issued-receipts";
 
 interface InvoiceEditPageProps {
   params: Promise<{ id: string }>;
@@ -55,6 +56,13 @@ export default async function InvoiceEditPage({
           </Link>
         )}
       </PageHeader>
+
+      {document.receipts?.length > 0 && (
+        <div className="mb-6 space-y-2 rounded-lg border p-4">
+          <p className="font-medium">ใบเสร็จรับเงินของใบแจ้งหนี้นี้</p>
+          <IssuedReceiptsList receipts={document.receipts} />
+        </div>
+      )}
 
       <DocumentForm
         type="INVOICE"
