@@ -176,7 +176,7 @@ export function AppointmentDialog({
             toast.error(result.error);
             return;
           }
-          toast.success("แก้ไขนัดพบลูกค้าเรียบร้อยแล้ว");
+          toast.success("แก้ไขนัดลูกค้าเรียบร้อยแล้ว");
         } else {
           const result = await createAppointment(values);
           if (result.error) {
@@ -186,7 +186,7 @@ export function AppointmentDialog({
           toast.success(
             needsConfirmation
               ? `ส่งนัดให้ ${attendeeName ?? "แอดมิน"} แล้ว รอยืนยันว่าว่าง`
-              : "บันทึกนัดพบลูกค้าเรียบร้อยแล้ว"
+              : "บันทึกนัดลูกค้าเรียบร้อยแล้ว"
           );
         }
         onOpenChange(false);
@@ -235,7 +235,7 @@ export function AppointmentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{appointment ? "แก้ไขนัดพบลูกค้า" : "นัดพบลูกค้า"}</DialogTitle>
+          <DialogTitle>{appointment ? "แก้ไขนัดลูกค้า" : "นัดลูกค้า"}</DialogTitle>
           <DialogDescription>
             {isPickup
               ? "ลูกค้ามารับสินค้าที่โชว์รูม เลือกใบเสนอราคาที่ยืนยันแล้วเพื่อให้รู้ว่ามารับรายการไหน · ลงให้พนักงานรับนัดหรือรับเองได้ นัดจะยืนยันทันที"

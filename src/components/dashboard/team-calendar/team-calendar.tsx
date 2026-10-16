@@ -917,7 +917,7 @@ export function TeamCalendar({
             </Button>
             <Button size="sm" variant="outline" onClick={() => openAppointment(selectedDate)}>
               <Plus className="mr-1 h-4 w-4" />
-              นัดพบลูกค้าวันนี้
+              นัดลูกค้าวันนี้
             </Button>
           </div>
         </DialogContent>
