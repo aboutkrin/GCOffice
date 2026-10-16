@@ -255,8 +255,11 @@ export function DocumentForm({
 
   // Invoices are issued off a quotation the way receipts are issued off an invoice.
   const managedInvoice = type === "INVOICE" && (!initialData || !!initialData.invoiceBillingType);
-  const [invoiceBillingType, setInvoiceBillingType] = useState<InvoiceBillingKind>(initialData?.invoiceBillingType || "FULL");
+  // No default: a new invoice must have its billing type picked explicitly before it can be saved.
+  const [invoiceBillingType, setInvoiceBillingType] = useState<InvoiceBillingKind | "">(initialData?.invoiceBillingType || "");
   const [invoiceBillingTouched, setInvoiceBillingTouched] = useState(false);
+  const [invoiceBillingError, setInvoiceBillingError] = useState("");
+  const [invoiceTermError, setInvoiceTermError] = useState("");
   const [invoiceBasis, setInvoiceBasis] = useState<"AMOUNT" | "PERCENTAGE">("AMOUNT");
   const [invoiceValue, setInvoiceValue] = useState(Number(initialData?.grandTotal || 0));
   const [invoiceSelectedTermIndex, setInvoiceSelectedTermIndex] = useState("");
@@ -266,7 +269,9 @@ export function DocumentForm({
     .reduce((sum, d) => sum + satang(d.grandTotal), 0) / 100;
   const remainingToBill = (satang(quotationTotal) - satang(previousDeposits)) / 100;
   // Only DEPOSIT / BALANCE invoices are generated; a FULL invoice keeps the editable form.
-  const generatedInvoice = managedInvoice && invoiceBillingType !== "FULL";
+  const generatedInvoice = managedInvoice && invoiceBillingType !== "" && invoiceBillingType !== "FULL";
+  // Until the type is picked the editable FULL form stays hidden.
+  const invoiceBillingPending = managedInvoice && invoiceBillingType === "";
   const invoiceHasPaidReceipts = !!initialData?.receipts?.length;
   const depositBillingAmount = initialData?.invoiceBillingType && initialData.invoiceBillingType !== "FULL" && !invoiceBillingTouched
     ? Number(initialData.grandTotal)
@@ -506,8 +511,9 @@ export function DocumentForm({
     if (!q) return;
 
     setSourceQuotationId(quotationId);
-    const depositsIssued = ((q.invoices as BillingQuotationOption["invoices"]) || []).reduce((sum, d) => sum + satang(d.grandTotal), 0);
-    setInvoiceBillingType(depositsIssued > 0 ? "BALANCE" : "FULL");
+    setInvoiceBillingType("");
+    setInvoiceBillingError("");
+    setInvoiceTermError("");
     setInvoiceBasis("AMOUNT");
     setInvoiceValue(Number(q.paymentTerms?.[0]?.calculatedAmount || 0));
     setInvoiceSelectedTermIndex("");
@@ -652,7 +658,7 @@ export function DocumentForm({
       depositPercent: isDepositInvoice && depositBasisType === "PERCENTAGE" ? depositBasisValue : undefined,
       receiptPaymentType: managedReceipt ? receiptPaymentType : undefined,
       receiptAmount: managedReceipt ? receiptAmount : undefined,
-      invoiceBillingType: managedInvoice ? invoiceBillingType : undefined,
+      invoiceBillingType: managedInvoice && invoiceBillingType ? invoiceBillingType : undefined,
       invoiceBillingAmount: managedInvoice ? (generatedInvoice ? depositBillingAmount : pricing.grandTotal) : undefined,
       paymentMethod: type === "RECEIPT" ? paymentMethod : undefined,
       paymentReference: type === "RECEIPT" ? paymentReference || undefined : undefined,
@@ -728,6 +734,21 @@ export function DocumentForm({
       alert("กรุณาระบุเลขที่ใบกำกับภาษี");
       return;
     }
+
+    if (managedInvoice && billingQuotation) {
+      if (!invoiceBillingType) {
+        setInvoiceBillingError("กรุณาเลือกประเภทการเรียกเก็บ");
+        document.getElementById("invoice-billing-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      if (invoiceBillingType === "DEPOSIT" && (billingQuotation.paymentTerms?.length ?? 0) > 0 && invoiceSelectedTermIndex === "") {
+        setInvoiceTermError("กรุณาเลือกงวดชำระ");
+        document.getElementById("invoice-billing-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+    }
+    setInvoiceBillingError("");
+    setInvoiceTermError("");
 
     if (generatedInvoice) {
       if (!Number.isFinite(depositBillingAmount) || depositBillingAmount <= 0 || satang(depositBillingAmount) > satang(remainingToBill)) {
@@ -871,6 +892,8 @@ export function DocumentForm({
                 onBillingTypeChange={(value) => {
                   setInvoiceBillingTouched(true);
                   setInvoiceBillingType(value);
+                  setInvoiceBillingError("");
+                  setInvoiceTermError("");
                   // A deposit can never exceed what is still unbilled.
                   if (value === "DEPOSIT") {
                     setInvoiceBasis("AMOUNT");
@@ -890,6 +913,7 @@ export function DocumentForm({
                 onSelectTerm={(index) => {
                   setInvoiceBillingTouched(true);
                   setInvoiceSelectedTermIndex(index);
+                  setInvoiceTermError("");
                   setInvoiceBasis("AMOUNT");
                   setInvoiceValue(Number(billingQuotation.paymentTerms[Number(index)].calculatedAmount));
                 }}
@@ -898,6 +922,8 @@ export function DocumentForm({
                 remaining={remainingToBill}
                 amount={generatedInvoice ? depositBillingAmount : pricing.grandTotal}
                 locked={invoiceHasPaidReceipts}
+                billingTypeError={invoiceBillingError}
+                termError={invoiceTermError}
               />
             )}
 
@@ -1159,7 +1185,7 @@ export function DocumentForm({
                   <FormItem>
                     <FormLabel>บริษัท <span className="text-destructive">*</span></FormLabel>
                     <Select
-                      disabled={managedReceipt || generatedInvoice}
+                      disabled={managedReceipt || generatedInvoice || invoiceBillingPending}
                       onValueChange={(companyId) => {
                         field.onChange(companyId);
                         const selected = companies.find((c) => c.id === companyId);
@@ -1195,7 +1221,7 @@ export function DocumentForm({
                 render={({ field }) => (
                   <FormItem className="min-w-0">
                     <FormLabel>ลูกค้า <span className="text-destructive">*</span></FormLabel>
-                    <fieldset disabled={managedReceipt || generatedInvoice}>
+                    <fieldset disabled={managedReceipt || generatedInvoice || invoiceBillingPending}>
                     <CustomerSelect
                       customers={customers}
                       value={field.value}
@@ -1251,7 +1277,7 @@ export function DocumentForm({
           </CardContent>
         </Card>
 
-        {!managedReceipt && !generatedInvoice && (<>
+        {!managedReceipt && !generatedInvoice && !invoiceBillingPending && (<>
         {/* Section 2: Line Items */}
         <Card>
           <CardHeader>
@@ -1358,7 +1384,8 @@ export function DocumentForm({
 
         </>)}
 
-        {/* Section 6: Notes & Delivery */}
+        {/* Section 6: Notes & Delivery — not shown on invoices (they follow the quotation) */}
+        {type !== "INVOICE" && (
         <Card>
           <CardHeader>
             <CardTitle>หมายเหตุและการจัดส่ง</CardTitle>
@@ -1384,6 +1411,7 @@ export function DocumentForm({
             />
           </CardContent>
         </Card>
+        )}
 
         {/* Section 7: Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 justify-end">
