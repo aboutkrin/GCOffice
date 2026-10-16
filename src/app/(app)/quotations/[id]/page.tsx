@@ -6,9 +6,6 @@ import { getCompanies } from "@/data/companies";
 import { getCustomers } from "@/data/customers";
 import { getActivePaymentTermTemplates } from "@/data/payment-term-templates";
 import { getActiveHolidays } from "@/data/holidays";
-import { getDocumentProfit } from "@/data/document-profit";
-import { getCurrentUser } from "@/lib/auth";
-import { DocumentProfitCard } from "@/components/documents/document-profit-card";
 import { getDocumentIssueProgress } from "@/data/stock-documents";
 import { getDeliveryRounds } from "@/data/delivery-notes";
 import { QuotationDeliveryCard } from "@/components/delivery-note/quotation-delivery-card";
@@ -36,14 +33,11 @@ export default async function QuotationEditPage({
     notFound();
   }
 
-  const [user, issueProgress, deliveryRounds] = await Promise.all([
-    getCurrentUser(),
+  const [issueProgress, deliveryRounds] = await Promise.all([
     getDocumentIssueProgress(id),
     getDeliveryRounds(id),
   ]);
   const canDeliver = document.status === "CONFIRMED" || document.status === "SHIPPED";
-  const profit =
-    user?.role === "ADMIN" && !document.isDepositInvoice ? await getDocumentProfit(id) : null;
 
   return (
     <div>
@@ -69,8 +63,6 @@ export default async function QuotationEditPage({
           canDeliver={canDeliver}
         />
       )}
-
-      {profit && <DocumentProfitCard key={JSON.stringify(profit)} profit={profit} />}
     </div>
   );
 }
