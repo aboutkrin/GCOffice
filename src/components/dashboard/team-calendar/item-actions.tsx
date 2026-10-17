@@ -2,12 +2,17 @@
 
 import { useTransition } from "react";
 import { toast } from "sonner";
-import { Check, X, Ship, PackageCheck, Undo2, Trash2 } from "lucide-react";
+import { Check, X, Ship, PackageCheck, Undo2, Trash2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { reviewLeaveRequest, cancelLeaveRequest } from "@/actions/leave-actions";
 import { setChinaShipmentStatus } from "@/actions/china-shipment-actions";
-import { cancelAppointment, deleteAppointment, reviewAppointment } from "@/actions/appointment-actions";
+import {
+  cancelAppointment,
+  deleteAppointment,
+  reviewAppointment,
+  setAppointmentCompleted,
+} from "@/actions/appointment-actions";
 import type {
   CalendarAppointmentItem,
   CalendarLeaveItem,
@@ -223,6 +228,79 @@ export function AppointmentCancelButton({
       }}
     >
       ยกเลิกนัด
+    </Button>
+  );
+}
+
+/** Wording of the "done" button per appointment kind. */
+export function appointmentDoneLabel(kind: string): { action: string; done: string } {
+  if (kind === "PICKUP") return { action: "รับสินค้าแล้ว", done: "รับสินค้าแล้ว" };
+  if (kind === "SHOWROOM") return { action: "มาชมแล้ว", done: "มาชมแล้ว" };
+  return { action: "พบลูกค้าแล้ว", done: "พบลูกค้าแล้ว" };
+}
+
+/**
+ * "รับสินค้าแล้ว" / "พบลูกค้าแล้ว" for a CONFIRMED appointment (creator,
+ * attendee or admin). Once done it shows a green label with a small undo
+ * button, and the cards push the appointment below the open ones.
+ */
+export function AppointmentDoneButton({
+  appointment,
+  isAdmin,
+  currentUserId,
+  onChanged,
+  className,
+}: {
+  appointment: CalendarAppointmentItem;
+  isAdmin: boolean;
+  currentUserId: string;
+  onChanged: () => void;
+  className?: string;
+}) {
+  const { isPending, run } = useRun(onChanged);
+  if (appointment.status !== "CONFIRMED") return null;
+  const allowed =
+    isAdmin ||
+    appointment.createdById === currentUserId ||
+    appointment.attendeeId === currentUserId;
+  const label = appointmentDoneLabel(appointment.kind);
+  if (appointment.completedAt) {
+    return (
+      <>
+        <span
+          className={cn(
+            "inline-flex h-7 shrink-0 items-center gap-1 rounded-md border border-green-500 bg-green-50 px-2.5 text-xs font-medium text-green-700",
+            className
+          )}
+        >
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          {label.done}
+        </span>
+        {allowed && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 shrink-0 text-muted-foreground"
+            title="ย้อนกลับเป็นยังไม่เสร็จ"
+            disabled={isPending}
+            onClick={() => run(() => setAppointmentCompleted(appointment.id, false), "ย้อนสถานะแล้ว")}
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
+      </>
+    );
+  }
+  if (!allowed) return null;
+  return (
+    <Button
+      size="sm"
+      className={cn("h-7 shrink-0 bg-green-600 px-2.5 text-xs hover:bg-green-700", className)}
+      disabled={isPending}
+      onClick={() => run(() => setAppointmentCompleted(appointment.id, true), `บันทึก${label.done}`)}
+    >
+      <Check className="mr-1 h-3.5 w-3.5" />
+      {label.action}
     </Button>
   );
 }

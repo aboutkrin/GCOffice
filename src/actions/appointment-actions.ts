@@ -185,6 +185,35 @@ export async function cancelAppointment(id: string) {
 }
 
 /**
+ * Mark a CONFIRMED appointment as done ("รับสินค้าแล้ว" / "พบลูกค้าแล้ว"):
+ * creator, attendee or any ADMIN. The status stays CONFIRMED; the side cards
+ * move it below the open ones. `done = false` undoes it.
+ */
+export async function setAppointmentCompleted(id: string, done: boolean) {
+  const user = await requireUserAction();
+  const appointment = await prisma.customerAppointment.findUniqueOrThrow({ where: { id } });
+
+  if (
+    user.role !== "ADMIN" &&
+    appointment.createdById !== user.id &&
+    appointment.attendeeId !== user.id
+  ) {
+    throw new Error("บันทึกได้เฉพาะนัดที่คุณสร้างเองหรือเป็นผู้รับนัด");
+  }
+  if (appointment.status !== "CONFIRMED") {
+    throw new Error("บันทึกได้เฉพาะนัดที่ยืนยันแล้ว");
+  }
+
+  await prisma.customerAppointment.update({
+    where: { id },
+    data: done
+      ? { completedAt: new Date(), completedById: user.id }
+      : { completedAt: null, completedById: null },
+  });
+  revalidatePath("/dashboard");
+}
+
+/**
  * ADMIN removes a cancelled or declined appointment for good (e.g. a test
  * entry). Live appointments must be cancelled first so nothing disappears
  * from the calendar by accident.

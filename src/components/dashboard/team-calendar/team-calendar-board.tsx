@@ -93,7 +93,8 @@ export function TeamCalendarBoard({
         />
       </div>
       <div className="min-w-0">{beforeAppointments}</div>
-      <div className="grid min-w-0 grid-cols-1 items-start gap-4 lg:col-span-3 lg:grid-cols-3 [&>*]:min-w-0">
+      {/* items stretch so the นัดพบลูกค้า and รับสินค้าที่โชว์รูม cards are the same height */}
+      <div className="grid min-w-0 grid-cols-1 gap-4 lg:col-span-3 lg:grid-cols-3 [&>*]:min-w-0">
         <AppointmentsCard
           appointments={data.appointments}
           year={year}

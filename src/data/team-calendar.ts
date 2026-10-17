@@ -56,6 +56,8 @@ export interface CalendarAppointmentItem {
   createdByName: string;
   status: string;
   reviewNote: string | null;
+  /** ISO datetime once the appointment has happened (รับสินค้าแล้ว / พบลูกค้าแล้ว), else null */
+  completedAt: string | null;
 }
 
 export interface TeamCalendarData {
@@ -186,6 +188,7 @@ type AppointmentRow = {
   createdById: string;
   status: string;
   reviewNote: string | null;
+  completedAt: Date | null;
   attendee: ProfileName;
   createdBy: ProfileName;
 };
@@ -223,6 +226,7 @@ function toAppointmentItem(a: AppointmentRow): CalendarAppointmentItem {
     createdByName: profileDisplayName(a.createdBy),
     status: a.status,
     reviewNote: a.reviewNote,
+    completedAt: a.completedAt ? a.completedAt.toISOString() : null,
   };
 }
 
@@ -261,6 +265,7 @@ const appointmentSelect = {
   createdById: true,
   status: true,
   reviewNote: true,
+  completedAt: true,
   attendee: { select: profileNameSelect },
   createdBy: { select: profileNameSelect },
 } as const;

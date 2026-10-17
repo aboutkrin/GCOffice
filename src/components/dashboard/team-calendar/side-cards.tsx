@@ -1,12 +1,13 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
 import Link from "next/link";
 import { formatLeaveHours, LEAVE_MAIN_TYPES } from "@/lib/leave-policy";
 import type { LeaveBalanceSummary } from "@/data/leave-balances";
 import { useRouter } from "next/navigation";
 import {
   CalendarCheck,
+  CheckCircle2,
   Clock,
   FileText,
   Handshake,
@@ -44,6 +45,7 @@ import type {
 import {
   AppointmentActionButtons,
   AppointmentCancelButton,
+  AppointmentDoneButton,
   LeaveActionButtons,
   ShipmentStatusButtons,
 } from "./item-actions";
@@ -82,21 +84,23 @@ function etaText(s: CalendarShipmentItem): { text: string; className: string } {
 
 /** How many shipment rows are visible before the list scrolls. */
 const SHIPMENT_ROWS_VISIBLE = 4;
+/** How many appointment rows (นัดพบลูกค้า / รับสินค้า) are visible before the list scrolls. */
+const APPOINTMENT_ROWS_VISIBLE = 2;
 
 /**
- * Every shipment still on the way (plus recently received lots), newest lot on
- * top. Only the first
- * `SHIPMENT_ROWS_VISIBLE` rows are shown; the rest sit below and scroll into
- * view, so the card never pushes the other side cards off the screen.
+ * Caps a list at its first `visible` rows: rows vary in height (photos,
+ * buttons), so the first N rows are measured instead of guessing a fixed pixel
+ * height, and the result is written straight to the DOM as `max-height`.
+ * Re-measured whenever a visible row changes size (images loading etc.).
+ * Does nothing unless `overflow` is true. `deps` re-runs the measurement when
+ * the rows are swapped out.
  */
-export function UpcomingShipmentsCard({ shipments }: { shipments: CalendarShipmentItem[] }) {
-  const router = useRouter();
-  const listRef = useRef<HTMLUListElement>(null);
-  const overflow = shipments.length > SHIPMENT_ROWS_VISIBLE;
-
-  // Rows vary in height (photos, buttons), so measure the first N rows instead
-  // of guessing a fixed pixel height, and write the result straight to the DOM.
-  // Re-measured whenever a visible row changes size (images loading etc.).
+function useVisibleRows(
+  listRef: RefObject<HTMLElement | null>,
+  visible: number,
+  overflow: boolean,
+  deps: unknown[]
+) {
   useLayoutEffect(() => {
     const list = listRef.current;
     if (!list) return;
@@ -104,7 +108,10 @@ export function UpcomingShipmentsCard({ shipments }: { shipments: CalendarShipme
       list.style.maxHeight = "";
       return;
     }
-    const rows = Array.from(list.children).slice(0, SHIPMENT_ROWS_VISIBLE) as HTMLElement[];
+    // Section dividers (marked data-divider) are not rows.
+    const rows = (Array.from(list.children) as HTMLElement[])
+      .filter((el) => !el.hasAttribute("data-divider"))
+      .slice(0, visible);
     const measure = () => {
       const last = rows[rows.length - 1];
       if (!last) return;
@@ -116,7 +123,21 @@ export function UpcomingShipmentsCard({ shipments }: { shipments: CalendarShipme
     const observer = new ResizeObserver(measure);
     for (const row of rows) observer.observe(row);
     return () => observer.disconnect();
-  }, [overflow, shipments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listRef, visible, overflow, ...deps]);
+}
+
+/**
+ * Every shipment still on the way (plus recently received lots), newest lot on
+ * top. Only the first
+ * `SHIPMENT_ROWS_VISIBLE` rows are shown; the rest sit below and scroll into
+ * view, so the card never pushes the other side cards off the screen.
+ */
+export function UpcomingShipmentsCard({ shipments }: { shipments: CalendarShipmentItem[] }) {
+  const router = useRouter();
+  const listRef = useRef<HTMLUListElement>(null);
+  const overflow = shipments.length > SHIPMENT_ROWS_VISIBLE;
+  useVisibleRows(listRef, SHIPMENT_ROWS_VISIBLE, overflow, [shipments]);
 
   return (
     <Card>
@@ -374,12 +395,17 @@ function compareSchedule(a: CalendarAppointmentItem, b: CalendarAppointmentItem)
 /**
  * Nearest upcoming appointment first (today counts as upcoming), then the
  * ones already past, most recently passed first, so what is coming up always
- * sits at the top of the list.
+ * sits at the top of the list; appointments already done go last.
  */
 export function splitUpcomingPast(items: CalendarAppointmentItem[]) {
-  const upcoming = items.filter((a) => daysUntil(a.date) >= 0).sort(compareSchedule);
-  const past = items.filter((a) => daysUntil(a.date) < 0).sort((a, b) => compareSchedule(b, a));
-  return { upcoming, past };
+  const open = items.filter((a) => !a.completedAt);
+  const upcoming = open.filter((a) => daysUntil(a.date) >= 0).sort(compareSchedule);
+  const past = open.filter((a) => daysUntil(a.date) < 0).sort((a, b) => compareSchedule(b, a));
+  // Done (รับสินค้าแล้ว / พบลูกค้าแล้ว) always sinks to the bottom, most recently done first.
+  const done = items
+    .filter((a) => !!a.completedAt)
+    .sort((a, b) => (b.completedAt ?? "").localeCompare(a.completedAt ?? "") || compareSchedule(b, a));
+  return { upcoming, past, done };
 }
 
 /** Tappable "เปิดแผนที่" (Google Maps app on phones) and "โทร" (tel:) links plus the contact name. */
@@ -452,12 +478,13 @@ function AppointmentRow({
   const forMe = a.attendeeId === currentUserId;
   const style = appointmentKindStyle(a.kind);
   const cancelled = a.status === "CANCELLED";
-  const when = showCountdown && !cancelled ? appointmentWhen(a) : null;
+  const done = !!a.completedAt && !cancelled;
+  const when = showCountdown && !cancelled && !done ? appointmentWhen(a) : null;
   return (
     <li
       className={cn(
         "space-y-1.5 rounded-md border p-2.5",
-        cancelled ? "border-gray-200 bg-gray-50/60" : style.border
+        cancelled ? "border-gray-200 bg-gray-50/60" : done ? "border-green-200 bg-green-50/40" : style.border
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -491,22 +518,30 @@ function AppointmentRow({
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end justify-between gap-2 self-stretch">
-          <div className="flex items-center gap-1.5">
-            {showStatus && !cancelled && (
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            {showStatus && !cancelled && !done && (
               <Badge className={cn("shrink-0", APPOINTMENT_STATUS_COLORS[a.status])}>
                 {APPOINTMENT_STATUS_LABELS[a.status]}
               </Badge>
             )}
-            <AppointmentCancelButton
+            <AppointmentDoneButton
               appointment={a}
               isAdmin={isAdmin}
               currentUserId={currentUserId}
               onChanged={() => router.refresh()}
             />
+            {!done && (
+              <AppointmentCancelButton
+                appointment={a}
+                isAdmin={isAdmin}
+                currentUserId={currentUserId}
+                onChanged={() => router.refresh()}
+              />
+            )}
           </div>
           {/* PICKUP: sample photos of the goods, bottom-right like the shipments card */}
           {a.kind === "PICKUP" && a.documentImageUrls.length > 0 && (
-            <StackedImageThumb urls={a.documentImageUrls} className={cn(cancelled && "opacity-60")} />
+            <StackedImageThumb urls={a.documentImageUrls} className={cn((cancelled || done) && "opacity-60")} />
           )}
         </div>
       </div>
@@ -519,7 +554,12 @@ function AppointmentRow({
   );
 }
 
-/** Confirmed appointments: upcoming first, then a "ผ่านมาแล้ว" divider and the past ones. */
+/**
+ * Confirmed appointments: upcoming first, then a "ผ่านมาแล้ว" divider and the
+ * past ones, then a "เสร็จแล้ว" divider and the ones already done. Only the
+ * first `APPOINTMENT_ROWS_VISIBLE` rows are shown; the rest scroll inside the
+ * card so both appointment cards stay the same height.
+ */
 function ConfirmedAppointmentList({
   appointments,
   isAdmin,
@@ -529,7 +569,10 @@ function ConfirmedAppointmentList({
   isAdmin: boolean;
   currentUserId: string;
 }) {
-  const { upcoming, past } = useMemo(() => splitUpcomingPast(appointments), [appointments]);
+  const { upcoming, past, done } = useMemo(() => splitUpcomingPast(appointments), [appointments]);
+  const listRef = useRef<HTMLUListElement>(null);
+  const overflow = appointments.length > APPOINTMENT_ROWS_VISIBLE;
+  useVisibleRows(listRef, APPOINTMENT_ROWS_VISIBLE, overflow, [appointments]);
   const row = (a: CalendarAppointmentItem) => (
     <AppointmentRow
       key={a.id}
@@ -540,18 +583,36 @@ function ConfirmedAppointmentList({
       showCountdown
     />
   );
+  const divider = (key: string, Icon: LucideIcon, label: string) => (
+    <li key={key} data-divider className="flex items-center gap-2 pt-1 text-[11px] text-muted-foreground">
+      <Icon className="h-3 w-3" />
+      {label}
+      <span className="h-px flex-1 bg-border" />
+    </li>
+  );
   return (
-    <ul className="space-y-3">
-      {upcoming.map(row)}
-      {past.length > 0 && (
-        <li className="flex items-center gap-2 pt-1 text-[11px] text-muted-foreground">
-          <History className="h-3 w-3" />
-          ผ่านมาแล้ว
-          <span className="h-px flex-1 bg-border" />
-        </li>
+    <div>
+      <div className="relative">
+        {/* Dividers are not counted as rows: the N visible rows are measured on
+            the appointment items only. */}
+        <ul
+          ref={listRef}
+          className={cn("space-y-3", overflow && "overflow-y-auto overscroll-contain pr-1")}
+        >
+          {upcoming.map(row)}
+          {past.map((a, i) => (i === 0 ? [divider("past", History, "ผ่านมาแล้ว"), row(a)] : row(a)))}
+          {done.map((a, i) => (i === 0 ? [divider("done", CheckCircle2, "เสร็จแล้ว"), row(a)] : row(a)))}
+        </ul>
+        {overflow && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-card to-transparent" />
+        )}
+      </div>
+      {overflow && (
+        <p className="mt-1.5 text-center text-[11px] text-muted-foreground">
+          เลื่อนลงเพื่อดูอีก {appointments.length - APPOINTMENT_ROWS_VISIBLE} รายการ
+        </p>
       )}
-      {past.map(row)}
-    </ul>
+    </div>
   );
 }
 
@@ -594,7 +655,7 @@ export function AppointmentsCard({
   const pendingCount = pending.filter((a) => a.status === "PENDING").length;
   const monthLabel = `${THAI_MONTHS[month - 1]} ${year + 543}`;
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base font-semibold">
           <Handshake className="h-5 w-5" />
@@ -693,7 +754,7 @@ export function PickupCard({
   const pendingCount = pending.filter((a) => a.status === "PENDING").length;
   const monthLabel = `${THAI_MONTHS[month - 1]} ${year + 543}`;
   return (
-    <Card className="border-yellow-200">
+    <Card className="h-full border-yellow-200">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base font-semibold">
           <PackageCheck className="h-5 w-5 text-yellow-700" />
