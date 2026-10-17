@@ -58,6 +58,7 @@ import { AppointmentDialog } from "./appointment-dialog";
 import {
   AppointmentActionButtons,
   AppointmentCancelButton,
+  AppointmentDoneButton,
   LeaveActionButtons,
   ShipmentStatusButtons,
 } from "./item-actions";
@@ -805,13 +806,13 @@ export function TeamCalendar({
                           <div className="text-xs text-muted-foreground">หมายเหตุแอดมิน: {a.reviewNote}</div>
                         )}
                       </div>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        {!cancelled && (
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                        {!cancelled && !a.completedAt && (
                           <Badge className={cn("shrink-0", APPOINTMENT_STATUS_COLORS[a.status])}>
                             {APPOINTMENT_STATUS_LABELS[a.status]}
                           </Badge>
                         )}
-                        <AppointmentCancelButton
+                        <AppointmentDoneButton
                           appointment={a}
                           isAdmin={isAdmin}
                           currentUserId={currentUserId}
@@ -820,6 +821,17 @@ export function TeamCalendar({
                             onChanged();
                           }}
                         />
+                        {!a.completedAt && (
+                          <AppointmentCancelButton
+                            appointment={a}
+                            isAdmin={isAdmin}
+                            currentUserId={currentUserId}
+                            onChanged={() => {
+                              setSelectedDay(null);
+                              onChanged();
+                            }}
+                          />
+                        )}
                         {canEdit && (
                           <Button
                             size="icon"

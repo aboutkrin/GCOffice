@@ -44,6 +44,7 @@ model Profile {
   appointmentsAttending CustomerAppointment[] @relation("AppointmentAttendee")
   appointmentsReviewed  CustomerAppointment[] @relation("AppointmentReviewer")
   appointmentsCreated   CustomerAppointment[] @relation("AppointmentCreatedBy")
+  appointmentsCompleted CustomerAppointment[] @relation("AppointmentCompletedBy")
   importLotsCreated     ImportLot[]     @relation("ImportLotCreatedBy")
   employeeSalary        EmployeeSalary?
   payrolls              Payroll[]       @relation("PayrollEmployee")
@@ -556,6 +557,12 @@ model CustomerAppointment {
   reviewedBy   Profile?  @relation("AppointmentReviewer", fields: [reviewedById], references: [id])
   reviewedAt   DateTime? @map("reviewed_at")
   reviewNote   String?   @map("review_note")
+
+  /// Set when the appointment has happened (goods collected / customer met); the
+  /// status stays CONFIRMED, the side cards push it to the bottom
+  completedAt   DateTime? @map("completed_at")
+  completedById String?   @map("completed_by_id") @db.Uuid
+  completedBy   Profile?  @relation("AppointmentCompletedBy", fields: [completedById], references: [id])
 
   createdById String  @map("created_by_id") @db.Uuid
   createdBy   Profile @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
