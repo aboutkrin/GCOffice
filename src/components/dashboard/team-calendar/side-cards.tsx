@@ -24,6 +24,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { QuotationThumb } from "./quotation-thumb";
 import { THAI_MONTHS, formatThaiDate } from "@/lib/thai-date";
 import {
   APPOINTMENT_KIND_LABELS,
@@ -348,7 +349,9 @@ export function AppointmentQuotationLine({
   if (!a.documentId) return null;
   const items = a.documentItems;
   return (
-    <div className={cn("space-y-0.5", className)}>
+    <div className={cn("flex items-start gap-2", className)}>
+      <QuotationThumb documentId={a.documentId} documentNumber={a.documentNumber} width={40} />
+      <div className="min-w-0 space-y-0.5">
       <Link
         href={`/quotations/${a.documentId}`}
         className="inline-flex items-center gap-1 font-medium text-yellow-800 underline-offset-2 hover:underline"
@@ -363,6 +366,7 @@ export function AppointmentQuotationLine({
           {items.length > 3 && ` (+${items.length - 3})`}
         </div>
       )}
+      </div>
     </div>
   );
 }

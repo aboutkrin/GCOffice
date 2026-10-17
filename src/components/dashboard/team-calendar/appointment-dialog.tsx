@@ -19,6 +19,7 @@ import type { AppointmentAttendeeOption, CalendarAppointmentItem } from "@/data/
 import { cn } from "@/lib/utils";
 import { formatThaiDate } from "@/lib/thai-date";
 import { APPOINTMENT_KIND_LABELS } from "@/lib/constants";
+import { QuotationThumb } from "./quotation-thumb";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -215,6 +216,9 @@ export function AppointmentDialog({
   function clearQuotation() {
     setPickedQuotation(null);
     form.setValue("documentId", null);
+    // On a pickup the customer comes from the quotation only.
+    form.setValue("companyName", "");
+    form.setValue("customerId", null);
   }
 
   function pickCustomer(c: AppointmentCustomerOption) {
@@ -301,11 +305,20 @@ export function AppointmentDialog({
                     <FormLabel>ใบเสนอราคาที่มารับ</FormLabel>
                     {documentId ? (
                       <div className="flex items-start justify-between gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm">
-                        <div className="min-w-0">
+                        <QuotationThumb
+                          documentId={documentId}
+                          documentNumber={pickedQuotation?.documentNumber ?? appointment?.documentNumber}
+                        />
+                        <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 font-medium text-yellow-900">
                             <FileText className="h-4 w-4 shrink-0" />
                             {pickedQuotation?.documentNumber ?? appointment?.documentNumber ?? "ใบเสนอราคา"}
                           </div>
+                          {(pickedQuotation?.customerName ?? appointment?.companyName) && (
+                            <div className="mt-0.5 truncate text-xs text-yellow-900/90">
+                              {pickedQuotation?.customerName ?? appointment?.companyName}
+                            </div>
+                          )}
                           {(() => {
                             const items = pickedQuotation?.items ?? appointment?.documentItems ?? [];
                             if (items.length === 0) return null;
@@ -330,7 +343,7 @@ export function AppointmentDialog({
                       open && <QuotationPicker onPick={pickQuotation} />
                     )}
                     <p className="text-xs text-muted-foreground">
-                      เลือกได้เฉพาะใบเสนอราคาที่ยืนยันแล้ว · เลือกแล้วชื่อลูกค้าและผู้ติดต่อจะถูกกรอกให้
+                      เลือกได้เฉพาะใบเสนอราคาที่ยืนยันแล้ว · ชื่อลูกค้าและผู้ติดต่อจะใช้จากใบเสนอราคา
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -338,17 +351,15 @@ export function AppointmentDialog({
               />
             )}
 
+            {/* A pickup takes its customer from the quotation, so no customer field. */}
+            {!isPickup && (
             <FormField
               control={form.control}
               name="companyName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>
-                    {isPickup
-                      ? "ลูกค้าที่มารับสินค้า"
-                      : isShowroom
-                        ? "บริษัท / ลูกค้าที่มาชม"
-                        : "บริษัท / ลูกค้าที่พบ"}
+                    {isShowroom ? "บริษัท / ลูกค้าที่มาชม" : "บริษัท / ลูกค้าที่พบ"}
                   </FormLabel>
                   <div className="flex gap-2">
                     <FormControl>
@@ -367,6 +378,7 @@ export function AppointmentDialog({
                 </FormItem>
               )}
             />
+            )}
 
             {!isShowroom && (
             <FormField

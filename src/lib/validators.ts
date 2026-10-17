@@ -498,7 +498,8 @@ const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 /**
  * นัดพบลูกค้า: going out (VISIT_CUSTOMER) needs an ADMIN attendee (checked
  * server-side). PICKUP = the customer collects goods at the showroom, optionally
- * linked to the CONFIRMED quotation (`documentId`).
+ * linked to the CONFIRMED quotation (`documentId`), which supplies the customer
+ * (the form has no customer field for a pickup).
  */
 export const appointmentSchema = z.object({
   kind: z.enum(["VISIT_CUSTOMER", "SHOWROOM", "PICKUP"]).default("VISIT_CUSTOMER"),
@@ -522,6 +523,9 @@ export const appointmentSchema = z.object({
 }).refine(
   (data) => !data.endTime || data.endTime > data.startTime,
   { message: "เวลาสิ้นสุดต้องหลังเวลาเริ่ม", path: ["endTime"] }
+).refine(
+  (data) => data.kind !== "PICKUP" || !!data.documentId,
+  { message: "กรุณาเลือกใบเสนอราคาที่มารับ", path: ["documentId"] }
 );
 
 export const appointmentReviewSchema = z.object({
