@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { serialize } from "@/lib/utils";
 
-export async function getCompanies() {
+/** `includeIds` keeps inactive companies that a document being edited/issued still points to. */
+export async function getCompanies(params?: { includeIds?: string[] }) {
   try {
+    const includeIds = params?.includeIds?.length ? params.includeIds : null;
     const data = await prisma.company.findMany({
-      where: { status: "ACTIVE" },
+      where: includeIds
+        ? { OR: [{ status: "ACTIVE" }, { id: { in: includeIds } }] }
+        : { status: "ACTIVE" },
       orderBy: { createdAt: "asc" },
     });
     return serialize(data);

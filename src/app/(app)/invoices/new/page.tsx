@@ -18,13 +18,16 @@ export default async function NewInvoicePage({
   const year = params.year ? parseInt(params.year) : now.getFullYear();
   const month = params.month ? parseInt(params.month) : now.getMonth() + 1;
 
-  const [companies, customers, quotations, paymentTermTemplates, holidays] = await Promise.all([
-    getCompanies(),
+  const [customers, quotations, paymentTermTemplates, holidays] = await Promise.all([
     getCustomers({ status: "ACTIVE" }),
     getConfirmedQuotations({ year, month, includeId: params.quotationId }),
     getActivePaymentTermTemplates(),
     getActiveHolidays(),
   ]);
+  // A quotation's company may have been deactivated since; keep it listed so the field shows its name.
+  const companies = await getCompanies({
+    includeIds: quotations.map((q: { companyId: string }) => q.companyId),
+  });
 
   return (
     <div>
