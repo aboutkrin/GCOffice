@@ -196,6 +196,8 @@ export async function getDocumentById(id: string) {
         depositDeductions: { orderBy: { sequence: "asc" } },
         sourceInvoice: { include: {
           lineItems: { orderBy: { sequence: "asc" } },
+          // Deposit / balance invoices carry no product lines, so receipts take the images from the quotation.
+          sourceQuotation: { select: { lineItems: { orderBy: { sequence: "asc" } } } },
           paymentTerms: { orderBy: { sequence: "asc" } },
           receipts: { where: { status: "PAID", type: "RECEIPT" }, select: { id: true, netPayable: true } },
         } },

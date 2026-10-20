@@ -119,7 +119,10 @@ export interface DocumentData {
   lineItems: LineItem[];
   paymentTerms: PaymentTerm[];
   /** Receipts: the invoice they pay, for the "รูปสินค้า" box. */
-  sourceInvoice?: { lineItems: PreviewProductImageItem[] } | null;
+  sourceInvoice?: {
+    lineItems: PreviewProductImageItem[];
+    sourceQuotation?: { lineItems: PreviewProductImageItem[] } | null;
+  } | null;
   /** Deposit invoices: the quotation they bill, for the "รูปสินค้า" box. */
   sourceQuotation?: { lineItems: PreviewProductImageItem[] } | null;
   createdBy?: {
@@ -336,7 +339,11 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
     const billedPart = doc.type === "INVOICE" && (doc.invoiceBillingType === "DEPOSIT" || doc.invoiceBillingType === "BALANCE");
     const showProductImages =
       (doc.type === "RECEIPT" || billedPart) && !doc.lineItems.some((item) => item.productImage);
-    const productImageItems = doc.type === "RECEIPT" ? doc.sourceInvoice?.lineItems : doc.sourceQuotation?.lineItems;
+    // A receipt on a deposit / balance invoice falls back to that invoice's quotation, whose lines hold the images.
+    const invoiceItems = doc.sourceInvoice?.lineItems;
+    const productImageItems = doc.type === "RECEIPT"
+      ? (invoiceItems?.some((item) => item.productImage) ? invoiceItems : doc.sourceInvoice?.sourceQuotation?.lineItems ?? invoiceItems)
+      : doc.sourceQuotation?.lineItems;
     // A deposit / balance receipt has one "รับชำระ..." line and no products,
     // so its price column must not read "ราคา/กล่อง".
     const paymentLines =
