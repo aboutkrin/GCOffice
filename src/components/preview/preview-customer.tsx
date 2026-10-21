@@ -30,10 +30,15 @@ export function PreviewCustomer({
   customInvoiceNumber,
   documentType,
 }: PreviewCustomerProps) {
-  const isCompany = customer.type === "COMPANY";
-  const displayName = isCompany
-    ? customer.companyName || customer.customerName
-    : customer.customerName;
+  // Same rule as the customer picker in the form: a company name always wins
+  const displayName = customer.companyName || customer.customerName;
+  const isCompany = customer.type === "COMPANY" || !!customer.companyName;
+  // An individual record that also has a company name: the person is the contact
+  const contactPerson =
+    customer.contactPerson ||
+    (customer.companyName && customer.customerName !== customer.companyName
+      ? customer.customerName
+      : undefined);
 
   return (
     <div className="mb-3 flex items-stretch gap-4">
@@ -57,12 +62,12 @@ export function PreviewCustomer({
           </div>
 
           {/* Contact Person & Tax ID (same line) */}
-          {(customer.contactPerson || customer.taxId) && (
+          {(contactPerson || customer.taxId) && (
             <div className="flex items-center gap-2 text-[10px] text-gray-700">
               <User className="h-3.5 w-3.5 shrink-0 text-gray-400" />
               <span>
-                {customer.contactPerson && `ผู้ติดต่อ: ${customer.contactPerson}`}
-                {customer.contactPerson && customer.taxId && "  "}
+                {contactPerson && `ผู้ติดต่อ: ${contactPerson}`}
+                {contactPerson && customer.taxId && "  "}
                 {customer.taxId && `เลขประจำตัวผู้เสียภาษี: ${customer.taxId}`}
               </span>
             </div>
