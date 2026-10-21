@@ -434,7 +434,12 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
         <PreviewFooter
           footerNotes={doc.footerNotes}
           documentDate={doc.documentDate}
-          createdBy={doc.createdBy}
+          // Receipts are signed by hand in front of the customer, so leave the signature image out.
+          createdBy={
+            doc.type === "RECEIPT" && doc.createdBy
+              ? { ...doc.createdBy, signatureUrl: null }
+              : doc.createdBy
+          }
         />
       </>
     );
