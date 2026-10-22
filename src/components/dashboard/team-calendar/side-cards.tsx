@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useMemo, useRef, type RefObject } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import Link from "next/link";
 import { formatLeaveHours, LEAVE_MAIN_TYPES } from "@/lib/leave-policy";
 import type { LeaveBalanceSummary } from "@/data/leave-balances";
@@ -475,6 +475,8 @@ function AppointmentRow({
   showCountdown?: boolean;
 }) {
   const router = useRouter();
+  // Tap the row to read the full company name / address instead of the truncated line.
+  const [expanded, setExpanded] = useState(false);
   const forMe = a.attendeeId === currentUserId;
   const style = appointmentKindStyle(a.kind);
   const cancelled = a.status === "CANCELLED";
@@ -482,8 +484,12 @@ function AppointmentRow({
   const when = showCountdown && !cancelled && !done ? appointmentWhen(a) : null;
   return (
     <li
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest("a,button,[role=button],[role=dialog]")) return;
+        setExpanded((v) => !v);
+      }}
       className={cn(
-        "space-y-1.5 rounded-md border p-2.5",
+        "cursor-pointer space-y-1.5 rounded-md border p-2.5",
         cancelled ? "border-gray-200 bg-gray-50/60" : done ? "border-green-200 bg-green-50/40" : style.border
       )}
     >
@@ -493,7 +499,7 @@ function AppointmentRow({
             <style.Icon className="h-3 w-3" />
             {APPOINTMENT_KIND_LABELS[a.kind] ?? "นัดพบลูกค้า"}
           </div>
-          <div className="truncate font-medium">{a.companyName}</div>
+          <div className={cn("font-medium", expanded ? "break-words" : "truncate")}>{a.companyName}</div>
           <div className="text-xs text-muted-foreground">
             {formatThaiDate(new Date(a.date), "short")} · {appointmentTimeText(a)} น.
             {when && (
@@ -504,7 +510,9 @@ function AppointmentRow({
             )}
           </div>
           {!style.atShowroom && a.location && (
-            <div className="truncate text-xs text-muted-foreground">{a.location}</div>
+            <div className={cn("text-xs text-muted-foreground", expanded ? "break-words" : "truncate")}>
+              {a.location}
+            </div>
           )}
           <AppointmentQuotationLine appointment={a} className="mt-1 text-xs" />
           <AppointmentContactLinks appointment={a} className="text-xs" />
