@@ -165,6 +165,7 @@ async function getDeliveryDefaults(documentId: string) {
         customerPoNumber: true,
         vehiclePlate: true,
         driverName: true,
+        driverPhone: true,
         carrierName: true,
       },
     }),
@@ -191,6 +192,7 @@ async function getDeliveryDefaults(documentId: string) {
     customerPoNumber: previous?.customerPoNumber ?? null,
     vehiclePlate: previous?.vehiclePlate ?? null,
     driverName: previous?.driverName ?? null,
+    driverPhone: previous?.driverPhone ?? null,
     carrierName: previous?.carrierName ?? null,
   };
 }
@@ -218,6 +220,7 @@ export async function updateDeliveryInfo(stockDocumentId: string, data: unknown)
       customerPoNumber: clean(parsed.customerPoNumber),
       vehiclePlate: clean(parsed.vehiclePlate),
       driverName: clean(parsed.driverName),
+      driverPhone: clean(parsed.driverPhone),
       carrierName: clean(parsed.carrierName),
       deliveryRemark: clean(parsed.deliveryRemark),
     },

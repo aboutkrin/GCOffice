@@ -399,6 +399,7 @@ export const deliveryInfoSchema = z.object({
   customerPoNumber: z.string().max(100, "เลข PO ยาวเกินไป").optional(),
   vehiclePlate: z.string().max(50, "ทะเบียนรถยาวเกินไป").optional(),
   driverName: z.string().max(200, "ชื่อคนขับยาวเกินไป").optional(),
+  driverPhone: z.string().max(100, "เบอร์โทรยาวเกินไป").optional(),
   carrierName: z.string().max(200, "ชื่อขนส่งยาวเกินไป").optional(),
   deliveryRemark: z.string().max(2000, "หมายเหตุยาวเกินไป").optional(),
 });

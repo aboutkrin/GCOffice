@@ -20,6 +20,7 @@ const FIELDS: { key: keyof DeliveryInfoFormData; label: string; placeholder?: st
   { key: "customerPoNumber", label: "เลขที่ PO ลูกค้า" },
   { key: "vehiclePlate", label: "ทะเบียนรถ", placeholder: "เช่น 1กข 1234" },
   { key: "driverName", label: "ชื่อคนขับ" },
+  { key: "driverPhone", label: "เบอร์คนขับ" },
   { key: "carrierName", label: "บริษัทขนส่ง", placeholder: "เว้นว่างถ้าส่งเอง" },
 ];
 
@@ -35,6 +36,7 @@ function initialValues(document: DeliveryDocument): Required<DeliveryInfoFormDat
     customerPoNumber: document.customerPoNumber ?? "",
     vehiclePlate: document.vehiclePlate ?? "",
     driverName: document.driverName ?? "",
+    driverPhone: document.driverPhone ?? "",
     carrierName: document.carrierName ?? "",
     deliveryRemark: document.deliveryRemark ?? "",
   };
