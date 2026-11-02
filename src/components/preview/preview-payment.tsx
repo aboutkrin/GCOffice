@@ -97,18 +97,16 @@ export function BankInfoBox({ company, compact = false }: { company: PreviewPaym
  * "ข้อมูลการชำระ": how the customer actually paid, printed on receipts in the
  * slot the bank box takes on invoices (the money is already in, so the account
  * to pay into is no longer the point). Transfers / PromptPay still name the
- * receiving account.
+ * receiving account; the reference number stays back-office data.
  */
 export function PaymentInfoBox({
   company,
   paymentMethod,
-  paymentReference,
   paymentDate,
   documentDate,
 }: {
   company: PreviewPaymentProps["company"];
   paymentMethod?: string | null;
-  paymentReference?: string | null;
   paymentDate?: Date;
   documentDate?: Date;
 }) {
@@ -134,12 +132,6 @@ export function PaymentInfoBox({
             {paidOn ? formatThaiDate(new Date(paidOn)) : "-"}
           </span>
         </div>
-        {paymentReference && (
-          <div className="flex gap-2">
-            <span className="text-gray-500 w-20 shrink-0">เลขอ้างอิง:</span>
-            <span className="font-medium text-gray-800 tracking-wide">{paymentReference}</span>
-          </div>
-        )}
         {intoAccount && (
           <div className="flex items-center gap-2">
             <span className="text-gray-500 w-20 shrink-0">เข้าบัญชี:</span>

@@ -392,7 +392,6 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
               <PaymentInfoBox
                 company={bankInfo ?? {}}
                 paymentMethod={doc.paymentMethod}
-                paymentReference={doc.paymentReference}
                 paymentDate={doc.paymentDate}
                 documentDate={doc.documentDate}
               />
