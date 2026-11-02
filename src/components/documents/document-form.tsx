@@ -61,7 +61,7 @@ import { createDocument, updateDocument } from "@/actions/document-actions";
 import { calculateDeliveryDates, type Holiday } from "@/lib/delivery-date";
 
 import { RECEIPT_PAYMENT_LABELS, defaultReceiptPayment, satang, type ReceiptPaymentKind } from "@/lib/receipt-payment";
-import { buildInvoiceBillingChoices, type InvoiceBillingKind } from "@/lib/invoice-billing";
+import { buildInvoiceBillingChoices, INVOICE_BILLING_COLORS, INVOICE_BILLING_LABELS, type InvoiceBillingKind } from "@/lib/invoice-billing";
 import { InvoiceBillingPanel, type BillingQuotationOption } from "./invoice-billing-panel";
 import { PaymentMethodChips, type PaymentMethodKind } from "./payment-method-chips";
 
@@ -94,6 +94,18 @@ interface ReceiptInvoiceOption {
   sourceQuotation?: { lineItems: ProductImageItem[] } | null;
   receipts: { id: string; netPayable: number | string }[];
   paymentTerms: { name: string; calculatedAmount: number | string }[];
+}
+
+/** มัดจำ / ยอดคงเหลือ badge shown after an invoice in the receipt dropdown (nothing for a full invoice). */
+function invoiceBillingBadge(invoice: Pick<ReceiptInvoiceOption, "invoiceBillingType" | "isDepositInvoice">) {
+  const kind: InvoiceBillingKind | null =
+    invoice.invoiceBillingType ?? (invoice.isDepositInvoice ? "DEPOSIT" : null);
+  if (!kind || kind === "FULL") return null;
+  return (
+    <Badge className={`${INVOICE_BILLING_COLORS[kind]} text-[10px] px-1.5 py-0 pointer-events-none`}>
+      {INVOICE_BILLING_LABELS[kind]}
+    </Badge>
+  );
 }
 
 /** The lines whose product photos represent an invoice: its own, else its quotation's. */
@@ -1074,9 +1086,12 @@ export function DocumentForm({
                         {/* Always pass defined children (null, not undefined/false): Radix decides at
                             mount whether SelectItem text is portaled into the trigger, and switching
                             from undefined to a string later crashes with a removeChild error. */}
-                        {receiptInvoice
-                          ? `${receiptInvoice.documentNumber} - ${(receiptInvoice as any).customerSnapshot?.customerName || "ไม่ระบุ"} - ${formatBaht((receiptInvoice as any).grandTotal)}`
-                          : null}
+                        {receiptInvoice ? (
+                          <span className="inline-flex items-center gap-2">
+                            {`${receiptInvoice.documentNumber} - ${(receiptInvoice as any).customerSnapshot?.customerName || "ไม่ระบุ"} - ${formatBaht((receiptInvoice as any).grandTotal)}`}
+                            {invoiceBillingBadge(receiptInvoice)}
+                          </span>
+                        ) : null}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -1087,8 +1102,9 @@ export function DocumentForm({
                           <SelectItem key={inv.id} value={inv.id}>
                             <span className="flex items-center gap-3">
                               <ProductThumbs items={invoiceImageItems(inv)} max={3} size="sm" placeholder />
-                              <span>
+                              <span className="inline-flex items-center gap-2">
                                 {inv.documentNumber} - {customerName} - {formatBaht(inv.grandTotal)}
+                                {invoiceBillingBadge(inv)}
                               </span>
                             </span>
                           </SelectItem>
