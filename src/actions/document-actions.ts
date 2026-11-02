@@ -445,6 +445,24 @@ export async function updateDocument(id: string, data: unknown) {
           [lineCostKey(l), { unitCost: l.unitCost, costSnapshot: l.costSnapshot, costBreakdown: l.costBreakdown }] as const)
       );
 
+      // Delivery rounds (ISSUE lines) point at these line items; the FK nulls
+      // them on delete, so remember them and re-link to the recreated items
+      type LinkedStockLine = {
+        id: string;
+        stockDocumentId: string;
+        sourceLineItem: Parameters<typeof lineCostKey>[0] & { sequence: number };
+      };
+      const linkedStockLines: LinkedStockLine[] = await tx.stockDocumentLine.findMany({
+        where: { sourceLineItem: { documentId: id } },
+        select: {
+          id: true,
+          stockDocumentId: true,
+          sourceLineItem: {
+            select: { sequence: true, productId: true, colorVariantId: true, productName: true, colorVariantName: true },
+          },
+        },
+      });
+
       // Delete old items
       await tx.documentLineItem.deleteMany({ where: { documentId: id } });
       await tx.documentPaymentTerm.deleteMany({ where: { documentId: id } });
@@ -530,6 +548,31 @@ export async function updateDocument(id: string, data: unknown) {
           })
         ),
       });
+
+      if (linkedStockLines.length > 0) {
+        type NewItem = Parameters<typeof lineCostKey>[0] & { id: string; sequence: number };
+        const newItems: NewItem[] = await tx.documentLineItem.findMany({
+          where: { documentId: id },
+          select: { id: true, sequence: true, productId: true, colorVariantId: true, productName: true, colorVariantName: true },
+        });
+        // Same item at the same row first, else the only row with that item
+        const bySequence = new Map(newItems.map((li) => [`${lineCostKey(li)}#${li.sequence}`, li.id]));
+        const byKey = new Map<string, string[]>();
+        for (const li of newItems) byKey.set(lineCostKey(li), [...(byKey.get(lineCostKey(li)) ?? []), li.id]);
+        const relink = new Map<string, string[]>();
+        const taken = new Set<string>(); // one line per item per round (unique index)
+        for (const line of linkedStockLines) {
+          const old = line.sourceLineItem;
+          const candidates = byKey.get(lineCostKey(old)) ?? [];
+          const newId = bySequence.get(`${lineCostKey(old)}#${old.sequence}`) ?? (candidates.length === 1 ? candidates[0] : null);
+          if (!newId || taken.has(`${line.stockDocumentId}|${newId}`)) continue;
+          taken.add(`${line.stockDocumentId}|${newId}`);
+          relink.set(newId, [...(relink.get(newId) ?? []), line.id]);
+        }
+        for (const [newId, stockLineIds] of relink) {
+          await tx.stockDocumentLine.updateMany({ where: { id: { in: stockLineIds } }, data: { sourceLineItemId: newId } });
+        }
+      }
 
       // Bulk-insert payment terms
       if (validated.paymentTerms && validated.paymentTerms.length > 0) {
