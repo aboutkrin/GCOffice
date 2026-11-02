@@ -99,7 +99,15 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
     const docId = doc.id;
     startTransition(async () => {
       try {
-        const result = await updateDocumentStatus(docId, newStatus as any);
+        const outcome = await updateDocumentStatus(docId, newStatus as any);
+        if (!outcome.success) {
+          toast.error("ไม่สามารถเปลี่ยนสถานะได้", {
+            description: outcome.error,
+            duration: 8000,
+          });
+          return;
+        }
+        const result = outcome.data;
         toast.success(
           `เปลี่ยนสถานะเป็น "${DOCUMENT_STATUS_LABELS[newStatus]}" สำเร็จ`
         );
@@ -119,7 +127,12 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
         }
       } catch (error) {
         console.error("Status update failed:", error);
-        toast.error("ไม่สามารถเปลี่ยนสถานะได้");
+        toast.error("ไม่สามารถเปลี่ยนสถานะได้", {
+          description: error instanceof Error && error.message
+            ? error.message
+            : "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+          duration: 8000,
+        });
       }
     });
   };
@@ -214,7 +227,11 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
     if (!deleteId) return;
     setDeleting(true);
     try {
-      await deleteDocument(deleteId);
+      const result = await deleteDocument(deleteId);
+      if (!result.success) {
+        toast.error("ยกเลิกเอกสารไม่สำเร็จ", { description: result.error, duration: 8000 });
+        return;
+      }
       setDeleteId(null);
     } catch (error) {
       console.error("ยกเลิกเอกสารไม่สำเร็จ:", error);

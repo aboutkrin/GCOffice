@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "sonner";
+
 import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Package, FileText, Truck } from "lucide-react";
@@ -219,7 +221,11 @@ export function DeliverySchedule({
   async function handleMarkShipped(id: string) {
     setIsShipping(true);
     try {
-      await markDocumentShippedAction(id);
+      const result = await markDocumentShippedAction(id);
+      if (!result.success) {
+        toast.error("ไม่สามารถเปลี่ยนสถานะเป็นจัดส่งแล้วได้", { description: result.error, duration: 8000 });
+        return;
+      }
       setData((prev) =>
         prev.map((item) =>
           item.id === id ? { ...item, status: "SHIPPED" } : item
@@ -230,6 +236,9 @@ export function DeliverySchedule({
       );
     } catch (error) {
       console.error("Failed to mark as shipped:", error);
+      toast.error("ไม่สามารถเปลี่ยนสถานะเป็นจัดส่งแล้วได้", {
+        description: "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+      });
     } finally {
       setIsShipping(false);
     }

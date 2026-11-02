@@ -320,11 +320,13 @@ export function ExportToolbar({
             }
           );
 
+          const data = await response.json().catch(() => null);
           if (!response.ok) {
-            throw new Error("Failed to update status");
+            throw new Error(
+              (data && typeof data.error === "string" && data.error) ||
+                "เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
+            );
           }
-
-          const data = await response.json();
 
           toast.success(
             `เปลี่ยนสถานะเป็น "${DOCUMENT_STATUS_LABELS[newStatus]}" สำเร็จ`
@@ -347,7 +349,10 @@ export function ExportToolbar({
           router.refresh();
         } catch (error) {
           console.error("Status update failed:", error);
-          toast.error("ไม่สามารถเปลี่ยนสถานะได้");
+          toast.error("ไม่สามารถเปลี่ยนสถานะได้", {
+            description: error instanceof Error ? error.message : "กรุณาลองใหม่อีกครั้ง",
+            duration: 8000,
+          });
         }
       });
     },

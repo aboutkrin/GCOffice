@@ -42,9 +42,10 @@ export async function fetchHolidaysForMonthAction(
 
 export async function markDocumentShippedAction(
   id: string
-): Promise<void> {
+): Promise<{ success: true } | { success: false; error: string }> {
   const { updateDocumentStatus } = await import("@/actions/document-actions");
-  await updateDocumentStatus(id, "SHIPPED");
+  const result = await updateDocumentStatus(id, "SHIPPED");
+  return result.success ? { success: true } : result;
 }
 
 export async function fetchTeamCalendarAction(
