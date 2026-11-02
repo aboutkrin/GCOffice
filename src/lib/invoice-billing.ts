@@ -85,3 +85,76 @@ export function calculateInvoiceBilling(input: {
     throw new Error(INVOICE_MESSAGES[message] ?? message);
   }
 }
+
+/** One tappable card on the invoice form: what this invoice can bill off the quotation. */
+export interface InvoiceBillingChoice {
+  /** "FULL" | "BALANCE" | "TERM:<index>" | "CUSTOM" */
+  key: string;
+  type: InvoiceBillingKind;
+  label: string;
+  /** Second line: the payment term behind the amount ("งวด 1 · มัดจำ 30%"). */
+  detail?: string;
+  /** null = CUSTOM: the user types a ฿ or % amount. */
+  amount: number | null;
+  percent: string | null;
+  /** The one to preselect when the quotation is picked. */
+  recommended: boolean;
+}
+
+/**
+ * Choices offered for an invoice off a quotation, in display order.
+ * First invoice (nothing issued): FULL, one deposit per payment term except
+ * the last (that one is the balance), and a custom deposit; the first term is
+ * recommended. Once a deposit exists: BALANCE (recommended), "มัดจำเพิ่ม" for
+ * the terms not billed yet, and a custom extra deposit. FULL is never offered
+ * after a deposit. Amounts are capped at what is still unbilled.
+ */
+export function buildInvoiceBillingChoices(input: {
+  quotationTotal: number; previousDeposits: number;
+  paymentTerms: { name: string; calculatedAmount: number | string }[];
+}): InvoiceBillingChoice[] {
+  const total = satang(input.quotationTotal);
+  const issued = satang(input.previousDeposits);
+  const remaining = total - issued;
+  if (!Number.isFinite(total) || total <= 0 || remaining <= 0) return [];
+  const terms = input.paymentTerms.map((t, index) => ({ index, name: t.name, amount: satang(t.calculatedAmount) }));
+  // The last of several terms is the balance; a single (100%) term is the FULL invoice.
+  const depositTerms = terms.length >= 2 ? terms.slice(0, -1) : [];
+  const lastTerm = terms.length >= 2 ? terms[terms.length - 1] : null;
+  const pct = (amount: number) => invoiceBillingPercentLabel(amount / 100, total / 100);
+  const choices: InvoiceBillingChoice[] = [];
+
+  if (issued <= 0) {
+    choices.push({ key: "FULL", type: "FULL", label: "เต็มจำนวน", amount: total / 100, percent: pct(total), recommended: false });
+    depositTerms.forEach((term, i) => {
+      const amount = Math.min(term.amount, remaining);
+      if (amount <= 0) return;
+      choices.push({
+        key: `TERM:${term.index}`, type: "DEPOSIT", label: "มัดจำ", detail: `งวด ${term.index + 1} · ${term.name}`,
+        amount: amount / 100, percent: pct(amount), recommended: i === 0,
+      });
+    });
+    choices.push({ key: "CUSTOM", type: "DEPOSIT", label: "มัดจำ กำหนดเอง", amount: null, percent: null, recommended: false });
+    return choices;
+  }
+
+  // A term counts as billed when the deposits so far cover the terms up to it.
+  let cumulative = 0;
+  const billedCount = depositTerms.filter((term) => { cumulative += term.amount; return cumulative <= issued; }).length;
+  const balanceIsLastTerm = !!lastTerm && billedCount === depositTerms.length && lastTerm.amount === remaining;
+  choices.push({
+    key: "BALANCE", type: "BALANCE", label: "ยอดคงเหลือ",
+    detail: balanceIsLastTerm && lastTerm ? `งวด ${lastTerm.index + 1} · ${lastTerm.name}` : undefined,
+    amount: remaining / 100, percent: pct(remaining), recommended: true,
+  });
+  depositTerms.slice(billedCount).forEach((term) => {
+    const amount = Math.min(term.amount, remaining);
+    if (amount <= 0 || amount >= remaining) return;
+    choices.push({
+      key: `TERM:${term.index}`, type: "DEPOSIT", label: "มัดจำเพิ่ม", detail: `งวด ${term.index + 1} · ${term.name}`,
+      amount: amount / 100, percent: pct(amount), recommended: false,
+    });
+  });
+  choices.push({ key: "CUSTOM", type: "DEPOSIT", label: "มัดจำเพิ่ม กำหนดเอง", amount: null, percent: null, recommended: false });
+  return choices;
+}

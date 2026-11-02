@@ -250,11 +250,19 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
   };
   const balanceReceiptHref = (invoiceId: string) => `/receipts/new?invoiceId=${invoiceId}`;
 
-  /** Deposit invoice → the balance invoice is issued off the same quotation. */
-  const balanceInvoiceHref = (doc: { invoiceBillingType?: string | null; sourceQuotationId?: string | null; status: string }) =>
-    documentType === "INVOICE" && doc.invoiceBillingType === "DEPOSIT" && doc.sourceQuotationId && doc.status !== "CANCELLED"
+  /**
+   * Where "ออกใบแจ้งหนี้" goes: a confirmed quotation with no final invoice yet, or
+   * a deposit invoice → the balance invoice is issued off the same quotation.
+   */
+  const balanceInvoiceHref = (doc: { id: string; invoiceBillingType?: string | null; sourceQuotationId?: string | null; status: string; invoices?: { id: string }[] }) => {
+    if (documentType === "QUOTATION") {
+      return (doc.status === "CONFIRMED" || doc.status === "SHIPPED") && !(doc.invoices?.length) ? `/invoices/new?quotationId=${doc.id}` : null;
+    }
+    return documentType === "INVOICE" && doc.invoiceBillingType === "DEPOSIT" && doc.sourceQuotationId && doc.status !== "CANCELLED"
       ? `/invoices/new?quotationId=${doc.sourceQuotationId}`
       : null;
+  };
+  const invoiceShortcutLabel = documentType === "QUOTATION" ? "ออกใบแจ้งหนี้" : "ออกใบแจ้งหนี้ยอดคงเหลือ";
 
   const billingBadge = (doc: { invoiceBillingType?: string | null }) =>
     documentType === "INVOICE" && doc.invoiceBillingType && doc.invoiceBillingType !== "FULL" ? (
@@ -397,7 +405,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-blue-700"
-                        title="ออกใบแจ้งหนี้ยอดคงเหลือ"
+                        title={invoiceShortcutLabel}
                         onClick={() => router.push(balanceInvoiceHref(doc)!)}
                       >
                         <FilePlus2 className="h-4 w-4" />
@@ -522,7 +530,7 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
                     {balanceInvoiceHref(doc) && (
                       <DropdownMenuItem onClick={() => router.push(balanceInvoiceHref(doc)!)}>
                         <FilePlus2 className="h-4 w-4 mr-2" />
-                        ออกใบแจ้งหนี้ยอดคงเหลือ
+                        {invoiceShortcutLabel}
                       </DropdownMenuItem>
                     )}
                     {balanceReceiptInvoiceId(doc) && (

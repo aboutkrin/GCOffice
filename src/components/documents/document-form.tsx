@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,7 +60,7 @@ import { createDocument, updateDocument } from "@/actions/document-actions";
 import { calculateDeliveryDates, type Holiday } from "@/lib/delivery-date";
 
 import { RECEIPT_PAYMENT_LABELS, satang, type ReceiptPaymentKind } from "@/lib/receipt-payment";
-import { type InvoiceBillingKind } from "@/lib/invoice-billing";
+import { buildInvoiceBillingChoices, type InvoiceBillingKind } from "@/lib/invoice-billing";
 import { InvoiceBillingPanel, type BillingQuotationOption } from "./invoice-billing-panel";
 import { PaymentMethodChips, type PaymentMethodKind } from "./payment-method-chips";
 
@@ -255,19 +255,32 @@ export function DocumentForm({
 
   // Invoices are issued off a quotation the way receipts are issued off an invoice.
   const managedInvoice = type === "INVOICE" && (!initialData || !!initialData.invoiceBillingType);
-  // No default: a new invoice must have its billing type picked explicitly before it can be saved.
-  const [invoiceBillingType, setInvoiceBillingType] = useState<InvoiceBillingKind | "">(initialData?.invoiceBillingType || "");
   const [invoiceBillingTouched, setInvoiceBillingTouched] = useState(false);
   const [invoiceBillingError, setInvoiceBillingError] = useState("");
-  const [invoiceTermError, setInvoiceTermError] = useState("");
   const [invoiceBasis, setInvoiceBasis] = useState<"AMOUNT" | "PERCENTAGE">("AMOUNT");
   const [invoiceValue, setInvoiceValue] = useState(Number(initialData?.grandTotal || 0));
-  const [invoiceSelectedTermIndex, setInvoiceSelectedTermIndex] = useState("");
   const billingQuotation = (initialData?.sourceQuotation || quotations?.find((q) => q.id === sourceQuotationId)) as BillingQuotationOption | undefined;
   const quotationTotal = Number(billingQuotation?.grandTotal ?? 0);
   const previousDeposits = (billingQuotation?.invoices || []).filter((d) => d.id !== initialData?.id)
     .reduce((sum, d) => sum + satang(d.grandTotal), 0) / 100;
   const remainingToBill = (satang(quotationTotal) - satang(previousDeposits)) / 100;
+  // One tappable card per thing this invoice can bill (full / a term as deposit / balance / custom deposit).
+  const invoiceChoices = useMemo(
+    () => billingQuotation ? buildInvoiceBillingChoices({ quotationTotal, previousDeposits, paymentTerms: billingQuotation.paymentTerms || [] }) : [],
+    [billingQuotation, quotationTotal, previousDeposits],
+  );
+  // "" until picked: a new invoice has no default unless a choice is recommended (see handleQuotationSelect).
+  // Editing: the card that matches the stored type / amount, else the custom one.
+  const [invoiceChoiceKey, setInvoiceChoiceKey] = useState<string>(() => {
+    const type = initialData?.invoiceBillingType as InvoiceBillingKind | undefined;
+    if (!type) return "";
+    if (type !== "DEPOSIT") return type;
+    const stored = satang(initialData?.grandTotal);
+    const term = invoiceChoices.find((c) => c.key.startsWith("TERM:") && c.amount !== null && satang(c.amount) === stored);
+    return term?.key ?? "CUSTOM";
+  });
+  const invoiceChoice = invoiceChoices.find((c) => c.key === invoiceChoiceKey);
+  const invoiceBillingType: InvoiceBillingKind | "" = invoiceChoice?.type ?? "";
   // Only DEPOSIT / BALANCE invoices are generated; a FULL invoice keeps the editable form.
   const generatedInvoice = managedInvoice && invoiceBillingType !== "" && invoiceBillingType !== "FULL";
   // Until the type is picked the editable FULL form stays hidden.
@@ -275,7 +288,7 @@ export function DocumentForm({
   const invoiceHasPaidReceipts = !!initialData?.receipts?.length;
   const depositBillingAmount = initialData?.invoiceBillingType && initialData.invoiceBillingType !== "FULL" && !invoiceBillingTouched
     ? Number(initialData.grandTotal)
-    : invoiceBillingType === "BALANCE" ? remainingToBill
+    : invoiceChoice && invoiceChoice.amount !== null ? invoiceChoice.amount
     : satang(invoiceBasis === "PERCENTAGE" ? quotationTotal * invoiceValue / 100 : invoiceValue) / 100;
 
   const [depositDeductionRows, setDepositDeductionRows] = useState<DepositDeductionRow[]>(
@@ -511,12 +524,13 @@ export function DocumentForm({
     if (!q) return;
 
     setSourceQuotationId(quotationId);
-    setInvoiceBillingType("");
     setInvoiceBillingError("");
-    setInvoiceTermError("");
     setInvoiceBasis("AMOUNT");
-    setInvoiceValue(Number(q.paymentTerms?.[0]?.calculatedAmount || 0));
-    setInvoiceSelectedTermIndex("");
+    setInvoiceValue(0);
+    // Preselect the obvious card: the balance once a deposit exists, the first term on a first invoice.
+    const issued = (q.invoices || []).reduce((sum: number, d: { grandTotal: number | string }) => sum + satang(d.grandTotal), 0) / 100;
+    const choices = buildInvoiceBillingChoices({ quotationTotal: Number(q.grandTotal), previousDeposits: issued, paymentTerms: q.paymentTerms || [] });
+    setInvoiceChoiceKey(choices.find((c) => c.recommended)?.key ?? "");
 
     // Pre-fill company and customer
     form.setValue("companyId", q.companyId);
@@ -737,18 +751,12 @@ export function DocumentForm({
 
     if (managedInvoice && billingQuotation) {
       if (!invoiceBillingType) {
-        setInvoiceBillingError("กรุณาเลือกประเภทการเรียกเก็บ");
-        document.getElementById("invoice-billing-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
-        return;
-      }
-      if (invoiceBillingType === "DEPOSIT" && (billingQuotation.paymentTerms?.length ?? 0) > 0 && invoiceSelectedTermIndex === "") {
-        setInvoiceTermError("กรุณาเลือกงวดชำระ");
+        setInvoiceBillingError("กรุณาเลือกยอดที่เรียกเก็บครั้งนี้");
         document.getElementById("invoice-billing-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
         return;
       }
     }
     setInvoiceBillingError("");
-    setInvoiceTermError("");
 
     if (generatedInvoice) {
       if (!Number.isFinite(depositBillingAmount) || depositBillingAmount <= 0 || satang(depositBillingAmount) > satang(remainingToBill)) {
@@ -865,9 +873,11 @@ export function DocumentForm({
                       {quotations.map((q: any) => {
                         const customerName =
                           (q.customerSnapshot as any)?.customerName || "ไม่ระบุ";
+                        const deposited = (q.invoices || []).reduce((sum: number, d: { grandTotal: number | string }) => sum + satang(d.grandTotal), 0) / 100;
                         return (
                           <SelectItem key={q.id} value={q.id}>
                             {q.documentNumber} - {customerName} - {formatBaht(q.grandTotal)}
+                            {deposited > 0 && <span className="ml-1 text-amber-700">· มัดจำแล้ว {formatBaht(deposited)}</span>}
                           </SelectItem>
                         );
                       })}
@@ -888,17 +898,16 @@ export function DocumentForm({
               <InvoiceBillingPanel
                 quotation={billingQuotation}
                 thumbs={<ProductThumbs items={billingQuotation.lineItems} size="lg" showNames />}
-                billingType={invoiceBillingType}
-                onBillingTypeChange={(value) => {
+                choices={invoiceChoices}
+                selectedKey={invoiceChoiceKey}
+                onSelectChoice={(key) => {
                   setInvoiceBillingTouched(true);
-                  setInvoiceBillingType(value);
+                  setInvoiceChoiceKey(key);
                   setInvoiceBillingError("");
-                  setInvoiceTermError("");
-                  // A deposit can never exceed what is still unbilled.
-                  if (value === "DEPOSIT") {
+                  // A custom deposit starts from the amount shown so far (never above what is still unbilled).
+                  if (key === "CUSTOM") {
                     setInvoiceBasis("AMOUNT");
-                    setInvoiceSelectedTermIndex("");
-                    setInvoiceValue(Math.min(Number(billingQuotation.paymentTerms?.[0]?.calculatedAmount || 0) || remainingToBill, remainingToBill));
+                    setInvoiceValue(Math.min(invoiceChoice?.amount ?? depositBillingAmount ?? 0, remainingToBill));
                   }
                 }}
                 basis={invoiceBasis}
@@ -909,21 +918,12 @@ export function DocumentForm({
                 }}
                 value={invoiceValue}
                 onValueChange={(value) => { setInvoiceBillingTouched(true); setInvoiceValue(value); }}
-                selectedTermIndex={invoiceSelectedTermIndex}
-                onSelectTerm={(index) => {
-                  setInvoiceBillingTouched(true);
-                  setInvoiceSelectedTermIndex(index);
-                  setInvoiceTermError("");
-                  setInvoiceBasis("AMOUNT");
-                  setInvoiceValue(Number(billingQuotation.paymentTerms[Number(index)].calculatedAmount));
-                }}
                 quotationTotal={quotationTotal}
                 previousDeposits={previousDeposits}
                 remaining={remainingToBill}
                 amount={generatedInvoice ? depositBillingAmount : pricing.grandTotal}
                 locked={invoiceHasPaidReceipts}
                 billingTypeError={invoiceBillingError}
-                termError={invoiceTermError}
               />
             )}
 
