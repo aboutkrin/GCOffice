@@ -285,3 +285,7 @@ export const CHINA_SHIPMENT_STATUS_COLORS: Record<string, string> = {
   RECEIVED: "bg-green-100 text-green-800",
   CANCELLED: "bg-gray-100 text-gray-600",
 };
+
+/** Printed under every receipt instead of the company / quotation footer notes. */
+export const RECEIPT_FOOTER_NOTE =
+  "ทางลูกค้าได้รับสินค้าตามรายการเรียบร้อยครบถ้วนแล้ว ขอบคุณ คุณลูกค้าที่ไว้วางใจ กู๊ด ช้อย นะคะ";

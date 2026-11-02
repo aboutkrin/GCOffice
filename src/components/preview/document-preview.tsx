@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
+import { DOCUMENT_TYPE_LABELS, RECEIPT_FOOTER_NOTE } from "@/lib/constants";
 import { formatThaiDate } from "@/lib/thai-date";
 import { PreviewHeader } from "./preview-header";
 import { PreviewCustomer } from "./preview-customer";
@@ -11,7 +11,7 @@ import { PreviewProductImages, type PreviewProductImageItem } from "./preview-pr
 import { BankInfoBox, PreviewPayment } from "./preview-payment";
 import { PreviewFooter } from "./preview-footer";
 
-import { type ReceiptPaymentKind, type ReceiptPaymentSummary, RECEIPT_PAYMENT_LABELS } from "@/lib/receipt-payment";
+import { type ReceiptPaymentKind, type ReceiptPaymentSummary, receiptPaymentLineName } from "@/lib/receipt-payment";
 import { type InvoiceBillingKind, type InvoiceBillingSummary, INVOICE_BILLING_LABELS, invoiceBillingPercentLabel, invoiceBillingTitle } from "@/lib/invoice-billing";
 import { formatBaht } from "@/lib/thai-currency";
 
@@ -391,7 +391,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
               {bankInfo && <BankInfoBox company={bankInfo} compact />}
             </div>
             <div className="w-full max-w-sm shrink-0 rounded border border-blue-200 bg-blue-50/40 p-2 text-[11px]">
-              <div className="mb-1 font-semibold">รับชำระ{RECEIPT_PAYMENT_LABELS[doc.receiptPaymentType]} ตามใบแจ้งหนี้เลขที่ {doc.receiptPaymentSummary.invoiceNumber}</div>
+              <div className="mb-1 font-semibold">{receiptPaymentLineName(doc.receiptPaymentType, doc.receiptPaymentSummary.invoiceNumber, doc.receiptPaymentSummary.paymentPercent)}</div>
               <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5">
                 <span className="text-gray-500">ยอดใบแจ้งหนี้</span><span className="text-right text-gray-500">{formatBaht(doc.receiptPaymentSummary.invoiceTotal)}</span>
                 <span className="text-gray-500">รับชำระก่อนหน้านี้</span><span className="text-right text-gray-500">{formatBaht(doc.receiptPaymentSummary.previousPayments)}</span>
@@ -434,10 +434,9 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           productionDays={billedPart ? undefined : doc.productionDays}
           deliveryDateStart={billedPart ? undefined : doc.deliveryDateStart}
           deliveryDateEnd={billedPart ? undefined : doc.deliveryDateEnd}
-          deliveryCompletedDate={doc.deliveryCompletedDate}
         />
         <PreviewFooter
-          footerNotes={doc.footerNotes}
+          footerNotes={doc.type === "RECEIPT" ? RECEIPT_FOOTER_NOTE : doc.footerNotes}
           documentDate={doc.documentDate}
           createdBy={doc.createdBy}
           hideSignature={doc.type === "RECEIPT"}

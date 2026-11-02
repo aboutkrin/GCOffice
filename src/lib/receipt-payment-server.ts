@@ -1,5 +1,5 @@
 import type { Prisma } from "@/generated/prisma/client";
-import { calculateReceiptPayment, RECEIPT_PAYMENT_LABELS, satang, type ReceiptPaymentKind, type ReceiptPaymentSummary } from "./receipt-payment";
+import { calculateReceiptPayment, receiptPaymentLineName, receiptPaymentPercentLabel, satang, type ReceiptPaymentKind, type ReceiptPaymentSummary } from "./receipt-payment";
 
 type Tx = Prisma.TransactionClient;
 
@@ -69,9 +69,15 @@ export async function applyReceiptPayment(tx: Tx, id: string, input: {
   const calculated = calculateReceiptPayment({ total: Number(invoice.netPayable), invoiceVat,
     vatRate: invoice.vatEnabled && invoiceVat > 0 ? Number(invoice.vatRate) : 0,
     paid, paidVat, type: input.type, requested: input.amount });
+  // A deposit / balance invoice bills part of a quotation; the % on the receipt is of that quotation.
+  const billing = invoice.invoiceBillingSummary as { quotationTotal?: number } | null;
+  const paymentPercent = receiptPaymentPercentLabel(input.type, calculated.amount, {
+    total: Number(invoice.netPayable), quotationTotal: billing?.quotationTotal ? Number(billing.quotationTotal) : null,
+  });
   const summary: ReceiptPaymentSummary = {
     invoiceNumber: invoice.documentNumber ?? "", invoiceTotal: Number(invoice.netPayable),
     previousPayments: paid, paymentAmount: calculated.amount, remainingBalance: calculated.remaining,
+    paymentPercent,
   };
   const full = input.type === "FULL";
   const copyFull = full && satang(invoice.depositDeduction) === 0;
@@ -104,7 +110,7 @@ export async function applyReceiptPayment(tx: Tx, id: string, input: {
     unitPrice: item.unitPrice, lineTotal: item.lineTotal,
     productId: item.productId, colorVariantId: item.colorVariantId,
   })) : [{
-    documentId: id, sequence: 1, productName: `รับชำระ${RECEIPT_PAYMENT_LABELS[input.type]} ตามใบแจ้งหนี้เลขที่ ${invoice.documentNumber}`,
+    documentId: id, sequence: 1, productName: receiptPaymentLineName(input.type, invoice.documentNumber, paymentPercent),
     quantity: 1, unitPrice: calculated.base, lineTotal: calculated.base, showImage: false,
   }];
   await tx.documentLineItem.createMany({ data: items });

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calculateReceiptPayment as calculate, defaultReceiptPayment, satang } from "../src/lib/receipt-payment";
+import { calculateReceiptPayment as calculate, defaultReceiptPayment, receiptPaymentLineName, receiptPaymentPercentLabel, satang } from "../src/lib/receipt-payment";
 import { applyReceiptPayment, lockInvoice, syncInvoicePaymentStatus } from "../src/lib/receipt-payment-server";
 import type { Prisma } from "../src/generated/prisma/client";
 
@@ -138,4 +138,17 @@ test("restoring an old receipt rejects an invoice whose payable amount changed",
   rows[1].status = "CANCELLED";
   rows[0].netPayable = 12000;
   await assert.rejects(applyReceiptPayment(tx, "deposit", { sourceInvoiceId: "inv", type: "DEPOSIT", amount: 3210 }, true), /ใบแจ้งหนี้เปลี่ยนแปลง/);
+});
+
+test("receipt line carries the % of the order for deposit / balance payments", () => {
+  // A 30% deposit invoice (3,210 of a 10,700 quotation) paid in full reads 30%, not 100%.
+  assert.equal(receiptPaymentPercentLabel("DEPOSIT", 3210, { total: 3210, quotationTotal: 10700 }), "30%");
+  assert.equal(receiptPaymentLineName("DEPOSIT", "INV-6911-0004", "30%"), "รับชำระมัดจำ 30% ตามใบแจ้งหนี้เลขที่ INV-6911-0004");
+  // A partial payment of a plain invoice is a share of that invoice.
+  assert.equal(receiptPaymentPercentLabel("DEPOSIT", 3566.67, { total: 10700 }), "33.33%");
+  assert.equal(receiptPaymentPercentLabel("BALANCE", 7490, { total: 10700, quotationTotal: null }), "70%");
+  // เต็มจำนวน never shows a %, and unknown totals give none.
+  assert.equal(receiptPaymentPercentLabel("FULL", 10700, { total: 10700 }), null);
+  assert.equal(receiptPaymentPercentLabel("DEPOSIT", 100, { total: 0 }), null);
+  assert.equal(receiptPaymentLineName("FULL", "INV-1", null), "รับชำระเต็มจำนวน ตามใบแจ้งหนี้เลขที่ INV-1");
 });

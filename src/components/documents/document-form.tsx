@@ -43,7 +43,7 @@ import { CalendarIcon, Save, FileText, Loader2, AlertTriangle, Trash2, Plus, Pac
 import { cn } from "@/lib/utils";
 import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
 import { formatBaht } from "@/lib/thai-currency";
-import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
+import { DOCUMENT_TYPE_LABELS, RECEIPT_FOOTER_NOTE } from "@/lib/constants";
 
 import { useLineItems, type LineItem } from "@/hooks/use-line-items";
 import { usePaymentTerms, type PaymentTerm } from "@/hooks/use-payment-terms";
@@ -60,7 +60,7 @@ import { Input } from "@/components/ui/input";
 import { createDocument, updateDocument } from "@/actions/document-actions";
 import { calculateDeliveryDates, type Holiday } from "@/lib/delivery-date";
 
-import { RECEIPT_PAYMENT_LABELS, defaultReceiptPayment, satang, type ReceiptPaymentKind } from "@/lib/receipt-payment";
+import { RECEIPT_PAYMENT_LABELS, defaultReceiptPayment, receiptPaymentPercentLabel, satang, type ReceiptPaymentKind } from "@/lib/receipt-payment";
 import { buildInvoiceBillingChoices, INVOICE_BILLING_COLORS, INVOICE_BILLING_LABELS, type InvoiceBillingKind } from "@/lib/invoice-billing";
 import { InvoiceBillingPanel, type BillingQuotationOption } from "./invoice-billing-panel";
 import { PaymentMethodChips, type PaymentMethodKind } from "./payment-method-chips";
@@ -88,6 +88,7 @@ interface ReceiptInvoiceOption {
   netPayable: number | string;
   grandTotal: number | string;
   invoiceBillingType?: ReceiptPaymentKind | null;
+  invoiceBillingSummary?: { quotationTotal?: number | string } | null;
   isDepositInvoice?: boolean | null;
   lineItems?: ProductImageItem[];
   /** Deposit / balance invoices carry one generated line, so their photos come from the quotation. */
@@ -216,9 +217,11 @@ export function DocumentForm({
   const [discountValue, setDiscountValue] = useState<number>(
     initialData?.discountValue ? Number(initialData.discountValue) : 0
   );
-  const [footerNotes, setFooterNotes] = useState<string>(
+  const [editableFooterNotes, setFooterNotes] = useState<string>(
     initialData?.footerNotes || ""
   );
+  // Receipts always print the same closing note; the textarea is read-only for them.
+  const footerNotes = type === "RECEIPT" ? RECEIPT_FOOTER_NOTE : editableFooterNotes;
   const [productionDaysMin, setProductionDaysMin] = useState<number | null>(
     initialData?.productionDaysMin ?? 10
   );
@@ -300,6 +303,10 @@ export function DocumentForm({
     ? Number(initialData.netPayable)
     : !receiptPartial ? receiptDefault?.amount ?? 0
     : satang(receiptBasis === "PERCENTAGE" ? invoiceTotal * receiptValue / 100 : receiptValue) / 100;
+  // The % printed on the receipt line ("รับชำระมัดจำ 30% …"): of the quotation when the invoice bills part of one.
+  const receiptPercent = receiptInvoice ? receiptPaymentPercentLabel(receiptPaymentType, receiptAmount, {
+    total: invoiceTotal, quotationTotal: Number(receiptInvoice.invoiceBillingSummary?.quotationTotal ?? 0) || null,
+  }) : null;
 
   // Invoices are issued off a quotation the way receipts are issued off an invoice.
   const managedInvoice = type === "INVOICE" && (!initialData || !!initialData.invoiceBillingType);
@@ -1188,7 +1195,7 @@ export function DocumentForm({
                   </div>
                 )}
                 <div className="flex flex-wrap justify-between gap-3 rounded-md bg-muted p-3">
-                  <strong>รับชำระ{RECEIPT_PAYMENT_LABELS[receiptPaymentType]}ครั้งนี้ {formatBaht(receiptAmount)}</strong>
+                  <strong>รับชำระ{RECEIPT_PAYMENT_LABELS[receiptPaymentType]}{receiptPercent ? ` ${receiptPercent}` : ""} ครั้งนี้ {formatBaht(receiptAmount)}</strong>
                   <span>คงเหลือหลังรับชำระ {formatBaht((satang(outstanding) - satang(receiptAmount)) / 100)}</span>
                 </div>
                 <p className="text-xs text-muted-foreground">ยอดรับชำระรวมภาษีตามใบแจ้งหนี้แล้ว ใบเสร็จร่างยังไม่หักยอดคงเหลือ</p>
