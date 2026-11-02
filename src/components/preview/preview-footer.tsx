@@ -10,12 +10,15 @@ interface PreviewFooterProps {
     lastName?: string | null;
     signatureUrl?: string | null;
   };
+  /** Receipts are signed by hand with a pen, so the issuer's stored signature is left out. */
+  hideSignature?: boolean;
 }
 
 export function PreviewFooter({
   footerNotes,
   documentDate,
   createdBy,
+  hideSignature = false,
 }: PreviewFooterProps) {
   return (
     <div className="flex gap-3 sm:gap-4 w-full">
@@ -39,7 +42,7 @@ export function PreviewFooter({
           {/* Issuer */}
           <div className="text-center">
             <div className="flex items-end justify-center h-8 sm:h-12">
-              {createdBy?.signatureUrl && (
+              {!hideSignature && createdBy?.signatureUrl && (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={createdBy.signatureUrl}

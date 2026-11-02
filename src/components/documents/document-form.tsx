@@ -36,9 +36,10 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { DecimalInput } from "@/components/ui/decimal-input";
-import { CalendarIcon, Save, FileText, Loader2, AlertTriangle, Trash2, Plus } from "lucide-react";
+import { CalendarIcon, Save, FileText, Loader2, AlertTriangle, Trash2, Plus, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatThaiDate, toUTCNoon } from "@/lib/thai-date";
 import { formatBaht } from "@/lib/thai-currency";
@@ -59,7 +60,7 @@ import { Input } from "@/components/ui/input";
 import { createDocument, updateDocument } from "@/actions/document-actions";
 import { calculateDeliveryDates, type Holiday } from "@/lib/delivery-date";
 
-import { RECEIPT_PAYMENT_LABELS, satang, type ReceiptPaymentKind } from "@/lib/receipt-payment";
+import { RECEIPT_PAYMENT_LABELS, defaultReceiptPayment, satang, type ReceiptPaymentKind } from "@/lib/receipt-payment";
 import { buildInvoiceBillingChoices, type InvoiceBillingKind } from "@/lib/invoice-billing";
 import { InvoiceBillingPanel, type BillingQuotationOption } from "./invoice-billing-panel";
 import { PaymentMethodChips, type PaymentMethodKind } from "./payment-method-chips";
@@ -75,13 +76,30 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+interface ProductImageItem {
+  productImage?: string | null;
+  productName?: string;
+  colorVariantName?: string | null;
+}
+
 interface ReceiptInvoiceOption {
   id: string;
   documentNumber: string | null;
   netPayable: number | string;
   grandTotal: number | string;
+  invoiceBillingType?: ReceiptPaymentKind | null;
+  isDepositInvoice?: boolean | null;
+  lineItems?: ProductImageItem[];
+  /** Deposit / balance invoices carry one generated line, so their photos come from the quotation. */
+  sourceQuotation?: { lineItems: ProductImageItem[] } | null;
   receipts: { id: string; netPayable: number | string }[];
   paymentTerms: { name: string; calculatedAmount: number | string }[];
+}
+
+/** The lines whose product photos represent an invoice: its own, else its quotation's. */
+function invoiceImageItems(invoice: Pick<ReceiptInvoiceOption, "lineItems" | "sourceQuotation">): ProductImageItem[] {
+  const own = invoice.lineItems ?? [];
+  return own.some((item) => item.productImage) ? own : invoice.sourceQuotation?.lineItems ?? own;
 }
 
 /** Product photos of an invoice's line items, so staff recognise the order at a glance. */
@@ -90,16 +108,26 @@ function ProductThumbs({
   max,
   size,
   showNames,
+  placeholder,
 }: {
-  items?: { productImage?: string | null; productName?: string; colorVariantName?: string | null }[];
+  items?: ProductImageItem[];
   max?: number;
   size: "sm" | "lg";
   showNames?: boolean;
+  /** Draw an empty box when there is no photo, so every row of a list lines up. */
+  placeholder?: boolean;
 }) {
   const withImage = (items || []).filter((item) => item.productImage);
-  if (withImage.length === 0) return null;
-  const shown = max ? withImage.slice(0, max) : withImage;
   const box = size === "sm" ? "h-8 w-8" : "h-20 w-20";
+  if (withImage.length === 0) {
+    if (!placeholder) return null;
+    return (
+      <span className={cn(box, "flex shrink-0 items-center justify-center rounded border bg-muted text-muted-foreground")}>
+        <Package className={size === "sm" ? "h-4 w-4" : "h-8 w-8"} />
+      </span>
+    );
+  }
+  const shown = max ? withImage.slice(0, max) : withImage;
   return (
     <span className={cn("flex flex-wrap items-start", size === "sm" ? "gap-1" : "gap-3")}>
       {shown.map((item, idx) => (
@@ -237,7 +265,6 @@ export function DocumentForm({
   const depositBasisValue = Number(initialData?.depositPercent || 0);
 
   const managedReceipt = type === "RECEIPT" && (!initialData || !!initialData.receiptPaymentType);
-  const [receiptPaymentType, setReceiptPaymentType] = useState<ReceiptPaymentKind>(initialData?.receiptPaymentType || "FULL");
   const [receiptPaymentTouched, setReceiptPaymentTouched] = useState(false);
   const [receiptBasis, setReceiptBasis] = useState<"AMOUNT" | "PERCENTAGE">("AMOUNT");
   const [receiptValue, setReceiptValue] = useState(Number(initialData?.netPayable || 0));
@@ -247,10 +274,19 @@ export function DocumentForm({
   const previousPayments = (receiptInvoice?.receipts || []).filter((r) => r.id !== initialData?.id)
     .reduce((sum, r) => sum + satang(r.netPayable), 0) / 100;
   const outstanding = (satang(invoiceTotal) - satang(previousPayments)) / 100;
+  // The receipt type is never picked: it is named after the invoice it pays (มัดจำ / ยอดคงเหลือ /
+  // เต็มจำนวน) and collects what is still owed. "ชำระบางส่วน" is the only choice, for a smaller amount.
+  const receiptDefault = receiptInvoice
+    ? defaultReceiptPayment({ invoiceBillingType: receiptInvoice.invoiceBillingType, isDepositInvoice: receiptInvoice.isDepositInvoice,
+      total: invoiceTotal, paid: previousPayments })
+    : null;
+  const [receiptPartial, setReceiptPartial] = useState(
+    () => initialData?.receiptPaymentType === "DEPOSIT" && satang(initialData.netPayable) < satang(outstanding)
+  );
+  const receiptPaymentType: ReceiptPaymentKind = receiptPartial ? "DEPOSIT" : receiptDefault?.type ?? initialData?.receiptPaymentType ?? "FULL";
   const receiptAmount = initialData?.receiptPaymentType && initialData.status === "PAID" && !receiptPaymentTouched
     ? Number(initialData.netPayable)
-    : receiptPaymentType === "FULL" ? invoiceTotal
-    : receiptPaymentType === "BALANCE" ? outstanding
+    : !receiptPartial ? receiptDefault?.amount ?? 0
     : satang(receiptBasis === "PERCENTAGE" ? invoiceTotal * receiptValue / 100 : receiptValue) / 100;
 
   // Invoices are issued off a quotation the way receipts are issued off an invoice.
@@ -569,7 +605,7 @@ export function DocumentForm({
 
     setSourceInvoiceId(invoiceId);
     const alreadyPaid = (inv.receipts as ReceiptInvoiceOption["receipts"] || []).reduce((sum, r) => sum + satang(r.netPayable), 0);
-    setReceiptPaymentType(alreadyPaid > 0 ? "BALANCE" : "FULL");
+    setReceiptPartial(false);
     setReceiptBasis("AMOUNT");
     // A partly paid invoice defaults to what is still owed, not the first (deposit) term again.
     const outstandingNow = (satang(inv.netPayable ?? inv.grandTotal) - alreadyPaid) / 100;
@@ -1050,7 +1086,7 @@ export function DocumentForm({
                         return (
                           <SelectItem key={inv.id} value={inv.id}>
                             <span className="flex items-center gap-3">
-                              <ProductThumbs items={inv.lineItems} max={3} size="sm" />
+                              <ProductThumbs items={invoiceImageItems(inv)} max={3} size="sm" placeholder />
                               <span>
                                 {inv.documentNumber} - {customerName} - {formatBaht(inv.grandTotal)}
                               </span>
@@ -1073,24 +1109,34 @@ export function DocumentForm({
             {managedReceipt && receiptInvoice && (
               <div className="mb-4 space-y-4 rounded-lg border p-4">
                 <p className="font-medium">รับชำระตามใบแจ้งหนี้ {receiptInvoice.documentNumber}</p>
-                <ProductThumbs items={(receiptInvoice as any).lineItems} size="lg" showNames />
+                <ProductThumbs items={invoiceImageItems(receiptInvoice)} size="lg" showNames />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                   <div>ยอดใบแจ้งหนี้ <strong>{formatBaht(invoiceTotal)}</strong></div>
                   <div>รับชำระแล้ว <strong>{formatBaht(previousPayments)}</strong></div>
                   <div>ยอดคงเหลือ <strong>{formatBaht(outstanding)}</strong></div>
                 </div>
-                <div className="space-y-2">
-                  <Label>ประเภทการรับชำระ</Label>
-                  <Select value={receiptPaymentType} onValueChange={(value) => { setReceiptPaymentTouched(true); setReceiptPaymentType(value as ReceiptPaymentKind); }}>
-                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="FULL" disabled={previousPayments > 0}>เต็มจำนวน</SelectItem>
-                      <SelectItem value="DEPOSIT">มัดจำ</SelectItem>
-                      <SelectItem value="BALANCE" disabled={previousPayments <= 0}>ยอดคงเหลือ</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-amber-100 text-amber-800 pointer-events-none">{RECEIPT_PAYMENT_LABELS[receiptPaymentType]}</Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {receiptPartial ? "ระบุยอดที่รับชำระครั้งนี้เอง" : "ตามใบแจ้งหนี้ ไม่ต้องเลือกประเภท"}
+                    </span>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm">
+                    <Switch
+                      checked={receiptPartial}
+                      onCheckedChange={(checked) => {
+                        setReceiptPaymentTouched(true);
+                        setReceiptPartial(checked);
+                        setReceiptBasis("AMOUNT");
+                        setReceiptSelectedTermIndex("");
+                        setReceiptValue(outstanding);
+                      }}
+                    />
+                    ชำระบางส่วน
+                  </label>
                 </div>
-                {receiptPaymentType === "DEPOSIT" && (
+                {receiptPartial && (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-2">
                       <Label>เลือกงวดชำระ (หรือระบุเอง)</Label>

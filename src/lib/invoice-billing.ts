@@ -75,6 +75,11 @@ export function calculateInvoiceBilling(input: {
   total: number; quotationVat: number; issued: number; issuedVat: number;
   vatRate: number; type: InvoiceBillingKind; requested: number;
 }) {
+  // A balance invoice only exists after a deposit invoice (a single bill is FULL); a receipt
+  // on a balance invoice may settle it in one go, so the shared math no longer checks this.
+  if (input.type === "BALANCE" && satang(input.issued) <= 0) {
+    throw new Error("ยอดคงเหลือของใบเสนอราคาเปลี่ยนแปลง กรุณาโหลดข้อมูลใหม่ก่อนบันทึก");
+  }
   try {
     return calculateReceiptPayment({
       total: input.total, invoiceVat: input.quotationVat, paid: input.issued, paidVat: input.issuedVat,

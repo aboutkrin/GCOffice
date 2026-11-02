@@ -258,8 +258,10 @@ export function DocumentTable({ documents, basePath, documentType, canDelete = f
   };
 
   /** Invoice to issue the balance receipt for: a paid deposit receipt or a DEPOSITED invoice. */
-  const balanceReceiptInvoiceId = (doc: { id: string; status: string; receiptPaymentType?: string | null; sourceInvoiceId?: string | null }): string | null => {
-    if (documentType === "RECEIPT" && doc.receiptPaymentType === "DEPOSIT" && doc.status === "PAID") {
+  const balanceReceiptInvoiceId = (doc: { id: string; status: string; receiptPaymentType?: string | null; sourceInvoiceId?: string | null; sourceInvoice?: { status: string } | null }): string | null => {
+    // A มัดจำ receipt that settled its (deposit) invoice in full has nothing left to collect.
+    if (documentType === "RECEIPT" && doc.receiptPaymentType === "DEPOSIT" && doc.status === "PAID"
+      && doc.sourceInvoice?.status === "DEPOSITED") {
       return doc.sourceInvoiceId ?? null;
     }
     if (documentType === "INVOICE" && doc.status === "DEPOSITED") return doc.id;

@@ -97,6 +97,8 @@ export async function getDocuments(params?: {
         isDepositInvoice: true,
         netPayable: true,
         sourceInvoiceId: true,
+        // Receipt rows: the "ออกใบเสร็จยอดคงเหลือ" shortcut only while the invoice still owes something.
+        sourceInvoice: { select: { status: true } },
         sourceQuotationId: true,
         invoiceBillingType: true,
         paymentMethod: true,
@@ -187,6 +189,10 @@ export async function getReceiptInvoices() {
     where: { type: "INVOICE", status: { in: ["BILLED", "DEPOSITED", "PAID"] } },
     include: {
       lineItems: { orderBy: { sequence: "asc" } },
+      // Deposit / balance invoices carry one generated line and no product photos: the receipt form shows the quotation's.
+      sourceQuotation: { select: { lineItems: {
+        select: { productImage: true, productName: true, colorVariantName: true }, orderBy: { sequence: "asc" },
+      } } },
       paymentTerms: { orderBy: { sequence: "asc" } },
       receipts: { where: { status: "PAID", type: "RECEIPT" }, select: { id: true, netPayable: true } },
     },

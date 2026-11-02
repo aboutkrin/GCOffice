@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { calculateReceiptPayment as calculate, satang } from "../src/lib/receipt-payment";
+import { calculateReceiptPayment as calculate, defaultReceiptPayment, satang } from "../src/lib/receipt-payment";
 import { applyReceiptPayment, lockInvoice, syncInvoicePaymentStatus } from "../src/lib/receipt-payment-server";
 import type { Prisma } from "../src/generated/prisma/client";
 
@@ -41,8 +41,20 @@ test("rejects invalid amounts, duplicate full payments and stale balances", () =
   }
   assert.throws(() => calculate({ ...base, type: "FULL", requested: 7000 }));
   assert.throws(() => calculate({ ...base, type: "BALANCE", requested: 6000 }));
-  assert.throws(() => calculate({ ...base, paid: 0, type: "BALANCE", requested: 10000 }));
+  // A balance invoice with nothing paid yet is settled by one ยอดคงเหลือ receipt for the whole amount.
+  assert.equal(calculate({ ...base, paid: 0, type: "BALANCE", requested: 10000 }).remaining, 0);
+  assert.throws(() => calculate({ ...base, paid: 0, type: "BALANCE", requested: 9000 }));
   assert.equal(calculate({ ...base, type: "BALANCE", requested: 7000 }).remaining, 0);
+});
+
+test("a receipt is named after the invoice it pays", () => {
+  assert.deepEqual(defaultReceiptPayment({ invoiceBillingType: "DEPOSIT", total: 6000, paid: 0 }), { type: "DEPOSIT", amount: 6000 });
+  assert.deepEqual(defaultReceiptPayment({ invoiceBillingType: "DEPOSIT", total: 6000, paid: 1000 }), { type: "DEPOSIT", amount: 5000 });
+  assert.deepEqual(defaultReceiptPayment({ invoiceBillingType: "BALANCE", total: 4000, paid: 0 }), { type: "BALANCE", amount: 4000 });
+  assert.deepEqual(defaultReceiptPayment({ invoiceBillingType: "FULL", total: 10000, paid: 0 }), { type: "FULL", amount: 10000 });
+  assert.deepEqual(defaultReceiptPayment({ invoiceBillingType: null, total: 10000, paid: 3000 }), { type: "BALANCE", amount: 7000 });
+  assert.deepEqual(defaultReceiptPayment({ invoiceBillingType: null, isDepositInvoice: true, total: 3000, paid: 0 }), { type: "DEPOSIT", amount: 3000 });
+  assert.deepEqual(defaultReceiptPayment({ total: 0.3, paid: 0.1 }), { type: "BALANCE", amount: 0.2 });
 });
 
 // Persistence harness exercises the server helpers without a production database.

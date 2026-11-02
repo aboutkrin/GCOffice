@@ -4,6 +4,22 @@ export type ReceiptPaymentKind = "FULL" | "DEPOSIT" | "BALANCE";
 export const RECEIPT_PAYMENT_LABELS: Record<ReceiptPaymentKind, string> = {
   FULL: "เต็มจำนวน", DEPOSIT: "มัดจำ", BALANCE: "ยอดคงเหลือ",
 };
+/**
+ * The receipt a new payment defaults to, so staff never pick a type: the receipt
+ * is named after the invoice it pays (มัดจำ invoice → มัดจำ receipt, ยอดคงเหลือ
+ * invoice → ยอดคงเหลือ receipt), a plain invoice is เต็มจำนวน on the first payment
+ * and ยอดคงเหลือ once something has been paid. The amount is what is still owed.
+ */
+export function defaultReceiptPayment(invoice: {
+  invoiceBillingType?: ReceiptPaymentKind | null; isDepositInvoice?: boolean | null;
+  total: number; paid: number;
+}): { type: ReceiptPaymentKind; amount: number } {
+  const remaining = (satang(invoice.total) - satang(invoice.paid)) / 100;
+  const billing = invoice.invoiceBillingType ?? (invoice.isDepositInvoice ? "DEPOSIT" : "FULL");
+  if (billing === "DEPOSIT") return { type: "DEPOSIT", amount: remaining };
+  if (billing === "BALANCE" || satang(invoice.paid) > 0) return { type: "BALANCE", amount: remaining };
+  return { type: "FULL", amount: remaining };
+}
 export interface ReceiptPaymentSummary {
   invoiceNumber: string;
   invoiceTotal: number;
@@ -28,7 +44,8 @@ export function calculateReceiptPayment(input: {
   if (input.type === "FULL" && (paid !== 0 || amount !== total)) {
     throw new Error("รับชำระเต็มจำนวนได้เฉพาะใบแจ้งหนี้ที่ยังไม่มีการรับชำระ");
   }
-  if (input.type === "BALANCE" && (paid <= 0 || amount !== remaining)) {
+  // A balance invoice may be paid in one go (paid === 0), so BALANCE only means "the whole rest".
+  if (input.type === "BALANCE" && amount !== remaining) {
     throw new Error("ยอดคงเหลือเปลี่ยนแปลง กรุณาโหลดข้อมูลใหม่ก่อนบันทึก");
   }
   const vatRemaining = satang(input.invoiceVat) - satang(input.paidVat);
