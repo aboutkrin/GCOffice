@@ -47,8 +47,12 @@ export async function PATCH(
 
     const { id } = await params;
     const result = await updateDocumentStatus(id, status as DocumentStatus);
+    if (!result.success) {
+      // A refused transition (not a server fault): send the reason to the UI.
+      return NextResponse.json({ error: result.error }, { status: 409 });
+    }
 
-    return NextResponse.json(result);
+    return NextResponse.json(result.data);
   } catch (error) {
     console.error("Status update error:", error);
     return NextResponse.json(

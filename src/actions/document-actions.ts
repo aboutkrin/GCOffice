@@ -14,6 +14,7 @@ import { checkAvailabilityForDocument, type StockShortage } from "@/data/stock-a
 import { clearDocumentLineCosts, lockDocumentLineCosts } from "@/data/document-profit";
 import { applyReceiptPayment, lockDocument, paidReceipts, syncInvoicePaymentStatus } from "@/lib/receipt-payment-server";
 import { satang } from "@/lib/receipt-payment";
+import { DOCUMENT_STATUS_LABELS } from "@/lib/constants";
 import { applyInvoiceBilling, hasFinalInvoice } from "@/lib/invoice-billing-server";
 
 function formatZodError(error: ZodError): string {
@@ -646,7 +647,42 @@ export async function updateDocument(id: string, data: unknown) {
   }
 }
 
+export type DocumentStatusResult =
+  | { success: true; data: Awaited<ReturnType<typeof applyDocumentStatus>> }
+  | { success: false; error: string };
+
+/**
+ * Change a document's status. Never throws: a refused change comes back as
+ * `{ success: false, error }` with the Thai reason, because Next.js hides the
+ * message of an error thrown by a server action in production and the UI
+ * could only show "ไม่สามารถเปลี่ยนสถานะได้".
+ */
 export async function updateDocumentStatus(
+  id: string,
+  status: DocumentStatus
+): Promise<DocumentStatusResult> {
+  try {
+    return { success: true, data: await applyDocumentStatus(id, status) };
+  } catch (error) {
+    console.error("updateDocumentStatus error:", error);
+    return { success: false, error: describeStatusError(error, status) };
+  }
+}
+
+/** Turn a thrown error into a reason the user can act on. */
+function describeStatusError(error: unknown, status: DocumentStatus): string {
+  if (error && typeof error === "object" && "code" in error) {
+    const code = (error as { code?: string }).code;
+    if (code === "P2025") return "ไม่พบเอกสารนี้ (อาจถูกลบไปแล้ว)";
+    if (code === "P2002") return "เลขที่เอกสารซ้ำกับเอกสารอื่น กรุณาลองใหม่อีกครั้ง";
+  }
+  if (error instanceof Error && error.message && !/^(Invalid|Unexpected|PrismaClient|Cannot)/.test(error.message)) {
+    return error.message;
+  }
+  return `เปลี่ยนสถานะเป็น "${DOCUMENT_STATUS_LABELS[status] ?? status}" ไม่สำเร็จ เกิดข้อผิดพลาดในระบบ กรุณาลองใหม่อีกครั้ง`;
+}
+
+async function applyDocumentStatus(
   id: string,
   status: DocumentStatus
 ) {
@@ -791,7 +827,7 @@ export async function recordInvoicePayment(id: string, data: unknown) {
     } });
     const result = document.status === validated.status
       ? null
-      : await updateDocumentStatus(id, validated.status as DocumentStatus);
+      : await applyDocumentStatus(id, validated.status as DocumentStatus);
     revalidatePath("/invoices");
     return { success: true as const, data: result };
   } catch (error) {
@@ -860,10 +896,12 @@ export async function getNextCustomInvoiceNumber(documentDate: Date) {
 export async function deleteDocument(id: string) {
   await assertAdmin();
 
-  await updateDocumentStatus(id, DocumentStatus.CANCELLED);
+  const result = await updateDocumentStatus(id, DocumentStatus.CANCELLED);
+  if (!result.success) return result;
 
   revalidatePath("/stock");
   revalidatePath("/quotations");
   revalidatePath("/invoices");
   revalidatePath("/receipts");
+  return { success: true as const };
 }
