@@ -12,6 +12,11 @@ interface PreviewFooterProps {
   };
   /** Receipts are signed by hand with a pen, so the issuer's stored signature is left out. */
   hideSignature?: boolean;
+  /**
+   * Receipts are signed as seller / payer (ผู้ขายสินค้า / ผู้รับเงิน and
+   * ผู้รับสินค้า / ผู้จ่ายเงิน) and never print the issuer's name.
+   */
+  variant?: "DOCUMENT" | "RECEIPT";
 }
 
 export function PreviewFooter({
@@ -19,7 +24,12 @@ export function PreviewFooter({
   documentDate,
   createdBy,
   hideSignature = false,
+  variant = "DOCUMENT",
 }: PreviewFooterProps) {
+  const isReceipt = variant === "RECEIPT";
+  const issuerLabel = isReceipt ? "ผู้ขายสินค้า / ผู้รับเงิน" : "ผู้เสนอราคา / ผู้ออกเอกสาร";
+  const customerLabel = isReceipt ? "ผู้รับสินค้า / ผู้จ่ายเงิน" : "ผู้อนุมัติ / ลูกค้า";
+  const showIssuerName = !isReceipt && (createdBy?.firstName || createdBy?.lastName);
   return (
     <div className="flex gap-3 sm:gap-4 w-full">
       {/* Left: Notes */}
@@ -52,15 +62,15 @@ export function PreviewFooter({
               )}
             </div>
             <div className="mx-auto w-24 sm:w-40 border-b border-blue-200" />
-            {createdBy?.firstName || createdBy?.lastName ? (
+            {showIssuerName ? (
               <p className="mt-1.5 text-[8px] text-gray-700">
-                {[createdBy.firstName, createdBy.lastName]
+                {[createdBy?.firstName, createdBy?.lastName]
                   .filter(Boolean)
                   .join(" ")}
               </p>
             ) : null}
-            <p className="mt-1 text-[8px] text-gray-700">
-              ผู้เสนอราคา / ผู้ออกเอกสาร
+            <p className={`${showIssuerName ? "mt-1" : "mt-1.5"} text-[8px] text-gray-700`}>
+              {issuerLabel}
             </p>
             <p className="mt-1 text-[8px] text-gray-500">
               วันที่{" "}
@@ -75,7 +85,7 @@ export function PreviewFooter({
             <div className="h-8 sm:h-12" />
             <div className="mx-auto w-24 sm:w-40 border-b border-blue-200" />
             <p className="mt-1.5 text-[8px] text-gray-700">
-              ผู้อนุมัติ / ลูกค้า
+              {customerLabel}
             </p>
             <p className="mt-1 text-[8px] text-gray-500">
               วันที่ ____/____/________
