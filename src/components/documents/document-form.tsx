@@ -1187,6 +1187,13 @@ export function DocumentForm({
                     <Select
                       disabled={managedReceipt || generatedInvoice || invoiceBillingPending}
                       onValueChange={(companyId) => {
+                        // Radix Select mirrors its value into a hidden native <select>. When the
+                        // value is set before the items have registered their <option>s (the
+                        // ?quotationId= / ?invoiceId= preselect runs in a mount effect), the
+                        // native select cannot hold it and Radix bubbles "" back, which wiped the
+                        // company copied from the quotation. The dropdown has no empty item, so
+                        // "" is never a real pick: ignore it.
+                        if (!companyId) return;
                         field.onChange(companyId);
                         const selected = companies.find((c) => c.id === companyId);
                         if (selected) {
