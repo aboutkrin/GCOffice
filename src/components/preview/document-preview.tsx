@@ -12,7 +12,7 @@ import { BankInfoBox, PreviewPayment } from "./preview-payment";
 import { PreviewFooter } from "./preview-footer";
 
 import { type ReceiptPaymentKind, type ReceiptPaymentSummary, receiptPaymentLineName } from "@/lib/receipt-payment";
-import { type InvoiceBillingKind, type InvoiceBillingSummary, INVOICE_BILLING_LABELS, invoiceBillingTitle } from "@/lib/invoice-billing";
+import { type InvoiceBillingKind, type InvoiceBillingSummary, INVOICE_BILLING_LABELS, invoiceBillingPercentLabel, invoiceBillingTitle } from "@/lib/invoice-billing";
 import { formatBaht } from "@/lib/thai-currency";
 
 interface CompanySnapshot {
@@ -350,6 +350,11 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
       ((doc.type === "RECEIPT" && !!doc.receiptPaymentType) || billedPart) &&
       !doc.lineItems.some((item) => item.productSku);
     const billing = billedPart && doc.invoiceBillingType ? doc.invoiceBillingSummary : null;
+    // "มัดจำแล้ว 60%" / "เรียกเก็บครั้งนี้ 40%": share of the quotation total, derived from the amounts.
+    const billingPercent = (amount: number) => {
+      const percent = billing ? invoiceBillingPercentLabel(amount, billing.quotationTotal) : null;
+      return percent ? ` ${percent}` : "";
+    };
     const bankInfo = doc.companySnapshot.bankName || doc.companySnapshot.accountName || doc.companySnapshot.accountNumber
       ? {
           bankName: doc.companySnapshot.bankName, accountName: doc.companySnapshot.accountName,
@@ -371,9 +376,9 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
               <div className="mb-1 font-semibold">{INVOICE_BILLING_LABELS[doc.invoiceBillingType]} ตามใบเสนอราคา {billing.quotationNumber}</div>
               <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5">
                 <span className="text-gray-500">ยอดใบเสนอราคา</span><span className="text-right text-gray-500">{formatBaht(billing.quotationTotal)}</span>
-                <span className="text-gray-500">มัดจำแล้ว</span><span className="text-right text-gray-500">{formatBaht(billing.previousDeposits)}</span>
-                <strong className="text-gray-900">เรียกเก็บครั้งนี้</strong><strong className="text-right text-gray-900">{formatBaht(billing.billedAmount)}</strong>
-                <span className="text-gray-500">คงเหลือ</span><span className="text-right text-gray-500">{formatBaht(billing.remainingBalance)}</span>
+                <span className="text-gray-500">มัดจำแล้ว{billingPercent(billing.previousDeposits)}</span><span className="text-right text-gray-500">{formatBaht(billing.previousDeposits)}</span>
+                <strong className="text-gray-900">เรียกเก็บครั้งนี้{billingPercent(billing.billedAmount)}</strong><strong className="text-right text-gray-900">{formatBaht(billing.billedAmount)}</strong>
+                <span className="text-gray-500">คงเหลือ{billingPercent(billing.remainingBalance)}</span><span className="text-right text-gray-500">{formatBaht(billing.remainingBalance)}</span>
               </div>
             </div>
           </div>

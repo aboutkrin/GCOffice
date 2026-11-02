@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Package,
+  Warehouse,
   FilePlus,
   Users,
   FileText,
@@ -37,9 +37,9 @@ const mobileNavItems: {
     isPrimary: true,
   },
   {
-    href: "/products",
-    label: "สินค้า",
-    icon: Package,
+    href: "/stock",
+    label: "สต็อคสินค้า",
+    icon: Warehouse,
   },
   {
     href: "/stock/scan",
