@@ -64,7 +64,7 @@ test("titles and generated line names", () => {
   );
   assert.equal(
     invoiceBillingLineName("BALANCE", "QT-6910-0019", { amount: 549450, quotationTotal: 610500 }),
-    "เรียกเก็บยอดคงเหลือ ตามใบเสนอราคาเลขที่ QT-6910-0019",
+    "เรียกเก็บยอดคงเหลือ 90% ตามใบเสนอราคาเลขที่ QT-6910-0019",
   );
 });
 

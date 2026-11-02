@@ -47,15 +47,15 @@ export function invoiceBillingPercentLabel(amount: number, quotationTotal: numbe
 
 /**
  * Name of the single generated line / payment term on a deposit or balance
- * invoice. A deposit line carries the % of the quotation it bills
- * ("เรียกเก็บเงินมัดจำ 10% ตามใบเสนอราคาเลขที่ QT-…") when the amounts are known.
+ * invoice. The line carries the % of the quotation it bills
+ * ("เรียกเก็บเงินมัดจำ 60% …", "เรียกเก็บยอดคงเหลือ 40% …") when the amounts are known.
  */
 export function invoiceBillingLineName(
   type: InvoiceBillingKind, quotationNumber: string | null,
   billing?: { amount: number; quotationTotal: number },
 ): string {
   const label = type === "DEPOSIT" ? "เงินมัดจำ" : "ยอดคงเหลือ";
-  const percent = type === "DEPOSIT" && billing ? invoiceBillingPercentLabel(billing.amount, billing.quotationTotal) : null;
+  const percent = billing ? invoiceBillingPercentLabel(billing.amount, billing.quotationTotal) : null;
   return `เรียกเก็บ${label}${percent ? ` ${percent}` : ""} ตามใบเสนอราคาเลขที่ ${quotationNumber ?? "-"}`;
 }
 
