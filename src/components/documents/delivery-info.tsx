@@ -65,7 +65,12 @@ export function DeliveryInfo({
           onChange={(e) => onFooterNotesChange(e.target.value)}
           placeholder="ระบุหมายเหตุเพิ่มเติม..."
           rows={3}
+          readOnly={isReceipt}
+          className={isReceipt ? "bg-muted text-muted-foreground" : undefined}
         />
+        {isReceipt && (
+          <p className="text-xs text-muted-foreground">ใบเสร็จรับเงินใช้ข้อความนี้เสมอ แก้ไขไม่ได้</p>
+        )}
       </div>
 
       {isReceipt ? (

@@ -1,4 +1,4 @@
-import { calculateReceiptPayment, satang, type ReceiptPaymentKind } from "./receipt-payment";
+import { calculateReceiptPayment, paymentPercentLabel, satang, type ReceiptPaymentKind } from "./receipt-payment";
 
 export { satang };
 export type InvoiceBillingKind = ReceiptPaymentKind;
@@ -37,12 +37,7 @@ export function invoiceBillingTitle(type?: InvoiceBillingKind | null): string {
  * was entered as ฿, as a % or picked from a payment term. Null when unknown.
  */
 export function invoiceBillingPercentLabel(amount: number, quotationTotal: number): string | null {
-  const total = satang(quotationTotal);
-  const billed = satang(amount);
-  if (!Number.isFinite(total) || !Number.isFinite(billed) || total <= 0 || billed <= 0) return null;
-  const percent = Math.round((billed / total) * 10000) / 100;
-  if (percent <= 0) return null;
-  return `${percent.toFixed(2).replace(/\.?0+$/, "")}%`;
+  return paymentPercentLabel(amount, quotationTotal);
 }
 
 /**

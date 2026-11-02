@@ -30,7 +30,6 @@ interface PreviewPaymentProps {
   productionDays?: string;
   deliveryDateStart?: Date;
   deliveryDateEnd?: Date;
-  deliveryCompletedDate?: Date;
 }
 
 /** "ข้อมูลบัญชีสำหรับการชำระ": bank account + PromptPay QR. `compact` fits half a row. */
@@ -104,20 +103,15 @@ export function PreviewPayment({
   productionDays,
   deliveryDateStart,
   deliveryDateEnd,
-  deliveryCompletedDate,
 }: PreviewPaymentProps) {
-  const isReceipt = documentType === "RECEIPT";
+  // Receipts print nothing here: how the customer paid (paymentMethod / paymentDate /
+  // deliveryCompletedDate) is back-office data kept on the form only.
+  if (documentType === "RECEIPT") return null;
   const hasPaymentTerms = paymentTerms.length > 0;
-  // Receipts don't show the bank account / QR box.
-  const hasBankInfo =
-    !isReceipt &&
-    (company.bankName || company.accountName || company.accountNumber);
+  const hasBankInfo = company.bankName || company.accountName || company.accountNumber;
   // Invoices already paid print how the customer paid, next to the delivery info.
   const hasPaymentRecord = !!paymentMethod && documentType !== "QUOTATION";
-  const hasDeliveryInfo = isReceipt
-    ? !!(deliveryCompletedDate || paymentDate || paymentMethod)
-    : productionDays || deliveryDateStart || deliveryDateEnd || hasPaymentRecord;
-
+  const hasDeliveryInfo = productionDays || deliveryDateStart || deliveryDateEnd || hasPaymentRecord;
   if (!hasPaymentTerms && !hasBankInfo && !hasDeliveryInfo) return null;
 
   const paymentRecordRows = hasPaymentRecord ? (
@@ -128,7 +122,7 @@ export function PreviewPayment({
         {PAYMENT_METHOD_LABELS[paymentMethod!] ?? paymentMethod}
         {paymentReference ? ` (${paymentReference})` : ""}
       </span>
-      {!isReceipt && paymentDate && (
+      {paymentDate && (
         <>
           <span className="font-bold">วันที่ชำระเงิน</span>
           <span className="font-bold">:</span>
@@ -239,9 +233,7 @@ export function PreviewPayment({
                         </div>
                         {term.note && (
                           <div className="text-[10px] text-gray-400 mt-0.5">
-                            {isReceipt && !isNaN(new Date(term.note).getTime())
-                              ? `วันที่ชำระเงิน: ${formatThaiDate(new Date(term.note), "short")}`
-                              : term.note}
+                            {term.note}
                           </div>
                         )}
                       </td>
@@ -255,49 +247,27 @@ export function PreviewPayment({
               {hasDeliveryInfo && (
                 <div className="rounded border border-blue-200 p-2 mt-2">
                   <div className="grid grid-cols-[auto_auto_1fr] gap-x-1 gap-y-0.5 text-[10px] text-gray-700">
-                    {isReceipt ? (
+                    {productionDays && (
                       <>
-                        {paymentDate && (
-                          <>
-                            <span className="font-bold">วันที่ชำระเงิน</span>
-                            <span className="font-bold">:</span>
-                            <span>{formatThaiDate(new Date(paymentDate))}</span>
-                          </>
-                        )}
-                        {paymentRecordRows}
-                        {deliveryCompletedDate && (
-                          <>
-                            <span className="font-bold">วันที่จัดส่งสินค้าสำเร็จ</span>
-                            <span className="font-bold">:</span>
-                            <span>{formatThaiDate(new Date(deliveryCompletedDate))}</span>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        {productionDays && (
-                          <>
-                            <span className="font-bold">ระยะเวลาผลิต/จัดส่ง</span>
-                            <span className="font-bold">:</span>
-                            <span>{productionDays}</span>
-                          </>
-                        )}
-                        {(deliveryDateStart || deliveryDateEnd) && (
-                          <>
-                            <span className="font-bold">วันที่คาดว่าจะได้รับสินค้า</span>
-                            <span className="font-bold">:</span>
-                            <span>
-                              {deliveryDateStart &&
-                                formatThaiDate(new Date(deliveryDateStart))}
-                              {deliveryDateStart && deliveryDateEnd && " - "}
-                              {deliveryDateEnd &&
-                                formatThaiDate(new Date(deliveryDateEnd))}
-                            </span>
-                          </>
-                        )}
-                        {paymentRecordRows}
+                        <span className="font-bold">ระยะเวลาผลิต/จัดส่ง</span>
+                        <span className="font-bold">:</span>
+                        <span>{productionDays}</span>
                       </>
                     )}
+                    {(deliveryDateStart || deliveryDateEnd) && (
+                      <>
+                        <span className="font-bold">วันที่คาดว่าจะได้รับสินค้า</span>
+                        <span className="font-bold">:</span>
+                        <span>
+                          {deliveryDateStart &&
+                            formatThaiDate(new Date(deliveryDateStart))}
+                          {deliveryDateStart && deliveryDateEnd && " - "}
+                          {deliveryDateEnd &&
+                            formatThaiDate(new Date(deliveryDateEnd))}
+                        </span>
+                      </>
+                    )}
+                    {paymentRecordRows}
                   </div>
                 </div>
               )}
@@ -343,9 +313,7 @@ export function PreviewPayment({
                         </div>
                         {term.note && (
                           <div className="text-[10px] text-gray-400 mt-0.5">
-                            {isReceipt && !isNaN(new Date(term.note).getTime())
-                              ? `วันที่ชำระเงิน: ${formatThaiDate(new Date(term.note), "short")}`
-                              : term.note}
+                            {term.note}
                           </div>
                         )}
                       </td>
@@ -373,13 +341,6 @@ export function PreviewPayment({
               </div>
               <div className="grid grid-cols-[auto_auto_1fr] gap-x-1 gap-y-0.5 text-[10px] text-gray-700">
                 {paymentRecordRows}
-                {isReceipt && paymentDate && (
-                  <>
-                    <span className="font-bold">วันที่ชำระเงิน</span>
-                    <span className="font-bold">:</span>
-                    <span>{formatThaiDate(new Date(paymentDate))}</span>
-                  </>
-                )}
               </div>
             </div>
                 </div>
@@ -394,13 +355,6 @@ export function PreviewPayment({
               </div>
               <div className="grid grid-cols-[auto_auto_1fr] gap-x-1 gap-y-0.5 text-[10px] text-gray-700">
                 {paymentRecordRows}
-                {isReceipt && paymentDate && (
-                  <>
-                    <span className="font-bold">วันที่ชำระเงิน</span>
-                    <span className="font-bold">:</span>
-                    <span>{formatThaiDate(new Date(paymentDate))}</span>
-                  </>
-                )}
               </div>
             </div>
             </div>

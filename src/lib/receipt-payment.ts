@@ -26,6 +26,43 @@ export interface ReceiptPaymentSummary {
   previousPayments: number;
   paymentAmount: number;
   remainingBalance: number;
+  /** "30%": this payment as a share of the order (see `receiptPaymentPercentLabel`); absent on old receipts. */
+  paymentPercent?: string | null;
+}
+
+/**
+ * A payment as a share of a total ("10%", "33.33%"), derived from the amounts so
+ * it is right whether it was entered as ฿, as a % or picked from a payment term.
+ * Null when unknown. Shared with deposit / balance invoices.
+ */
+export function paymentPercentLabel(amount: number, total: number): string | null {
+  const base = satang(total);
+  const part = satang(amount);
+  if (!Number.isFinite(base) || !Number.isFinite(part) || base <= 0 || part <= 0) return null;
+  const percent = Math.round((part / base) * 10000) / 100;
+  if (percent <= 0) return null;
+  return `${percent.toFixed(2).replace(/\.?0+$/, "")}%`;
+}
+
+/**
+ * The % printed on a มัดจำ / ยอดคงเหลือ receipt: the share of the whole order
+ * (the quotation total when the invoice is itself a deposit / balance invoice,
+ * else the invoice total), so a receipt that pays a 30% deposit invoice in full
+ * reads "30%", not "100%". เต็มจำนวน receipts carry no %.
+ */
+export function receiptPaymentPercentLabel(
+  type: ReceiptPaymentKind, amount: number, invoice: { total: number; quotationTotal?: number | null },
+): string | null {
+  if (type === "FULL") return null;
+  const base = invoice.quotationTotal && satang(invoice.quotationTotal) > 0 ? invoice.quotationTotal : invoice.total;
+  return paymentPercentLabel(amount, base);
+}
+
+/** The single generated line on a receipt: "รับชำระมัดจำ 30% ตามใบแจ้งหนี้เลขที่ INV-…". */
+export function receiptPaymentLineName(
+  type: ReceiptPaymentKind, invoiceNumber: string | null, percent?: string | null,
+): string {
+  return `รับชำระ${RECEIPT_PAYMENT_LABELS[type]}${percent ? ` ${percent}` : ""} ตามใบแจ้งหนี้เลขที่ ${invoiceNumber ?? "-"}`;
 }
 
 export function calculateReceiptPayment(input: {

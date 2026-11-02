@@ -14,7 +14,7 @@ import { checkAvailabilityForDocument, type StockShortage } from "@/data/stock-a
 import { clearDocumentLineCosts, lockDocumentLineCosts } from "@/data/document-profit";
 import { applyReceiptPayment, lockDocument, paidReceipts, syncInvoicePaymentStatus } from "@/lib/receipt-payment-server";
 import { satang } from "@/lib/receipt-payment";
-import { DOCUMENT_STATUS_LABELS } from "@/lib/constants";
+import { DOCUMENT_STATUS_LABELS, RECEIPT_FOOTER_NOTE } from "@/lib/constants";
 import { applyInvoiceBilling, hasFinalInvoice } from "@/lib/invoice-billing-server";
 
 function formatZodError(error: ZodError): string {
@@ -191,7 +191,7 @@ export async function createDocument(data: unknown, options?: { asDraft?: boolea
             : null,
           pickupAtShowroom: validated.pickupAtShowroom,
           grandTotal,
-          footerNotes: validated.footerNotes,
+          footerNotes: validated.type === "RECEIPT" ? RECEIPT_FOOTER_NOTE : validated.footerNotes,
           productionDays: validated.productionDays,
           productionDaysMin: validated.productionDaysMin ?? undefined,
           productionDaysMax: validated.productionDaysMax ?? undefined,
@@ -382,7 +382,7 @@ export async function updateDocument(id: string, data: unknown) {
             type: validated.invoiceBillingType, amount: validated.invoiceBillingAmount });
         }
         await tx.document.update({ where: { id }, data: {
-          documentDate, footerNotes: validated.footerNotes,
+          documentDate, footerNotes: validated.type === "RECEIPT" ? RECEIPT_FOOTER_NOTE : validated.footerNotes,
           productionDays: validated.productionDays,
           productionDaysMin: validated.productionDaysMin ?? null,
           productionDaysMax: validated.productionDaysMax ?? null,
@@ -402,7 +402,7 @@ export async function updateDocument(id: string, data: unknown) {
             type: validated.receiptPaymentType, amount: validated.receiptAmount });
         }
         await tx.document.update({ where: { id }, data: {
-          documentDate, footerNotes: validated.footerNotes,
+          documentDate, footerNotes: validated.type === "RECEIPT" ? RECEIPT_FOOTER_NOTE : validated.footerNotes,
           customInvoiceNumber: validated.customInvoiceNumber?.trim() || null,
           paymentDate: validated.paymentDate ? toUTCNoon(new Date(validated.paymentDate)) : null,
           paymentMethod: validated.paymentMethod ?? null,
@@ -500,7 +500,7 @@ export async function updateDocument(id: string, data: unknown) {
             : null,
           pickupAtShowroom: validated.pickupAtShowroom,
           grandTotal,
-          footerNotes: validated.footerNotes,
+          footerNotes: validated.type === "RECEIPT" ? RECEIPT_FOOTER_NOTE : validated.footerNotes,
           productionDays: validated.productionDays,
           productionDaysMin: validated.productionDaysMin ?? null,
           productionDaysMax: validated.productionDaysMax ?? null,
