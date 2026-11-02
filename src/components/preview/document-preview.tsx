@@ -105,7 +105,7 @@ export interface DocumentData {
   invoiceBillingType?: InvoiceBillingKind | null;
   invoiceBillingSummary?: InvoiceBillingSummary | null;
   /** How the customer actually paid (receipts; invoices once marked paid). */
-  paymentMethod?: "CASH" | "TRANSFER" | "CREDIT_CARD" | "PROMPTPAY" | "OTHER" | null;
+  paymentMethod?: "CASH" | "TRANSFER" | "CREDIT_CARD" | "PROMPTPAY" | "CHEQUE" | "OTHER" | null;
   paymentReference?: string | null;
   depositDeduction?: number;
   netPayable?: number;
