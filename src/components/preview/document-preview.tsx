@@ -435,6 +435,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           footerNotes={doc.footerNotes}
           documentDate={doc.documentDate}
           createdBy={doc.createdBy}
+          hideSignature={doc.type === "RECEIPT"}
         />
       </>
     );
