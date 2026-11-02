@@ -93,6 +93,67 @@ export function BankInfoBox({ company, compact = false }: { company: PreviewPaym
   );
 }
 
+/**
+ * "ข้อมูลการชำระ": how the customer actually paid, printed on receipts in the
+ * slot the bank box takes on invoices (the money is already in, so the account
+ * to pay into is no longer the point). Transfers / PromptPay still name the
+ * receiving account; the reference number stays back-office data.
+ */
+export function PaymentInfoBox({
+  company,
+  paymentMethod,
+  paymentDate,
+  documentDate,
+}: {
+  company: PreviewPaymentProps["company"];
+  paymentMethod?: string | null;
+  paymentDate?: Date;
+  documentDate?: Date;
+}) {
+  const methodLabel = paymentMethod ? (PAYMENT_METHOD_LABELS[paymentMethod] ?? paymentMethod) : null;
+  const intoAccount =
+    (paymentMethod === "TRANSFER" || paymentMethod === "PROMPTPAY") &&
+    (company.bankName || company.accountNumber);
+  const paidOn = paymentDate ?? documentDate;
+  return (
+    <div className="h-full rounded border border-blue-200 bg-blue-50/50 p-2">
+      <div className="flex items-center gap-2 mb-2">
+        <Wallet className="h-4 w-4 text-blue-600" />
+        <h4 className="text-[10px] font-bold text-gray-800">ข้อมูลการชำระ</h4>
+      </div>
+      <div className="grid grid-cols-1 gap-1 text-[10px]">
+        <div className="flex gap-2">
+          <span className="text-gray-500 w-20 shrink-0">ช่องทางการชำระ:</span>
+          <span className="font-medium text-gray-800">{methodLabel ?? "-"}</span>
+        </div>
+        <div className="flex gap-2">
+          <span className="text-gray-500 w-20 shrink-0">วันที่ชำระเงิน:</span>
+          <span className="font-medium text-gray-800">
+            {paidOn ? formatThaiDate(new Date(paidOn)) : "-"}
+          </span>
+        </div>
+        {intoAccount && (
+          <div className="flex items-center gap-2">
+            <span className="text-gray-500 w-20 shrink-0">เข้าบัญชี:</span>
+            <div className="flex items-center gap-1.5">
+              {company.bankLogoUrl && (
+                <img
+                  src={company.bankLogoUrl}
+                  alt={company.bankName ?? ""}
+                  className="h-4 w-4 object-contain shrink-0"
+                />
+              )}
+              <span className="font-medium text-gray-800">
+                {[company.bankName, company.accountNumber].filter(Boolean).join(" ")}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PreviewPayment({
   paymentTerms,
   company,

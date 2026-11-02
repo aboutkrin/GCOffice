@@ -8,7 +8,7 @@ import { PreviewCustomer } from "./preview-customer";
 import { PreviewLineItems } from "./preview-line-items";
 import { PreviewSummary } from "./preview-summary";
 import { PreviewProductImages, type PreviewProductImageItem } from "./preview-product-images";
-import { BankInfoBox, PreviewPayment } from "./preview-payment";
+import { BankInfoBox, PaymentInfoBox, PreviewPayment } from "./preview-payment";
 import { PreviewFooter } from "./preview-footer";
 
 import { type ReceiptPaymentKind, type ReceiptPaymentSummary, receiptPaymentLineName } from "@/lib/receipt-payment";
@@ -385,10 +385,16 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
         )}
         {doc.receiptPaymentType && doc.receiptPaymentSummary && (
           <div className="mb-3 flex items-stretch gap-3">
-            {/* Same layout as the deposit / balance invoice: bank box left, payment box right.
-                Receipts are always blue (the balance-invoice colour), never amber. */}
+            {/* Same layout as the deposit / balance invoice: "ข้อมูลการชำระ" (how the
+                customer paid) left, payment box right. Receipts are always blue
+                (the balance-invoice colour), never amber. */}
             <div className="flex-1 min-w-0">
-              {bankInfo && <BankInfoBox company={bankInfo} compact />}
+              <PaymentInfoBox
+                company={bankInfo ?? {}}
+                paymentMethod={doc.paymentMethod}
+                paymentDate={doc.paymentDate}
+                documentDate={doc.documentDate}
+              />
             </div>
             <div className="w-full max-w-sm shrink-0 rounded border border-blue-200 bg-blue-50/40 p-2 text-[11px]">
               <div className="mb-1 font-semibold">{receiptPaymentLineName(doc.receiptPaymentType, doc.receiptPaymentSummary.invoiceNumber, doc.receiptPaymentSummary.paymentPercent)}</div>
@@ -440,6 +446,7 @@ export const DocumentPreview = forwardRef<HTMLDivElement, DocumentPreviewProps>(
           documentDate={doc.documentDate}
           createdBy={doc.createdBy}
           hideSignature={doc.type === "RECEIPT"}
+          variant={doc.type === "RECEIPT" ? "RECEIPT" : "DOCUMENT"}
         />
       </>
     );
