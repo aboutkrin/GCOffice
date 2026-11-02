@@ -106,10 +106,11 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   TRANSFER: "โอนเงิน",
   CREDIT_CARD: "บัตรเครดิต",
   PROMPTPAY: "พร้อมเพย์",
+  CHEQUE: "เช็ค",
   OTHER: "อื่นๆ",
 };
 
-export const PAYMENT_METHOD_OPTIONS = ["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "OTHER"] as const;
+export const PAYMENT_METHOD_OPTIONS = ["CASH", "TRANSFER", "CREDIT_CARD", "PROMPTPAY", "CHEQUE", "OTHER"] as const;
 
 export const SHIPPING_PROVIDER_LABELS: Record<string, string> = {
   UNEED_CARGO: "Uneed cargo",

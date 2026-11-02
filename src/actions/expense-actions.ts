@@ -30,7 +30,7 @@ async function ensureExpenseTables() {
       await prisma.$executeRawUnsafe(`
         DO $$ BEGIN
           IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PaymentMethod') THEN
-            CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT_CARD', 'PROMPTPAY', 'OTHER');
+            CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT_CARD', 'PROMPTPAY', 'CHEQUE', 'OTHER');
           END IF;
         END $$
       `).catch(() => {});
@@ -57,7 +57,7 @@ async function ensureExpenseTables() {
       await prisma.$executeRawUnsafe(`
         DO $$ BEGIN
           IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'PaymentMethod') THEN
-            CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT_CARD', 'PROMPTPAY', 'OTHER');
+            CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'TRANSFER', 'CREDIT_CARD', 'PROMPTPAY', 'CHEQUE', 'OTHER');
           END IF;
         END $$
       `);
