@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  calculateInvoiceBilling as calculate, invoiceBillingLineName, invoiceBillingPercentLabel, invoiceBillingTitle, satang,
+  buildInvoiceBillingChoices, calculateInvoiceBilling as calculate, invoiceBillingLineName, invoiceBillingPercentLabel, invoiceBillingTitle, satang,
 } from "../src/lib/invoice-billing";
 
 test("deposit invoices and the balance invoice reconcile to the quotation total and VAT", () => {
@@ -74,4 +74,43 @@ test("deposit percent label", () => {
   assert.equal(invoiceBillingPercentLabel(61050, 610500), "10%");
   assert.equal(invoiceBillingPercentLabel(0, 10000), null);
   assert.equal(invoiceBillingPercentLabel(100, 0), null);
+});
+
+test("choices for the first invoice: full, one deposit per term except the last, custom; first term recommended", () => {
+  const terms = [{ name: "มัดจำ 30%", calculatedAmount: 3000 }, { name: "ก่อนส่ง 70%", calculatedAmount: 7000 }];
+  const choices = buildInvoiceBillingChoices({ quotationTotal: 10000, previousDeposits: 0, paymentTerms: terms });
+  assert.deepEqual(choices.map((c) => [c.key, c.type, c.amount, c.percent, c.recommended]), [
+    ["FULL", "FULL", 10000, "100%", false],
+    ["TERM:0", "DEPOSIT", 3000, "30%", true],
+    ["CUSTOM", "DEPOSIT", null, null, false],
+  ]);
+  assert.equal(choices[1].detail, "งวด 1 · มัดจำ 30%");
+});
+
+test("choices after a deposit: the balance is recommended and FULL is gone", () => {
+  const terms = [{ name: "มัดจำ 30%", calculatedAmount: 3000 }, { name: "ก่อนส่ง 70%", calculatedAmount: 7000 }];
+  const choices = buildInvoiceBillingChoices({ quotationTotal: 10000, previousDeposits: 3000, paymentTerms: terms });
+  assert.deepEqual(choices.map((c) => [c.key, c.type, c.amount, c.percent, c.recommended]), [
+    ["BALANCE", "BALANCE", 7000, "70%", true],
+    ["CUSTOM", "DEPOSIT", null, null, false],
+  ]);
+  assert.equal(choices[0].detail, "งวด 2 · ก่อนส่ง 70%");
+});
+
+test("choices with three terms and the first deposit billed offer the second term as an extra deposit", () => {
+  const terms = [
+    { name: "มัดจำ 30%", calculatedAmount: 3000 }, { name: "งวด 2 30%", calculatedAmount: 3000 }, { name: "ส่งมอบ 40%", calculatedAmount: 4000 },
+  ];
+  const choices = buildInvoiceBillingChoices({ quotationTotal: 10000, previousDeposits: 3000, paymentTerms: terms });
+  assert.deepEqual(choices.map((c) => [c.key, c.amount, c.recommended]), [["BALANCE", 7000, true], ["TERM:1", 3000, false], ["CUSTOM", null, false]]);
+  assert.equal(choices[0].detail, undefined);
+  assert.equal(choices[1].label, "มัดจำเพิ่ม");
+});
+
+test("choices without terms or with a single term: full and a custom deposit, nothing recommended", () => {
+  for (const terms of [[], [{ name: "ชำระเต็ม", calculatedAmount: 10000 }]]) {
+    const choices = buildInvoiceBillingChoices({ quotationTotal: 10000, previousDeposits: 0, paymentTerms: terms });
+    assert.deepEqual(choices.map((c) => [c.key, c.recommended]), [["FULL", false], ["CUSTOM", false]]);
+  }
+  assert.deepEqual(buildInvoiceBillingChoices({ quotationTotal: 10000, previousDeposits: 10000, paymentTerms: [] }), []);
 });

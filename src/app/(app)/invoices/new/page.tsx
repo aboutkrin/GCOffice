@@ -33,7 +33,7 @@ export default async function NewInvoicePage({
     <div>
       <PageHeader
         title="สร้างใบแจ้งหนี้"
-        description={params.quotationId ? "ออกใบแจ้งหนี้ยอดคงเหลือตามใบเสนอราคา" : "สร้างใบแจ้งหนี้ใหม่"}
+        description={params.quotationId ? "ออกใบแจ้งหนี้ตามใบเสนอราคา" : "สร้างใบแจ้งหนี้ใหม่"}
       />
 
       <DocumentForm

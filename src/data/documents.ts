@@ -3,6 +3,31 @@ import { DocumentType, DocumentStatus } from "@/generated/prisma/client";
 import { serialize } from "@/lib/utils";
 import { flattenLineItemSpecs, lineItemsWithSpecsInclude } from "@/lib/line-item-specs";
 
+/** Issued (not draft / cancelled) deposit invoice, new style or legacy. */
+const DEPOSIT_INVOICE_WHERE = {
+  type: "INVOICE" as const,
+  status: { in: ["BILLED" as const, "DEPOSITED" as const, "PAID" as const] },
+  OR: [{ invoiceBillingType: "DEPOSIT" as const }, { invoiceBillingType: null, isDepositInvoice: true }],
+};
+
+/** Non-cancelled FULL / BALANCE invoice (new style, or legacy with no billing type). */
+const FINAL_INVOICE_WHERE = {
+  status: { not: "CANCELLED" as const },
+  OR: [
+    { invoiceBillingType: { in: ["FULL" as const, "BALANCE" as const] } },
+    { invoiceBillingType: null, isDepositInvoice: false },
+  ],
+};
+
+/** True once a quotation has a non-cancelled FULL / BALANCE invoice (it can no longer be invoiced). */
+export async function hasFinalInvoiceForQuotation(quotationId: string) {
+  try {
+    return (await prisma.document.count({ where: { sourceQuotationId: quotationId, type: "INVOICE", ...FINAL_INVOICE_WHERE } })) > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function getDocuments(params?: {
   type?: DocumentType;
   status?: DocumentStatus | DocumentStatus[];
@@ -77,6 +102,8 @@ export async function getDocuments(params?: {
         paymentMethod: true,
         paymentReference: true,
         paymentDate: true,
+        // Quotation rows: whether a final invoice exists (hides the "ออกใบแจ้งหนี้" shortcut).
+        invoices: { where: { type: "INVOICE", ...FINAL_INVOICE_WHERE }, select: { id: true }, take: 1 },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -86,22 +113,6 @@ export async function getDocuments(params?: {
     return [];
   }
 }
-
-/** Issued (not draft / cancelled) deposit invoice, new style or legacy. */
-const DEPOSIT_INVOICE_WHERE = {
-  type: "INVOICE" as const,
-  status: { in: ["BILLED" as const, "DEPOSITED" as const, "PAID" as const] },
-  OR: [{ invoiceBillingType: "DEPOSIT" as const }, { invoiceBillingType: null, isDepositInvoice: true }],
-};
-
-/** Non-cancelled FULL / BALANCE invoice (new style, or legacy with no billing type). */
-const FINAL_INVOICE_WHERE = {
-  status: { not: "CANCELLED" as const },
-  OR: [
-    { invoiceBillingType: { in: ["FULL" as const, "BALANCE" as const] } },
-    { invoiceBillingType: null, isDepositInvoice: false },
-  ],
-};
 
 export async function getConfirmedQuotations(params?: { year?: number; month?: number; includeId?: string }) {
   try {
