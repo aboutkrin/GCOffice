@@ -119,22 +119,22 @@ export function PaymentInfoBox({
     <div className="h-full rounded border border-blue-200 bg-blue-50/50 p-2">
       <div className="flex items-center gap-2 mb-2">
         <Wallet className="h-4 w-4 text-blue-600" />
-        <h4 className="text-[10px] font-bold text-gray-800">ข้อมูลการชำระ</h4>
+        <h4 className="text-[10px] font-bold text-gray-800">
+          ข้อมูลการชำระ <span className="font-normal text-gray-500">/ Payment Information</span>
+        </h4>
       </div>
-      <div className="grid grid-cols-1 gap-1 text-[10px]">
-        <div className="flex gap-2">
-          <span className="text-gray-500 w-20 shrink-0">ช่องทางการชำระ:</span>
-          <span className="font-medium text-gray-800">{methodLabel ?? "-"}</span>
-        </div>
-        <div className="flex gap-2">
-          <span className="text-gray-500 w-20 shrink-0">วันที่ชำระเงิน:</span>
-          <span className="font-medium text-gray-800">
-            {paidOn ? formatThaiDate(new Date(paidOn)) : "-"}
-          </span>
-        </div>
+      {/* Labels sit in an auto-width column so "ช่องทางการชำระ / Payment Method" never
+          wraps onto a second line (which made it read as a repeated "ชำระ"). */}
+      <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[10px]">
+        <span className="whitespace-nowrap text-gray-500">ช่องทางการชำระ / Payment Method:</span>
+        <span className="font-medium text-gray-800">{methodLabel ?? "-"}</span>
+        <span className="whitespace-nowrap text-gray-500">วันที่ชำระเงิน / Payment Date:</span>
+        <span className="font-medium text-gray-800">
+          {paidOn ? formatThaiDate(new Date(paidOn)) : "-"}
+        </span>
         {intoAccount && (
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 w-20 shrink-0">เข้าบัญชี:</span>
+          <>
+            <span className="whitespace-nowrap text-gray-500">เข้าบัญชี / Paid into:</span>
             <div className="flex items-center gap-1.5">
               {company.bankLogoUrl && (
                 <img
@@ -147,7 +147,7 @@ export function PaymentInfoBox({
                 {[company.bankName, company.accountNumber].filter(Boolean).join(" ")}
               </span>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
@@ -177,7 +177,7 @@ export function PreviewPayment({
 
   const paymentRecordRows = hasPaymentRecord ? (
     <>
-      <span className="font-bold">ช่องทางการชำระ</span>
+      <span className="font-bold whitespace-nowrap">ช่องทางการชำระ / Payment Method</span>
       <span className="font-bold">:</span>
       <span>
         {PAYMENT_METHOD_LABELS[paymentMethod!] ?? paymentMethod}
@@ -185,7 +185,7 @@ export function PreviewPayment({
       </span>
       {paymentDate && (
         <>
-          <span className="font-bold">วันที่ชำระเงิน</span>
+          <span className="font-bold whitespace-nowrap">วันที่ชำระเงิน / Payment Date</span>
           <span className="font-bold">:</span>
           <span>{formatThaiDate(new Date(paymentDate))}</span>
         </>
